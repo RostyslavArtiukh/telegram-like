@@ -168,3 +168,13 @@
 
 **TODO:**
 - Push для unread-count (зараз 10-сек polling) — окремий integration event `NotificationReadIntegrationEvent` через RabbitMQ + pubsub в Web (як typing).
+
+## День 20 (2026-05-30): Real-time messages — push замість 3-сек polling ✅
+- Той самий patern що typing з Day 17. Web додає другий consumer `NewMessageConsumer : IConsumer<MessageSentIntegrationEvent>` → `INewMessagePubSub.PublishAsync(chatId, messageId)` → ChatView підписки fire → `ReloadMessagesAsync()`.
+- `MessageSentIntegrationEvent` вже публікується monolith через outbox (Day 9). Notifications service та Web тепер обидва підписуються (різні MassTransit consumer queues, обидва отримують fanout від exchange).
+- ChatView 3-сек poller тепер тільки `RefreshPresenceAsync()` + `SweepExpiredTyping()` — message reload видалено з нього.
+- **Latency:** від send → other browser sees message ≈ outbox poll 2с + RabbitMQ → consumer → pubsub → Blazor circuit ≈ 2.5с (раніше 3с polling worst-case).
+
+**TODO:**
+- Real-time для `MessageRetractedIntegrationEvent` + `ReactionAdded` — той самий patern.
+- Optimistic UI: показувати власне повідомлення одразу після send без чекати реальний event back.
