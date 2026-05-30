@@ -1,0 +1,27 @@
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+WORKDIR /app
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+COPY ["src/services/notifications/TelegramLike.Notifications.Api/TelegramLike.Notifications.Api.csproj", "src/services/notifications/TelegramLike.Notifications.Api/"]
+COPY ["src/services/notifications/TelegramLike.Notifications.Infrastructure/TelegramLike.Notifications.Infrastructure.csproj", "src/services/notifications/TelegramLike.Notifications.Infrastructure/"]
+COPY ["src/services/notifications/TelegramLike.Notifications.Application/TelegramLike.Notifications.Application.csproj", "src/services/notifications/TelegramLike.Notifications.Application/"]
+COPY ["src/services/notifications/TelegramLike.Notifications.Domain/TelegramLike.Notifications.Domain.csproj", "src/services/notifications/TelegramLike.Notifications.Domain/"]
+COPY ["src/TelegramLike.Contracts/TelegramLike.Contracts.csproj", "src/TelegramLike.Contracts/"]
+RUN dotnet restore "src/services/notifications/TelegramLike.Notifications.Api/TelegramLike.Notifications.Api.csproj"
+
+COPY . .
+WORKDIR /src/src/services/notifications/TelegramLike.Notifications.Api
+RUN dotnet publish "TelegramLike.Notifications.Api.csproj" \
+    -c Release \
+    -o /app/publish \
+    --no-restore \
+    /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "TelegramLike.Notifications.Api.dll"]

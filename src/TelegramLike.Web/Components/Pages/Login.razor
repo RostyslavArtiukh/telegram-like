@@ -1,0 +1,91 @@
+@page "/login"
+@using MediatR
+@using TelegramLike.Application.Identity.Commands.LoginUser
+@inject IMediator Mediator
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Sign in</PageTitle>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <h2 class="mb-4">Sign in</h2>
+
+        @if (_justRegistered)
+        {
+            <div class="alert alert-success">Account created! Please sign in.</div>
+        }
+        @if (!string.IsNullOrEmpty(_urlError))
+        {
+            <div class="alert alert-danger">Invalid session. Please try again.</div>
+        }
+
+        <EditForm Model="Model" OnValidSubmit="HandleSubmit" FormName="login">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <InputText class="form-control" @bind-Value="Model.Email" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <InputText type="password" class="form-control" @bind-Value="Model.Password" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="alert alert-danger">@_error</div>
+            }
+
+            <button type="submit" class="btn btn-primary w-100" disabled="@_loading">
+                @(_loading ? "Signing in..." : "Sign in")
+            </button>
+        </EditForm>
+
+        <p class="mt-3 text-center">
+            No account? <a href="/register">Register</a>
+        </p>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] private string? Registered { get; set; }
+    [SupplyParameterFromQuery] private string? Error { get; set; }
+
+    private LoginModel Model { get; set; } = new();
+    private string? _error;
+    private string? _urlError;
+    private bool _loading;
+    private bool _justRegistered;
+
+    protected override void OnParametersSet()
+    {
+        _justRegistered = Registered == "true";
+        _urlError = Error;
+    }
+
+    private async Task HandleSubmit()
+    {
+        _error = null;
+        _loading = true;
+
+        try
+        {
+            var token = await Mediator.Send(new LoginUserCommand(Model.Email, Model.Password));
+            // Navigate to auth callback which sets the cookie and redirects to home
+            Nav.NavigateTo($"/auth/signin?token={Uri.EscapeDataString(token)}", forceLoad: true);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = ex.Message;
+            _loading = false;
+        }
+    }
+
+    private sealed class LoginModel
+    {
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+}

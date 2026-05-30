@@ -1,0 +1,66 @@
+using MongoDB.Driver;
+using TelegramLike.Application.Chats.Queries;
+using TelegramLike.Application.Common.Interfaces;
+using TelegramLike.Domain.Chats.ValueObjects;
+
+namespace TelegramLike.Infrastructure.Persistence.MongoDB.Repositories;
+
+internal sealed class ChatQueryService(IMongoDatabase database) : IChatQueryService
+{
+    private readonly IMongoCollection<ChatDocument> _chats = database.GetCollection<ChatDocument>("chats");
+    private readonly IMongoCollection<ChatMemberDocument> _members = database.GetCollection<ChatMemberDocument>("chat_members");
+
+    public async Task<IReadOnlyList<ChatSummaryDto>> GetMyChatsAsync(Guid userId, CancellationToken ct = default)
+    {
+        var myMemberships = await _members
+            .Find(m => m.UserId == userId && m.Status == MemberStatus.Active)
+            .ToListAsync(ct);
+
+        if (myMemberships.Count == 0) return [];
+
+        var chatIds = myMemberships.Select(m => m.ChatId).ToHashSet();
+        var chats = await _chats
+            .Find(c => chatIds.Contains(c.Id) && c.DeletedAt == null)
+            .ToListAsync(ct);
+
+        var activeCounts = await _members
+            .Aggregate()
+            .Match(m => chatIds.Contains(m.ChatId) && m.Status == MemberStatus.Active)
+            .Group(m => m.ChatId, g => new { ChatId = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+        var countMap = activeCounts.ToDictionary(x => x.ChatId, x => x.Count);
+
+        return chats.Select(c =>
+        {
+            var myRole = myMemberships.First(m => m.ChatId == c.Id).Role;
+            var count = countMap.TryGetValue(c.Id, out var n) ? n : 0;
+            return new ChatSummaryDto(c.Id, c.Type, c.Name, myRole, count);
+        }).ToList();
+    }
+
+    public async Task<ChatDetailsDto?> GetChatByIdAsync(Guid chatId, CancellationToken ct = default)
+    {
+        var chat = await _chats.Find(c => c.Id == chatId).FirstOrDefaultAsync(ct);
+        if (chat is null) return null;
+
+        var members = await _members.Find(m => m.ChatId == chatId).ToListAsync(ct);
+
+        return new ChatDetailsDto(
+            chat.Id,
+            chat.Type,
+            chat.Name,
+            chat.CreatedBy,
+            chat.CreatedAt,
+            chat.DeletedAt.HasValue,
+            members.Select(MapMember).ToList());
+    }
+
+    public async Task<IReadOnlyList<ChatMemberDto>> GetChatMembersAsync(Guid chatId, CancellationToken ct = default)
+    {
+        var members = await _members.Find(m => m.ChatId == chatId).ToListAsync(ct);
+        return members.Select(MapMember).ToList();
+    }
+
+    private static ChatMemberDto MapMember(ChatMemberDocument m)
+        => new(m.UserId, m.Role, m.Status, m.JoinedAt, m.LeftAt);
+}

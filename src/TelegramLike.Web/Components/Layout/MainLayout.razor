@@ -1,0 +1,57 @@
+@inherits LayoutComponentBase
+@using MediatR
+@using TelegramLike.Application.Presence.Commands.GoOffline
+@using TelegramLike.Application.Presence.Commands.Heartbeat
+@using TelegramLike.Web.Services
+@inject IMediator Mediator
+@inject CurrentUserAccessor CurrentUser
+@implements IAsyncDisposable
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private Timer? _heartbeat;
+    private Guid? _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userId = await CurrentUser.GetUserIdAsync();
+        if (_userId is null) return;
+
+        await SendHeartbeatAsync();
+        _heartbeat = new Timer(async _ => await InvokeAsync(SendHeartbeatAsync), null,
+            TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20));
+    }
+
+    private async Task SendHeartbeatAsync()
+    {
+        if (_userId is null) return;
+        try { await Mediator.Send(new HeartbeatCommand(_userId.Value)); }
+        catch { /* presence is best-effort */ }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_heartbeat is not null) await _heartbeat.DisposeAsync();
+        if (_userId is not null)
+        {
+            try { await Mediator.Send(new GoOfflineCommand(_userId.Value)); } catch { }
+        }
+    }
+}

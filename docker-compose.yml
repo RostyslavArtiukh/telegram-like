@@ -1,0 +1,93 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: telegramlike-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: >
+        mongosh --quiet --eval
+        "try { rs.status().ok } catch (e) {
+          rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]});
+        }"
+      interval: 10s
+      start_period: 20s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: telegramlike-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --save "" --appendonly no
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: telegramlike-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      start_period: 20s
+      retries: 10
+
+  notifications:
+    build:
+      context: .
+      dockerfile: src/services/notifications/TelegramLike.Notifications.Api/Dockerfile
+    image: telegramlike-notifications:latest
+    container_name: telegramlike-notifications
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"
+      MongoDB__DatabaseName: telegramlike_notifications
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+
+  web:
+    build:
+      context: .
+      dockerfile: src/TelegramLike.Web/Dockerfile
+    image: telegramlike-web:latest
+    container_name: telegramlike-web
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      notifications:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"
+      MongoDB__DatabaseName: telegramlike
+      Redis__ConnectionString: "redis:6379"
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+      NotificationsApi__BaseUrl: "http://notifications:8080"
+
+volumes:
+  mongo_data:

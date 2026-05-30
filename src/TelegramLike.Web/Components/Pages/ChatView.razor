@@ -1,0 +1,150 @@
+@page "/chat/{ChatId:guid}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using MediatR
+@using TelegramLike.Application.Chats.Queries
+@using TelegramLike.Application.Chats.Queries.GetChatById
+@using TelegramLike.Application.Messaging.Commands.SendMessage
+@using TelegramLike.Application.Messaging.Queries
+@using TelegramLike.Application.Messaging.Queries.GetChatMessages
+@using TelegramLike.Web.Services
+@inject IMediator Mediator
+@inject CurrentUserAccessor CurrentUser
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+@implements IDisposable
+
+<PageTitle>@(_chat?.Name ?? "Chat")</PageTitle>
+
+@if (_loadError is not null)
+{
+    <div class="alert alert-danger">@_loadError</div>
+    <a href="/" class="btn btn-link">← Back to chats</a>
+}
+else if (_chat is null)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="mb-0">@(_chat.Name ?? "Direct chat")</h3>
+            <small class="text-muted">@_chat.Type · @_chat.Members.Count(m => m.Status == TelegramLike.Domain.Chats.ValueObjects.MemberStatus.Active) active</small>
+        </div>
+        <a href="/" class="btn btn-sm btn-outline-secondary">All chats</a>
+    </div>
+
+    <div class="border rounded p-3 mb-3" style="height: 50vh; overflow-y: auto; background: #f9f9f9;">
+        @if (_messages.Count == 0)
+        {
+            <p class="text-muted text-center">No messages yet — say hi.</p>
+        }
+        else
+        {
+            @foreach (var m in _messages.OrderBy(x => x.SentAt))
+            {
+                var isMine = m.AuthorId == _userId;
+                <div class="d-flex mb-2 @(isMine ? "justify-content-end" : "")">
+                    <div class="@(isMine ? "bg-primary text-white" : "bg-white border") rounded p-2 px-3" style="max-width: 70%;">
+                        <div class="small @(isMine ? "text-white-50" : "text-muted")">
+                            @(isMine ? "you" : m.AuthorId.ToString()[..8]) · @m.SentAt.ToLocalTime().ToString("HH:mm")
+                        </div>
+                        <div>
+                            @if (m.IsRetracted)
+                            {
+                                <em class="text-muted">[retracted]</em>
+                            }
+                            else
+                            {
+                                @m.Text
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <EditForm Model="@_send" OnValidSubmit="SendAsync" FormName="send-message">
+        <div class="input-group">
+            <InputText class="form-control" placeholder="Type a message…" @bind-Value="_send.Text" />
+            <button class="btn btn-primary" type="submit" disabled="@(_sending || string.IsNullOrWhiteSpace(_send.Text))">
+                @(_sending ? "…" : "Send")
+            </button>
+        </div>
+        @if (!string.IsNullOrEmpty(_sendError))
+        {
+            <div class="alert alert-danger mt-2">@_sendError</div>
+        }
+    </EditForm>
+}
+
+@code {
+    [Parameter] public Guid ChatId { get; set; }
+
+    private Guid _userId;
+    private ChatDetailsDto? _chat;
+    private List<MessageDto> _messages = [];
+    private SendModel _send = new();
+    private string? _loadError;
+    private string? _sendError;
+    private bool _sending;
+    private Timer? _poller;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var u = await CurrentUser.GetUserIdAsync();
+        if (u is null) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        _userId = u.Value;
+
+        await LoadChatAsync();
+        await ReloadMessagesAsync();
+
+        _poller = new Timer(async _ => await InvokeAsync(ReloadMessagesAsync), null,
+            TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    private async Task LoadChatAsync()
+    {
+        try
+        {
+            _chat = await Mediator.Send(new GetChatByIdQuery(ChatId));
+            if (_chat is null) _loadError = "Chat not found.";
+        }
+        catch (Exception ex) { _loadError = ex.Message; }
+    }
+
+    private async Task ReloadMessagesAsync()
+    {
+        try
+        {
+            var page = await Mediator.Send(new GetChatMessagesQuery(ChatId, _userId));
+            _messages = page.Items.ToList();
+            StateHasChanged();
+        }
+        catch { /* keep last good state */ }
+    }
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_send.Text)) return;
+
+        _sendError = null;
+        _sending = true;
+        try
+        {
+            await Mediator.Send(new SendMessageCommand(ChatId, _userId, _send.Text));
+            _send = new SendModel();
+            await ReloadMessagesAsync();
+        }
+        catch (Exception ex) { _sendError = ex.Message; }
+        finally { _sending = false; }
+    }
+
+    public void Dispose() => _poller?.Dispose();
+
+    private sealed class SendModel
+    {
+        public string Text { get; set; } = "";
+    }
+}

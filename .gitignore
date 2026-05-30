@@ -1,0 +1,76 @@
+# .NET build output
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+out/
+publish/
+
+# Test results
+[Tt]est[Rr]esult*/
+*.coverage
+*.coveragexml
+coverage*.xml
+coverage*.json
+TestResults/
+
+# Visual Studio
+.vs/
+*.opensdf
+*.sdf
+*.psess
+*.vsp
+*.vspx
+*.sap
+.vshistory/
+
+# Rider / JetBrains
+.idea/
+*.iml
+*.suo
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Sensitive / local config
+appsettings.Local.json
+appsettings.*.Local.json
+.env
+.env.local
+secrets.json
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+project.lock.json
+
+# MongoDB / Mongo dump output
+dump/
+*.bson
+
+# Docker (Compose overrides)
+docker-compose.override.yml
+
+# Claude Code local settings (per-machine)
+.claude/settings.local.json

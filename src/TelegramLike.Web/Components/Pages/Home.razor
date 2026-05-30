@@ -1,0 +1,146 @@
+@page "/"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using MediatR
+@using TelegramLike.Application.Chats.Commands.CreateGroupChat
+@using TelegramLike.Application.Chats.Commands.JoinChat
+@using TelegramLike.Application.Chats.Queries
+@using TelegramLike.Application.Chats.Queries.GetMyChats
+@using TelegramLike.Web.Services
+@inject IMediator Mediator
+@inject CurrentUserAccessor CurrentUser
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Chats</PageTitle>
+
+<h1>Chats</h1>
+
+<div class="row">
+    <div class="col-md-7">
+        @if (_chats is null)
+        {
+            <p>Loading…</p>
+        }
+        else if (_chats.Count == 0)
+        {
+            <div class="alert alert-info">You have no chats yet. Create one on the right.</div>
+        }
+        else
+        {
+            <ul class="list-group">
+                @foreach (var chat in _chats)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <a href="/chat/@chat.ChatId" class="text-decoration-none fw-semibold">
+                                @(chat.Name ?? "(direct)")
+                            </a>
+                            <small class="text-muted ms-2">
+                                @chat.Type · @chat.ActiveMemberCount member(s) · you are @chat.MyRole
+                            </small>
+                        </div>
+                        <code class="text-muted small">@chat.ChatId</code>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Create a group chat</h5>
+                <EditForm Model="@_form" OnValidSubmit="CreateAsync" FormName="create-group">
+                    <DataAnnotationsValidator />
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <InputText class="form-control" @bind-Value="_form.Name" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(_error))
+                    {
+                        <div class="alert alert-danger">@_error</div>
+                    }
+                    <button type="submit" class="btn btn-primary" disabled="@_busy">
+                        @(_busy ? "Creating…" : "Create")
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6 class="card-title">Join an existing chat</h6>
+                <p class="card-text small text-muted">
+                    Paste a chat id (someone shared it with you):
+                </p>
+                <div class="input-group">
+                    <input class="form-control" placeholder="00000000-…" @bind="_joinId" />
+                    <button class="btn btn-outline-secondary" @onclick="JoinAsync" disabled="@_busy">Join</button>
+                </div>
+                @if (!string.IsNullOrEmpty(_joinError))
+                {
+                    <div class="alert alert-danger mt-2 mb-0 small">@_joinError</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<ChatSummaryDto>? _chats;
+    private CreateGroupModel _form = new();
+    private string? _error;
+    private string? _joinError;
+    private string? _joinId;
+    private bool _busy;
+    private Guid _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await CurrentUser.GetUserIdAsync();
+        if (user is null) return;
+        _userId = user.Value;
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _chats = await Mediator.Send(new GetMyChatsQuery(_userId));
+    }
+
+    private async Task CreateAsync()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            var id = await Mediator.Send(new CreateGroupChatCommand(_userId, _form.Name));
+            _form = new CreateGroupModel();
+            await ReloadAsync();
+            Nav.NavigateTo($"/chat/{id}");
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _busy = false; }
+    }
+
+    private async Task JoinAsync()
+    {
+        _joinError = null;
+        if (!Guid.TryParse(_joinId, out var chatId)) { _joinError = "Invalid id"; return; }
+        _busy = true;
+        try
+        {
+            await Mediator.Send(new JoinChatCommand(chatId, _userId));
+            Nav.NavigateTo($"/chat/{chatId}");
+        }
+        catch (Exception ex) { _joinError = ex.Message; }
+        finally { _busy = false; }
+    }
+
+    private sealed class CreateGroupModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]
+        public string Name { get; set; } = "";
+    }
+}

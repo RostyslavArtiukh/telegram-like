@@ -1,0 +1,90 @@
+TelegramLike — Claude Code permissions cheat sheet
+====================================================
+
+Дозволи у Claude Code зберігаються у двох місцях:
+  - .claude/settings.json        — shared з командою (commit до git)
+  - .claude/settings.local.json  — тільки твоя машина (gitignore)
+
+ВАРІАНТ A: одним махом скопіювати готовий JSON у settings.local.json
+---------------------------------------------------------------------
+Це покриває все, що Claude робить у цьому проекті: .NET, Docker, curl,
+PowerShell-операції, git read, WebFetch для документації.
+
+{
+  "permissions": {
+    "allow": [
+      "Skill(*)",
+      "Bash(dotnet *)",
+      "Bash(docker *)",
+      "Bash(docker compose *)",
+      "Bash(curl *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(rm *)",
+      "Bash(echo *)",
+      "Bash(taskkill *)",
+      "Bash(git status)",
+      "Bash(git log *)",
+      "Bash(git diff *)",
+      "Bash(git show *)",
+      "Bash(git branch *)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Test-Path *)",
+      "WebFetch(domain:learn.microsoft.com)",
+      "WebFetch(domain:docs.mongodb.com)",
+      "WebFetch(domain:dotnet.microsoft.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:stackoverflow.com)"
+    ],
+    "deny": [
+      "Bash(git push *)",
+      "Bash(git reset --hard *)",
+      "Bash(rm -rf /*)",
+      "Bash(docker system prune *)"
+    ]
+  }
+}
+
+ВАРІАНТ B: додати поодиноко через slash-команду під час сесії
+--------------------------------------------------------------
+У Claude Code набираєш:
+
+  /permissions add Bash(dotnet *)
+  /permissions add Bash(docker *)
+  /permissions add Bash(docker compose *)
+  /permissions add Bash(curl *)
+  /permissions add Bash(taskkill *)
+  /permissions add PowerShell(Stop-Process *)
+  /permissions add PowerShell(Get-Process *)
+
+ВАРІАНТ C: тимчасово дати все на сесію
+---------------------------------------
+Запусти Claude Code з прапором:
+
+  claude --dangerously-skip-permissions
+
+Або:
+
+  /permissions mode acceptEdits     — авто-схвалення edit-операцій
+  /permissions mode bypassPermissions  — повний bypass на цю сесію
+
+УВАГА: bypassPermissions = жодних підтверджень навіть на rm/git push.
+Підходить тільки якщо ти впевнений у тому, що Claude робить, або
+запускаєш у sandbox/VM.
+
+Шпаргалка по командах, які Claude найчастіше використовує тут:
+  dotnet build TelegramLike.sln
+  dotnet test tests/<Project>/<Project>.csproj
+  dotnet run --urls http://localhost:5099
+  dotnet add package <Name>
+  docker compose up -d
+  docker compose down
+  docker ps
+  docker exec telegramlike-mongo mongosh --quiet --eval "..."
+  curl -s http://localhost:5099/<path>
+  taskkill /F /IM TelegramLike.Web.exe

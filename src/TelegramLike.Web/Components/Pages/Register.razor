@@ -1,0 +1,88 @@
+@page "/register"
+@using MediatR
+@using TelegramLike.Application.Identity.Commands.RegisterUser
+@inject IMediator Mediator
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Register</PageTitle>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <h2 class="mb-4">Create account</h2>
+
+        <EditForm Model="Model" OnValidSubmit="HandleSubmit" FormName="register">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <InputText class="form-control" @bind-Value="Model.Email" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Username</label>
+                <InputText class="form-control" @bind-Value="Model.Username" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Display name</label>
+                <InputText class="form-control" @bind-Value="Model.DisplayName" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <InputText type="password" class="form-control" @bind-Value="Model.Password" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="alert alert-danger">@_error</div>
+            }
+
+            <button type="submit" class="btn btn-primary w-100" disabled="@_loading">
+                @(_loading ? "Creating account..." : "Register")
+            </button>
+        </EditForm>
+
+        <p class="mt-3 text-center">
+            Already have an account? <a href="/login">Sign in</a>
+        </p>
+    </div>
+</div>
+
+@code {
+    private RegisterModel Model { get; set; } = new();
+    private string? _error;
+    private bool _loading;
+
+    private async Task HandleSubmit()
+    {
+        _error = null;
+        _loading = true;
+
+        try
+        {
+            var command = new RegisterUserCommand(
+                Model.Email, Model.Username, Model.DisplayName, Model.Password);
+
+            await Mediator.Send(command);
+            Nav.NavigateTo("/login?registered=true");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private sealed class RegisterModel
+    {
+        public string Email { get; set; } = "";
+        public string Username { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+}
