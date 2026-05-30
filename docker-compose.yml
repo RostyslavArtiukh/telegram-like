@@ -60,6 +60,9 @@ services:
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: guest
       RabbitMQ__Password: guest
+      ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
+      ServiceAuth__Issuer: telegramlike-web
+      ServiceAuth__Audience: telegramlike-services
 
   web:
     build:
@@ -88,6 +91,10 @@ services:
       RabbitMQ__Username: guest
       RabbitMQ__Password: guest
       NotificationsApi__BaseUrl: "http://notifications:8080"
+      ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
+      ServiceAuth__Issuer: telegramlike-web
+      ServiceAuth__Audience: telegramlike-services
+      ServiceAuth__TokenLifetimeSeconds: "300"
 
 volumes:
   mongo_data:

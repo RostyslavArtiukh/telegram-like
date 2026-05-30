@@ -35,13 +35,22 @@ builder.Services.AddValidatorsFromAssembly(typeof(RegisterUserCommand).Assembly)
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
-builder.Services.AddTransient<UserIdHeaderHandler>();
+builder.Services.Configure<ServiceAuthOptions>(opts =>
+{
+    var section = builder.Configuration.GetSection("ServiceAuth");
+    opts.JwtSecret = section["JwtSecret"] ?? throw new InvalidOperationException("ServiceAuth:JwtSecret is not configured.");
+    opts.Issuer = section["Issuer"] ?? throw new InvalidOperationException("ServiceAuth:Issuer is not configured.");
+    opts.Audience = section["Audience"] ?? throw new InvalidOperationException("ServiceAuth:Audience is not configured.");
+    if (int.TryParse(section["TokenLifetimeSeconds"], out var ttl)) opts.TokenLifetimeSeconds = ttl;
+});
+builder.Services.AddSingleton<ServiceTokenIssuer>();
+builder.Services.AddTransient<ServiceAuthHandler>();
 builder.Services.AddHttpClient<INotificationsApi, NotificationsApiClient>(client =>
 {
     var baseUrl = builder.Configuration["NotificationsApi:BaseUrl"]
                   ?? throw new InvalidOperationException("NotificationsApi:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl);
-}).AddHttpMessageHandler<UserIdHeaderHandler>();
+}).AddHttpMessageHandler<ServiceAuthHandler>();
 
 var app = builder.Build();
 

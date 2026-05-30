@@ -5,7 +5,10 @@ namespace TelegramLike.Web.Services.NotificationsApi;
 
 internal sealed class NotificationsApiClient(HttpClient http) : INotificationsApi
 {
+    public static readonly HttpRequestOptionsKey<Guid> UserIdKey = new("ServiceAuth.UserId");
+
     public async Task<NotificationFeedApiDto> GetFeedAsync(
+        Guid userId,
         DateTime? beforeCreatedAt = null,
         int pageSize = 20,
         bool unreadOnly = false,
@@ -15,26 +18,43 @@ internal sealed class NotificationsApiClient(HttpClient http) : INotificationsAp
         if (beforeCreatedAt.HasValue)
             query.Add($"before={Uri.EscapeDataString(beforeCreatedAt.Value.ToString("o"))}");
 
-        var url = "/notifications/?" + string.Join("&", query);
-        var feed = await http.GetFromJsonAsync<NotificationFeedApiDto>(url, ct);
-        return feed ?? new NotificationFeedApiDto([], null);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/notifications/?" + string.Join("&", query));
+        request.Options.Set(UserIdKey, userId);
+
+        using var response = await http.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<NotificationFeedApiDto>(ct)
+               ?? new NotificationFeedApiDto([], null);
     }
 
-    public async Task<long> GetUnreadCountAsync(CancellationToken ct = default)
+    public async Task<long> GetUnreadCountAsync(Guid userId, CancellationToken ct = default)
     {
-        var response = await http.GetFromJsonAsync<UnreadCountResponse>("/notifications/unread-count", ct);
-        return response?.Count ?? 0;
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/notifications/unread-count");
+        request.Options.Set(UserIdKey, userId);
+
+        using var response = await http.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadFromJsonAsync<UnreadCountResponse>(ct);
+        return payload?.Count ?? 0;
     }
 
-    public async Task MarkAsReadAsync(Guid notificationId, CancellationToken ct = default)
+    public async Task MarkAsReadAsync(Guid userId, Guid notificationId, CancellationToken ct = default)
     {
-        using var response = await http.PostAsync($"/notifications/{notificationId}/read", content: null, ct);
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/notifications/{notificationId}/read");
+        request.Options.Set(UserIdKey, userId);
+
+        using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task MarkAllAsReadAsync(CancellationToken ct = default)
+    public async Task MarkAllAsReadAsync(Guid userId, CancellationToken ct = default)
     {
-        using var response = await http.PostAsync("/notifications/read-all", content: null, ct);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/notifications/read-all");
+        request.Options.Set(UserIdKey, userId);
+
+        using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
     }
 

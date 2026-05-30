@@ -1,5 +1,9 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using MediatR;
-using TelegramLike.Contracts.Notifications;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using TelegramLike.Notifications.Api.Mapping;
 using TelegramLike.Notifications.Application.Commands.MarkAllNotificationsAsRead;
 using TelegramLike.Notifications.Application.Commands.MarkNotificationAsRead;
@@ -14,11 +18,40 @@ builder.Services.AddMediatR(cfg =>
 
 builder.Services.AddNotificationsInfrastructure(builder.Configuration);
 
+var jwtSecret = builder.Configuration["ServiceAuth:JwtSecret"]
+                ?? throw new InvalidOperationException("ServiceAuth:JwtSecret is not configured.");
+var jwtIssuer = builder.Configuration["ServiceAuth:Issuer"]
+                ?? throw new InvalidOperationException("ServiceAuth:Issuer is not configured.");
+var jwtAudience = builder.Configuration["ServiceAuth:Audience"]
+                  ?? throw new InvalidOperationException("ServiceAuth:Audience is not configured.");
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-var notifications = app.MapGroup("/notifications");
+var notifications = app.MapGroup("/notifications").RequireAuthorization();
 
 notifications.MapGet("/", async (
     HttpContext httpContext,
@@ -86,8 +119,9 @@ app.Run();
 static bool TryGetUserId(HttpContext httpContext, out Guid userId)
 {
     userId = Guid.Empty;
-    var header = httpContext.Request.Headers["X-User-Id"].ToString();
-    return !string.IsNullOrWhiteSpace(header) && Guid.TryParse(header, out userId);
+    var sub = httpContext.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+              ?? httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    return !string.IsNullOrWhiteSpace(sub) && Guid.TryParse(sub, out userId);
 }
 
 public sealed record UnreadCountResponse(long Count);

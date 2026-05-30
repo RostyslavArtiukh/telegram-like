@@ -103,7 +103,18 @@
 **Результат:** Notifications живе у власному процесі/контейнері/БД. Зв'язок з monolith тільки через RabbitMQ (consume integration events) + HTTP (Web BFF). 102 тести зелені (48 + 22 + 15 monolith; 8 + 5 + 4 Notifications).
 
 **TODO для прод:**
-- Auth: зараз `X-User-Id` довіряємо як є — для прода треба JWT/mTLS між Web і Notifications, бо хто завгодно в мережі може підставити header
+- ~~Auth: зараз `X-User-Id` довіряємо як є~~ ✅ виправлено День 14 (JWT)
 - Distributed tracing (OpenTelemetry) — щоб бачити end-to-end request flow
 - Health checks для Notifications.Api
 - Окремий RabbitMQ vhost для notifications (зараз shared /)
+
+## День 14 (2026-05-30): JWT auth між Web BFF і Notifications-сервісом ✅
+- Замість довіри `X-User-Id` header — Web підписує короткоживучий JWT (HMAC-SHA256, 5 хв exp)
+- Notifications валідує signature/issuer/audience через ASP.NET Core `AddJwtBearer` + `RequireAuthorization()` на `/notifications/*` group
+- Shared secret у env (`ServiceAuth__JwtSecret` 384-bit base64), Issuer=`telegramlike-web`, Audience=`telegramlike-services`
+- Новий `ServiceTokenIssuer` (Singleton) у Web; `UserIdHeaderHandler` перейменовано в `ServiceAuthHandler` — пробросує `Authorization: Bearer <jwt>` замість `X-User-Id`
+- Сервіс читає userId з `sub` claim (`MapInboundClaims = false` щоб не маппилось у `nameidentifier`)
+- `/health` endpoint лишається публічним (для compose healthcheck у майбутньому)
+- Smoke verify: `GET /notifications/unread-count` без token → `401`, з валідним → `200`
+- Цей паттерн готовий до reuse для наступних сервісів (Presence тощо) — той же `ServiceAuthHandler` працюватиме на будь-який downstream service
+- TODO: окремі секрети per-environment (зараз hardcoded у appsettings.json — для прода винести у secret manager); rotation policy

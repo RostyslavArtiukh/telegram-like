@@ -58,6 +58,7 @@ else
 }
 
 @code {
+    private Guid _userId;
     private NotificationFeedApiDto? _feed;
     private bool _unreadOnly;
     private bool _busy;
@@ -66,12 +67,13 @@ else
     {
         var u = await CurrentUser.GetUserIdAsync();
         if (u is null) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        _userId = u.Value;
         await ReloadAsync();
     }
 
     private async Task ReloadAsync()
     {
-        _feed = await NotificationsApi.GetFeedAsync(unreadOnly: _unreadOnly);
+        _feed = await NotificationsApi.GetFeedAsync(_userId, unreadOnly: _unreadOnly);
     }
 
     private async Task ToggleUnreadAsync(ChangeEventArgs e)
@@ -85,7 +87,7 @@ else
         _busy = true;
         try
         {
-            await NotificationsApi.MarkAsReadAsync(id);
+            await NotificationsApi.MarkAsReadAsync(_userId, id);
             await ReloadAsync();
         }
         finally { _busy = false; }
@@ -96,7 +98,7 @@ else
         _busy = true;
         try
         {
-            await NotificationsApi.MarkAllAsReadAsync();
+            await NotificationsApi.MarkAllAsReadAsync(_userId);
             await ReloadAsync();
         }
         finally { _busy = false; }
