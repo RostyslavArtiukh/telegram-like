@@ -40,6 +40,17 @@ internal sealed class UserRepository(IMongoDatabase database) : IUserRepository
     public async Task<bool> ExistsByUsernameAsync(Username username, CancellationToken ct = default) =>
         await _collection.Find(u => u.Username == username.Value).AnyAsync(ct);
 
+    public async Task<IReadOnlyList<User>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct = default)
+    {
+        if (ids.Count == 0) return [];
+
+        var docs = await _collection
+            .Find(Builders<UserDocument>.Filter.In(u => u.Id, ids))
+            .ToListAsync(ct);
+
+        return docs.Select(d => d.ToDomain()).ToList();
+    }
+
     public async Task AddAsync(User user, CancellationToken ct = default) =>
         await _collection.InsertOneAsync(UserDocument.FromDomain(user), cancellationToken: ct);
 

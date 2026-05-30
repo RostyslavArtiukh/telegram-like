@@ -10,6 +10,7 @@ using TelegramLike.Web.Components;
 using TelegramLike.Web.Services;
 using TelegramLike.Web.Services.NotificationsApi;
 using TelegramLike.Web.Services.PresenceApi;
+using TelegramLike.Web.Services.Typing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,7 +35,12 @@ builder.Services.AddMediatR(cfg =>
 
 builder.Services.AddValidatorsFromAssembly(typeof(RegisterUserCommand).Assembly);
 
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddSingleton<ITypingPubSub, TypingPubSub>();
+
+builder.Services.AddInfrastructure(builder.Configuration, bus =>
+{
+    bus.AddConsumer<UserTypingConsumer>();
+});
 
 builder.Services.Configure<ServiceAuthOptions>(opts =>
 {

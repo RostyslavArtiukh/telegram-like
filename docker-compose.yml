@@ -78,11 +78,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"
       MongoDB__DatabaseName: telegramlike_presence
       Redis__ConnectionString: "redis:6379"
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
       ServiceAuth__Issuer: telegramlike-web
       ServiceAuth__Audience: telegramlike-services

@@ -21,14 +21,15 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        Action<IBusRegistrationConfigurator>? configureBus = null)
     {
         services.AddMongoDB(configuration);
         services.AddRedis(configuration);
         services.AddRepositories();
         services.AddServices(configuration);
         services.AddOutbox(configuration);
-        services.AddIntegrationMessaging(configuration);
+        services.AddIntegrationMessaging(configuration, configureBus);
         return services;
     }
 
@@ -90,16 +91,21 @@ public static class DependencyInjection
         services.AddHostedService<OutboxPublisherHostedService>();
     }
 
-    private static void AddIntegrationMessaging(this IServiceCollection services, IConfiguration configuration)
+    private static void AddIntegrationMessaging(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        Action<IBusRegistrationConfigurator>? configureBus)
     {
-        // Monolith публікує integration events (через outbox), але НЕ підписується —
-        // consumers переїхали в окремі сервіси (Notifications etc.).
+        // Monolith публікує integration events (через outbox). Web додатково може
+        // підписувати consumers через configureBus (Day 17: UserTypingConsumer).
         var host = configuration["RabbitMQ:Host"] ?? "localhost";
         var username = configuration["RabbitMQ:Username"] ?? "guest";
         var password = configuration["RabbitMQ:Password"] ?? "guest";
 
         services.AddMassTransit(bus =>
         {
+            configureBus?.Invoke(bus);
+
             bus.UsingRabbitMq((ctx, cfg) =>
             {
                 cfg.Host(host, "/", h =>
@@ -107,6 +113,8 @@ public static class DependencyInjection
                     h.Username(username);
                     h.Password(password);
                 });
+
+                cfg.ConfigureEndpoints(ctx);
             });
         });
     }

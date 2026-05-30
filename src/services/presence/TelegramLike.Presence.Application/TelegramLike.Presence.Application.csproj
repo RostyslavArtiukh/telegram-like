@@ -2,9 +2,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TelegramLike.Presence.Domain\TelegramLike.Presence.Domain.csproj" />
+    <ProjectReference Include="..\..\..\TelegramLike.Contracts\TelegramLike.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MassTransit" Version="8.3.0" />
     <PackageReference Include="MediatR" Version="14.1.0" />
   </ItemGroup>
 

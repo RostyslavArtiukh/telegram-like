@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
@@ -32,6 +33,8 @@ public static class DependencyInjection
         services.AddSingleton<ITypingIndicatorService>(sp => new RedisTypingIndicatorService(
             sp.GetRequiredService<IConnectionMultiplexer>(), typingTtl));
 
+        services.AddIntegrationMessaging(configuration);
+
         return services;
     }
 
@@ -50,5 +53,25 @@ public static class DependencyInjection
         var connectionString = configuration["Redis:ConnectionString"]!;
         services.AddSingleton<IConnectionMultiplexer>(_ =>
             ConnectionMultiplexer.Connect(connectionString));
+    }
+
+    private static void AddIntegrationMessaging(this IServiceCollection services, IConfiguration configuration)
+    {
+        // Presence публікує UserTypingIntegrationEvent. Не підписується ні на що.
+        var host = configuration["RabbitMQ:Host"] ?? "localhost";
+        var username = configuration["RabbitMQ:Username"] ?? "guest";
+        var password = configuration["RabbitMQ:Password"] ?? "guest";
+
+        services.AddMassTransit(bus =>
+        {
+            bus.UsingRabbitMq((ctx, cfg) =>
+            {
+                cfg.Host(host, "/", h =>
+                {
+                    h.Username(username);
+                    h.Password(password);
+                });
+            });
+        });
     }
 }

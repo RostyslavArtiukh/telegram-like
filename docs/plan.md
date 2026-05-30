@@ -139,3 +139,18 @@
 - Окрема Mongo per service vs shared instance з різними DB names — для прода краще окрема (зараз shared instance). Для pet ОК.
 - Окремий Redis container для Presence — наразі shared. Якщо load зросте — split.
 - Local membership read-model у Presence (subscribe на MemberJoined/Left/Kicked events) — щоб відновити strict typing-validation.
+
+## День 17 (2026-05-30): Real-time typing через RabbitMQ + UX polish ✅
+- **Push замість polling для typing:** `StartTypingCommandHandler` тепер додатково publish-ить `UserTypingIntegrationEvent` через MassTransit RabbitMQ (direct, без outbox — typing ephemeral). Web консьюмить через `UserTypingConsumer` → `ITypingPubSub.PublishAsync(chatId, userId)` → Razor компоненти підписані через `TypingPubSub.Subscribe(chatId, callback)` отримують виклик і роблять `InvokeAsync(StateHasChanged)`. Blazor circuit (вбудований SignalR) пушить UI оновлення у браузер.
+- **Username замість GUID:** новий `GetUsernamesByIdsQuery` (Identity) + `IUserRepository.GetByIdsAsync` — `ChatView.razor` показує `Alice is typing…` замість `a3f2b1c4 is typing…`.
+- **Typing indicator перенесений у chat header** — поруч з `active`/`online` лічильниками, не над input. Виглядає краще.
+- **Batch presence endpoint:** `POST /presence/batch [ids]` → `{id: isOnline}`. `IPresenceApi.GetBatchPresenceAsync` замість N+1 викликів на presence checks.
+- **Infrastructure DI:** `AddInfrastructure(IConfiguration, Action<IBusRegistrationConfigurator>?)` — Web передає `bus => bus.AddConsumer<UserTypingConsumer>()`, інші сервіси нічого не передають.
+- 102 тести зелені, контейнери підняті, smoke OK (Presence публікує, Web консьюмить, UI оновлюється через Blazor circuit).
+
+**Архітектурний висновок:** для real-time у Blazor Server **окремий SignalR Hub не потрібен** — Blazor circuit вже використовує SignalR під капотом. Достатньо in-memory pubsub (`ITypingPubSub`) щоб MassTransit consumer достукався до Razor компонента у тому ж процесі. Якщо в майбутньому Web масштабується горизонтально (декілька instance'ів) — pubsub перейде на Redis pub/sub або STAN.
+
+**TODO:**
+- Bump RabbitMQ keepalive для typing exchange (зараз durable за замовчуванням — overhead для ephemeral; можна `Durable=false`)
+- Online polling замінити на push (UserCame/WentOnline integration events) — окремий день- Не показувати typing від себе у власному другому табі — фільтр `userId == _userId` (вже є)
+

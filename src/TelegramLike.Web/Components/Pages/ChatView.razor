@@ -3,15 +3,20 @@
 @using MediatR
 @using TelegramLike.Application.Chats.Queries
 @using TelegramLike.Application.Chats.Queries.GetChatById
+@using TelegramLike.Application.Identity.Queries.GetUsernamesByIds
 @using TelegramLike.Application.Messaging.Commands.SendMessage
 @using TelegramLike.Application.Messaging.Queries
 @using TelegramLike.Application.Messaging.Queries.GetChatMessages
 @using TelegramLike.Web.Services
+@using TelegramLike.Web.Services.PresenceApi
+@using TelegramLike.Web.Services.Typing
 @inject IMediator Mediator
+@inject IPresenceApi PresenceApi
+@inject ITypingPubSub TypingPubSub
 @inject CurrentUserAccessor CurrentUser
 @inject NavigationManager Nav
 @rendermode InteractiveServer
-@implements IDisposable
+@implements IAsyncDisposable
 
 <PageTitle>@(_chat?.Name ?? "Chat")</PageTitle>
 
@@ -26,10 +31,23 @@ else if (_chat is null)
 }
 else
 {
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-start mb-3">
         <div>
-            <h3 class="mb-0">@(_chat.Name ?? "Direct chat")</h3>
-            <small class="text-muted">@_chat.Type · @_chat.Members.Count(m => m.Status == TelegramLike.Domain.Chats.ValueObjects.MemberStatus.Active) active</small>
+            <h3 class="mb-1">@(_chat.Name ?? "Direct chat")</h3>
+            <small class="text-muted">
+                @_chat.Type ·
+                @_chat.Members.Count(m => m.Status == TelegramLike.Domain.Chats.ValueObjects.MemberStatus.Active) active
+                @if (_onlineCount > 0)
+                {
+                    <span class="text-success">· @_onlineCount online</span>
+                }
+            </small>
+            @if (_othersTyping.Count > 0)
+            {
+                <div class="text-primary fst-italic small mt-1" style="min-height: 1.25rem;">
+                    @TypingLabel(_othersTyping)
+                </div>
+            }
         </div>
         <a href="/" class="btn btn-sm btn-outline-secondary">All chats</a>
     </div>
@@ -47,7 +65,7 @@ else
                 <div class="d-flex mb-2 @(isMine ? "justify-content-end" : "")">
                     <div class="@(isMine ? "bg-primary text-white" : "bg-white border") rounded p-2 px-3" style="max-width: 70%;">
                         <div class="small @(isMine ? "text-white-50" : "text-muted")">
-                            @(isMine ? "you" : m.AuthorId.ToString()[..8]) · @m.SentAt.ToLocalTime().ToString("HH:mm")
+                            @(isMine ? "you" : DisplayName(m.AuthorId)) · @m.SentAt.ToLocalTime().ToString("HH:mm")
                         </div>
                         <div>
                             @if (m.IsRetracted)
@@ -67,7 +85,8 @@ else
 
     <EditForm Model="@_send" OnValidSubmit="SendAsync" FormName="send-message">
         <div class="input-group">
-            <InputText class="form-control" placeholder="Type a message…" @bind-Value="_send.Text" />
+            <InputText class="form-control" placeholder="Type a message…"
+                       @bind-Value="_send.Text" @oninput="OnInputAsync" />
             <button class="btn btn-primary" type="submit" disabled="@(_sending || string.IsNullOrWhiteSpace(_send.Text))">
                 @(_sending ? "…" : "Send")
             </button>
@@ -90,6 +109,14 @@ else
     private string? _sendError;
     private bool _sending;
     private Timer? _poller;
+    private IDisposable? _typingSubscription;
+    private readonly Dictionary<Guid, DateTime> _typingExpiry = new();
+    private List<Guid> _othersTyping = [];
+    private int _onlineCount;
+    private Dictionary<Guid, string> _usernames = new();
+    private DateTime _lastTypingHitUtc = DateTime.MinValue;
+    private static readonly TimeSpan TypingThrottle = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan TypingTtl = TimeSpan.FromSeconds(5);
 
     protected override async Task OnInitializedAsync()
     {
@@ -98,10 +125,22 @@ else
         _userId = u.Value;
 
         await LoadChatAsync();
+        await LoadUsernamesAsync();
         await ReloadMessagesAsync();
+        await RefreshPresenceAsync();
 
-        _poller = new Timer(async _ => await InvokeAsync(ReloadMessagesAsync), null,
+        _typingSubscription = TypingPubSub.Subscribe(ChatId, OnRemoteTypingAsync);
+
+        // Poller now only refreshes messages + presence + sweeps expired typing tokens.
+        _poller = new Timer(async _ => await InvokeAsync(PollAsync), null,
             TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    private async Task PollAsync()
+    {
+        await ReloadMessagesAsync();
+        await RefreshPresenceAsync();
+        SweepExpiredTyping();
     }
 
     private async Task LoadChatAsync()
@@ -112,6 +151,18 @@ else
             if (_chat is null) _loadError = "Chat not found.";
         }
         catch (Exception ex) { _loadError = ex.Message; }
+    }
+
+    private async Task LoadUsernamesAsync()
+    {
+        if (_chat is null) return;
+        try
+        {
+            var ids = _chat.Members.Select(m => m.UserId).ToList();
+            var map = await Mediator.Send(new GetUsernamesByIdsQuery(ids));
+            _usernames = map.ToDictionary(kv => kv.Key, kv => kv.Value);
+        }
+        catch { /* fall back to GUID display */ }
     }
 
     private async Task ReloadMessagesAsync()
@@ -125,6 +176,71 @@ else
         catch { /* keep last good state */ }
     }
 
+    private async Task RefreshPresenceAsync()
+    {
+        if (_chat is null) return;
+        try
+        {
+            var members = _chat.Members
+                .Where(m => m.Status == TelegramLike.Domain.Chats.ValueObjects.MemberStatus.Active)
+                .Select(m => m.UserId)
+                .Where(id => id != _userId)
+                .ToList();
+
+            if (members.Count == 0) return;
+
+            var presence = await PresenceApi.GetBatchPresenceAsync(_userId, members);
+            var online = presence.Count(kv => kv.Value);
+            if (online != _onlineCount)
+            {
+                _onlineCount = online;
+                StateHasChanged();
+            }
+        }
+        catch { /* best-effort */ }
+    }
+
+    private async Task OnRemoteTypingAsync(Guid userId)
+    {
+        if (userId == _userId) return;
+
+        _typingExpiry[userId] = DateTime.UtcNow + TypingTtl;
+        RebuildTypingList();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void SweepExpiredTyping()
+    {
+        var now = DateTime.UtcNow;
+        var expired = _typingExpiry.Where(kv => kv.Value <= now).Select(kv => kv.Key).ToList();
+        if (expired.Count == 0) return;
+
+        foreach (var id in expired) _typingExpiry.Remove(id);
+        RebuildTypingList();
+        StateHasChanged();
+    }
+
+    private void RebuildTypingList()
+    {
+        var newList = _typingExpiry.Keys.OrderBy(x => x).ToList();
+        if (!_othersTyping.SequenceEqual(newList))
+            _othersTyping = newList;
+    }
+
+    private async Task OnInputAsync(ChangeEventArgs e)
+    {
+        _send.Text = e.Value?.ToString() ?? "";
+
+        if (string.IsNullOrWhiteSpace(_send.Text)) return;
+
+        var now = DateTime.UtcNow;
+        if (now - _lastTypingHitUtc < TypingThrottle) return;
+        _lastTypingHitUtc = now;
+
+        try { await PresenceApi.StartTypingAsync(_userId, ChatId); }
+        catch { /* best-effort */ }
+    }
+
     private async Task SendAsync()
     {
         if (string.IsNullOrWhiteSpace(_send.Text)) return;
@@ -136,12 +252,29 @@ else
             await Mediator.Send(new SendMessageCommand(ChatId, _userId, _send.Text));
             _send = new SendModel();
             await ReloadMessagesAsync();
+            try { await PresenceApi.StopTypingAsync(_userId, ChatId); } catch { }
         }
         catch (Exception ex) { _sendError = ex.Message; }
         finally { _sending = false; }
     }
 
-    public void Dispose() => _poller?.Dispose();
+    public async ValueTask DisposeAsync()
+    {
+        _typingSubscription?.Dispose();
+        if (_poller is not null) await _poller.DisposeAsync();
+        try { await PresenceApi.StopTypingAsync(_userId, ChatId); } catch { }
+    }
+
+    private string DisplayName(Guid userId) =>
+        _usernames.TryGetValue(userId, out var name) ? name : userId.ToString()[..8];
+
+    private string TypingLabel(IReadOnlyCollection<Guid> users) => users.Count switch
+    {
+        0 => "",
+        1 => $"{DisplayName(users.First())} is typing…",
+        2 => $"{DisplayName(users.ElementAt(0))} and {DisplayName(users.ElementAt(1))} are typing…",
+        _ => $"{users.Count} people are typing…"
+    };
 
     private sealed class SendModel
     {

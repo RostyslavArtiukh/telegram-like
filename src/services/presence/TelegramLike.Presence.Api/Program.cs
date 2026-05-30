@@ -114,6 +114,16 @@ presence.MapGet("/typing/{chatId:guid}", async (
     return Results.Ok(dto);
 });
 
+presence.MapPost("/batch", async (
+    Guid[] userIds,
+    IMediator mediator,
+    CancellationToken ct) =>
+{
+    var result = await mediator.Send(
+        new TelegramLike.Presence.Application.Queries.GetBatchPresence.GetBatchPresenceQuery(userIds), ct);
+    return Results.Ok(result);
+});
+
 app.Run();
 
 static bool TryGetUserId(HttpContext httpContext, out Guid userId)
