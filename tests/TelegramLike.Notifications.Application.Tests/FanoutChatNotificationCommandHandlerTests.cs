@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MassTransit;
 using NSubstitute;
 using TelegramLike.Notifications.Application.Commands.FanoutChatNotification;
 using TelegramLike.Notifications.Domain.Aggregates;
@@ -10,8 +11,9 @@ namespace TelegramLike.Notifications.Application.Tests;
 public class FanoutChatNotificationCommandHandlerTests
 {
     private readonly INotificationRepository _notifications = Substitute.For<INotificationRepository>();
+    private readonly IPublishEndpoint _publish = Substitute.For<IPublishEndpoint>();
 
-    private FanoutChatNotificationCommandHandler Handler => new(_notifications);
+    private FanoutChatNotificationCommandHandler Handler => new(_notifications, _publish);
 
     [Fact]
     public async Task Creates_one_notification_per_recipient_except_actor()

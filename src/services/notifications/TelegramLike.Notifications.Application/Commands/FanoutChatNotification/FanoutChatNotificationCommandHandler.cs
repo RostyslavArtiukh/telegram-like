@@ -1,4 +1,6 @@
+using MassTransit;
 using MediatR;
+using TelegramLike.Contracts.Notifications;
 using TelegramLike.Notifications.Domain.Aggregates;
 using TelegramLike.Notifications.Domain.Repositories;
 using TelegramLike.Notifications.Domain.ValueObjects;
@@ -6,7 +8,8 @@ using TelegramLike.Notifications.Domain.ValueObjects;
 namespace TelegramLike.Notifications.Application.Commands.FanoutChatNotification;
 
 public sealed class FanoutChatNotificationCommandHandler(
-    INotificationRepository notificationRepository)
+    INotificationRepository notificationRepository,
+    IPublishEndpoint publishEndpoint)
     : IRequestHandler<FanoutChatNotificationCommand>
 {
     public async Task Handle(FanoutChatNotificationCommand request, CancellationToken cancellationToken)
@@ -36,5 +39,10 @@ public sealed class FanoutChatNotificationCommandHandler(
             .ToList();
 
         await notificationRepository.AddManyAsync(notifications, cancellationToken);
+
+        await publishEndpoint.Publish(new UnreadCountChangedIntegrationEvent(
+            EventId: Guid.NewGuid(),
+            OccurredAt: DateTime.UtcNow,
+            UserIds: recipients), cancellationToken);
     }
 }

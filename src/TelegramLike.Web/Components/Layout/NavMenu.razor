@@ -1,6 +1,8 @@
 @using TelegramLike.Web.Services
 @using TelegramLike.Web.Services.NotificationsApi
+@using TelegramLike.Web.Services.UnreadCount
 @inject INotificationsApi NotificationsApi
+@inject IUnreadCountPubSub UnreadCountPubSub
 @inject CurrentUserAccessor CurrentUser
 @implements IDisposable
 
@@ -52,24 +54,31 @@
 </div>
 
 @code {
+    private Guid _userId;
     private long _unread;
-    private Timer? _timer;
+    private IDisposable? _subscription;
 
     protected override async Task OnInitializedAsync()
-    {
-        await RefreshUnreadAsync();
-        _timer = new Timer(async _ => await InvokeAsync(RefreshUnreadAsync), null,
-            TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
-    }
-
-    private async Task RefreshUnreadAsync()
     {
         var userId = await CurrentUser.GetUserIdAsync();
         if (userId is null) return;
 
+        _userId = userId.Value;
+        await RefreshUnreadAsync();
+        _subscription = UnreadCountPubSub.Subscribe(_userId, OnUnreadChangedAsync);
+    }
+
+    private async Task OnUnreadChangedAsync()
+    {
+        await RefreshUnreadAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshUnreadAsync()
+    {
         try
         {
-            var count = await NotificationsApi.GetUnreadCountAsync(userId.Value);
+            var count = await NotificationsApi.GetUnreadCountAsync(_userId);
             if (count != _unread)
             {
                 _unread = count;
@@ -78,9 +87,9 @@
         }
         catch
         {
-            // Background refresh: swallow transient errors, retry on next tick.
+            // Best-effort: silently swallow transient errors.
         }
     }
 
-    public void Dispose() => _timer?.Dispose();
+    public void Dispose() => _subscription?.Dispose();
 }

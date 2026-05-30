@@ -1,9 +1,13 @@
+using MassTransit;
 using MediatR;
+using TelegramLike.Contracts.Notifications;
 using TelegramLike.Notifications.Domain.Repositories;
 
 namespace TelegramLike.Notifications.Application.Commands.MarkNotificationAsRead;
 
-public sealed class MarkNotificationAsReadCommandHandler(INotificationRepository repository)
+public sealed class MarkNotificationAsReadCommandHandler(
+    INotificationRepository repository,
+    IPublishEndpoint publishEndpoint)
     : IRequestHandler<MarkNotificationAsReadCommand>
 {
     public async Task Handle(MarkNotificationAsReadCommand request, CancellationToken cancellationToken)
@@ -16,5 +20,10 @@ public sealed class MarkNotificationAsReadCommandHandler(INotificationRepository
 
         notification.MarkAsRead();
         await repository.UpdateAsync(notification, cancellationToken);
+
+        await publishEndpoint.Publish(new UnreadCountChangedIntegrationEvent(
+            EventId: Guid.NewGuid(),
+            OccurredAt: DateTime.UtcNow,
+            UserIds: new[] { request.RecipientId }), cancellationToken);
     }
 }

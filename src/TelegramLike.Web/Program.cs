@@ -13,6 +13,7 @@ using TelegramLike.Web.Services.NewMessage;
 using TelegramLike.Web.Services.NotificationsApi;
 using TelegramLike.Web.Services.PresenceApi;
 using TelegramLike.Web.Services.Typing;
+using TelegramLike.Web.Services.UnreadCount;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,11 +50,13 @@ builder.Services.AddValidatorsFromAssembly(typeof(RegisterUserCommand).Assembly)
 
 builder.Services.AddSingleton<ITypingPubSub, TypingPubSub>();
 builder.Services.AddSingleton<INewMessagePubSub, NewMessagePubSub>();
+builder.Services.AddSingleton<IUnreadCountPubSub, UnreadCountPubSub>();
 
 builder.Services.AddInfrastructure(builder.Configuration, bus =>
 {
     bus.AddConsumer<UserTypingConsumer>();
     bus.AddConsumer<NewMessageConsumer>();
+    bus.AddConsumer<UnreadCountChangedConsumer>();
 });
 
 builder.Services.Configure<ServiceAuthOptions>(opts =>
