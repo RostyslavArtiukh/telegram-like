@@ -178,3 +178,13 @@
 **TODO:**
 - Real-time для `MessageRetractedIntegrationEvent` + `ReactionAdded` — той самий patern.
 - Optimistic UI: показувати власне повідомлення одразу після send без чекати реальний event back.
+
+## День 21 (2026-05-30): Real-time NavMenu unread badge ✅
+- Останній polling-точка прибрана. NavMenu badge тепер push.
+- **Новий event у Contracts:** `UnreadCountChangedIntegrationEvent(EventId, OccurredAt, UserIds: Guid[])` — signal-only payload (без count value, щоб уникнути stale-read race між конкурентними операціями).
+- **Notifications service publishes з 4 handlers:** `FanoutChatNotificationCommandHandler` (UserIds = recipients), `MarkNotificationAsReadCommandHandler` / `MarkAllNotificationsAsReadCommandHandler` / `MarkChatNotificationsAsReadCommandHandler` (UserIds = [actor]).
+- **Web:** `IUnreadCountPubSub` + `UnreadCountChangedConsumer` за тим самим patern як typing/messages. Consumer iterates UserIds → publish per-user у pubsub.
+- **NavMenu.razor:** замість `Timer` тепер `Subscribe(_userId, OnUnreadChangedAsync)` → refetch через `INotificationsApi.GetUnreadCountAsync` → `StateHasChanged`. Polling Timer видалений.
+- Цей patern третій раз reused (typing/messages/unread-count) — підтверджує що `IXPubSub` + `IConsumer` + RabbitMQ події = working real-time для Blazor Server без окремого SignalR Hub.
+
+**Наслідок:** усі UI-критичні події тепер push: typing, нові повідомлення, unread count. Polling залишився тільки у `Notifications.razor` (3 сек page state) і `RefreshPresenceAsync` у ChatView (3 сек online dots). Обидва теж можна push-ити при потребі.
