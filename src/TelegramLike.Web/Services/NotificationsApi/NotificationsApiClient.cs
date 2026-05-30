@@ -5,8 +5,6 @@ namespace TelegramLike.Web.Services.NotificationsApi;
 
 internal sealed class NotificationsApiClient(HttpClient http) : INotificationsApi
 {
-    public static readonly HttpRequestOptionsKey<Guid> UserIdKey = new("ServiceAuth.UserId");
-
     public async Task<NotificationFeedApiDto> GetFeedAsync(
         Guid userId,
         DateTime? beforeCreatedAt = null,
@@ -19,7 +17,7 @@ internal sealed class NotificationsApiClient(HttpClient http) : INotificationsAp
             query.Add($"before={Uri.EscapeDataString(beforeCreatedAt.Value.ToString("o"))}");
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/notifications/?" + string.Join("&", query));
-        request.Options.Set(UserIdKey, userId);
+        request.Options.Set(ServiceAuthHandler.UserIdKey, userId);
 
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
@@ -31,7 +29,7 @@ internal sealed class NotificationsApiClient(HttpClient http) : INotificationsAp
     public async Task<long> GetUnreadCountAsync(Guid userId, CancellationToken ct = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "/notifications/unread-count");
-        request.Options.Set(UserIdKey, userId);
+        request.Options.Set(ServiceAuthHandler.UserIdKey, userId);
 
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
@@ -43,7 +41,7 @@ internal sealed class NotificationsApiClient(HttpClient http) : INotificationsAp
     public async Task MarkAsReadAsync(Guid userId, Guid notificationId, CancellationToken ct = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, $"/notifications/{notificationId}/read");
-        request.Options.Set(UserIdKey, userId);
+        request.Options.Set(ServiceAuthHandler.UserIdKey, userId);
 
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
@@ -52,7 +50,7 @@ internal sealed class NotificationsApiClient(HttpClient http) : INotificationsAp
     public async Task MarkAllAsReadAsync(Guid userId, CancellationToken ct = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/notifications/read-all");
-        request.Options.Set(UserIdKey, userId);
+        request.Options.Set(ServiceAuthHandler.UserIdKey, userId);
 
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();

@@ -118,3 +118,24 @@
 - Smoke verify: `GET /notifications/unread-count` без token → `401`, з валідним → `200`
 - Цей паттерн готовий до reuse для наступних сервісів (Presence тощо) — той же `ServiceAuthHandler` працюватиме на будь-який downstream service
 - TODO: окремі секрети per-environment (зараз hardcoded у appsettings.json — для прода винести у secret manager); rotation policy
+
+## День 15 (2026-05-30): Presence як другий мікросервіс ✅
+- Створено 4 проекти у `src/services/presence/` (Domain/Application/Infrastructure/Api) за тим самим паттерном що й Notifications
+- Власна Mongo БД `telegramlike_presence` (колекція `user_presence`)
+- Спільний Redis container (ключі вже namespaced: `presence:`, `typing:`)
+- Власна ASP.NET Core minimal API на порту 8082: `POST /heartbeat`, `POST /offline`, `GET /{userId}`, `POST /typing/{chatId}/start|stop`, `GET /typing/{chatId}`
+- **JWT auth re-used з Day 14** — той же `ServiceTokenIssuer`/`ServiceAuthHandler` у Web, той же `AddJwtBearer` config у Presence.Api (copy-paste pattern)
+- Web BFF: `IPresenceApi` + `PresenceApiClient`, реєструється тим же `.AddHttpMessageHandler<ServiceAuthHandler>()` що й Notifications
+- `UserIdKey` винесено з `NotificationsApiClient` на `ServiceAuthHandler` (shared option key)
+- `MainLayout.razor` перейшов з `IMediator.Send(HeartbeatCommand)` на `IPresenceApi.HeartbeatAsync(userId)`
+- **Cross-context dependency dropped:** `StartTypingCommandHandler` більше не викликає `IChatRepository.GetByIdAsync` (Presence-service не має доступу до Chats БД). Trust JWT-authenticated caller. TODO: local membership read-model коли додамо typing UI.
+- Видалено з monolith: `src/TelegramLike.Domain/Presence/`, `src/TelegramLike.Application/Presence/` + `Common/Interfaces/IPresenceCache.cs`/`ITypingIndicatorService.cs`/`IUserPresenceQueryService.cs`, `Infrastructure/Caching/Redis/RedisPresence*.cs`/`RedisTyping*.cs`, `Infrastructure/Persistence/MongoDB/Repositories/UserPresence*.cs`
+- 102 тести зелені (9 проектів: monolith 41+18+8; Notifications 8+5+4; Presence 7+4+7)
+- Smoke OK: `curl POST /presence/heartbeat` без token → 401, з валідним → 204
+
+**Що цей день довів:** паттерн з Day 12+14 reusable. Кожен новий сервіс ≈ година роботи (5 csproj move + Api shell з copy-paste JWT setup + BFF client за template + 1 razor edit).
+
+**TODO:**
+- Окрема Mongo per service vs shared instance з різними DB names — для прода краще окрема (зараз shared instance). Для pet ОК.
+- Окремий Redis container для Presence — наразі shared. Якщо load зросте — split.
+- Local membership read-model у Presence (subscribe на MemberJoined/Left/Kicked events) — щоб відновити strict typing-validation.

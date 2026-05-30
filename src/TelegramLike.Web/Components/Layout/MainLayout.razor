@@ -1,9 +1,7 @@
 @inherits LayoutComponentBase
-@using MediatR
-@using TelegramLike.Application.Presence.Commands.GoOffline
-@using TelegramLike.Application.Presence.Commands.Heartbeat
 @using TelegramLike.Web.Services
-@inject IMediator Mediator
+@using TelegramLike.Web.Services.PresenceApi
+@inject IPresenceApi PresenceApi
 @inject CurrentUserAccessor CurrentUser
 @implements IAsyncDisposable
 
@@ -42,7 +40,7 @@
     private async Task SendHeartbeatAsync()
     {
         if (_userId is null) return;
-        try { await Mediator.Send(new HeartbeatCommand(_userId.Value)); }
+        try { await PresenceApi.HeartbeatAsync(_userId.Value); }
         catch { /* presence is best-effort */ }
     }
 
@@ -51,7 +49,7 @@
         if (_heartbeat is not null) await _heartbeat.DisposeAsync();
         if (_userId is not null)
         {
-            try { await Mediator.Send(new GoOfflineCommand(_userId.Value)); } catch { }
+            try { await PresenceApi.GoOfflineAsync(_userId.Value); } catch { }
         }
     }
 }

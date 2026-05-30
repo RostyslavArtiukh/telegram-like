@@ -10,7 +10,6 @@ using TelegramLike.Application.Messaging.IntegrationEvents;
 using TelegramLike.Domain.Chats.Repositories;
 using TelegramLike.Domain.Identity.Repositories;
 using TelegramLike.Domain.Messaging.Repositories;
-using TelegramLike.Domain.Presence.Repositories;
 using TelegramLike.Infrastructure.Auth;
 using TelegramLike.Infrastructure.Caching.Redis;
 using TelegramLike.Infrastructure.Outbox;
@@ -59,8 +58,6 @@ public static class DependencyInjection
         services.AddScoped<IMessageQueryService, MessageQueryService>();
         services.AddScoped<IHiddenMessageRepository, HiddenMessageRepository>();
         services.AddScoped<IMessageReadReceiptRepository, MessageReadReceiptRepository>();
-        services.AddScoped<IUserPresenceRepository, UserPresenceRepository>();
-        services.AddScoped<IUserPresenceQueryService, UserPresenceQueryService>();
     }
 
     private static void AddServices(this IServiceCollection services, IConfiguration configuration)
@@ -71,16 +68,6 @@ public static class DependencyInjection
         services.AddSingleton<ISessionService>(sp => new RedisSessionService(
             sp.GetRequiredService<IConnectionMultiplexer>(),
             TimeSpan.FromDays(ttlDays)));
-
-        var heartbeatTtl = TimeSpan.FromSeconds(
-            int.TryParse(configuration["Presence:HeartbeatTtlSeconds"], out var hb) ? hb : 30);
-        services.AddSingleton<IPresenceCache>(sp => new RedisPresenceCache(
-            sp.GetRequiredService<IConnectionMultiplexer>(), heartbeatTtl));
-
-        var typingTtl = TimeSpan.FromSeconds(
-            int.TryParse(configuration["Presence:TypingTtlSeconds"], out var tt) ? tt : 5);
-        services.AddSingleton<ITypingIndicatorService>(sp => new RedisTypingIndicatorService(
-            sp.GetRequiredService<IConnectionMultiplexer>(), typingTtl));
     }
 
     private static void AddOutbox(this IServiceCollection services, IConfiguration configuration)

@@ -41,6 +41,22 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Notifications.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Notifications.Api", "src\services\notifications\TelegramLike.Notifications.Api\TelegramLike.Notifications.Api.csproj", "{27C669AC-90E8-4F6F-B84C-41E6EFF03B62}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "presence", "presence", "{42FC3C26-1EF9-4902-A01E-E62BF419246F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Presence.Domain", "src\services\presence\TelegramLike.Presence.Domain\TelegramLike.Presence.Domain.csproj", "{0FA07131-0E56-4571-94B1-DBE15B7AB8DD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Presence.Application", "src\services\presence\TelegramLike.Presence.Application\TelegramLike.Presence.Application.csproj", "{BE4AA631-9CE1-4A65-A1AB-DA902A4B21B1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Presence.Infrastructure", "src\services\presence\TelegramLike.Presence.Infrastructure\TelegramLike.Presence.Infrastructure.csproj", "{0F234ED8-F098-4B80-8205-C4F41795C14A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Presence.Api", "src\services\presence\TelegramLike.Presence.Api\TelegramLike.Presence.Api.csproj", "{DF2F4C17-03CD-430C-9D11-9F5AC43D6CC4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Presence.Domain.Tests", "tests\TelegramLike.Presence.Domain.Tests\TelegramLike.Presence.Domain.Tests.csproj", "{41035181-3489-48E4-A8B5-C72EBEB94C3E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Presence.Application.Tests", "tests\TelegramLike.Presence.Application.Tests\TelegramLike.Presence.Application.Tests.csproj", "{CB9128A1-F86E-4809-BF6B-3440F0FB628B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Presence.Infrastructure.Tests", "tests\TelegramLike.Presence.Infrastructure.Tests\TelegramLike.Presence.Infrastructure.Tests.csproj", "{8931A227-7A24-445C-AE50-E4243CA053EC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -110,6 +126,34 @@ Global
 		{27C669AC-90E8-4F6F-B84C-41E6EFF03B62}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{27C669AC-90E8-4F6F-B84C-41E6EFF03B62}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{27C669AC-90E8-4F6F-B84C-41E6EFF03B62}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0FA07131-0E56-4571-94B1-DBE15B7AB8DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0FA07131-0E56-4571-94B1-DBE15B7AB8DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0FA07131-0E56-4571-94B1-DBE15B7AB8DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0FA07131-0E56-4571-94B1-DBE15B7AB8DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE4AA631-9CE1-4A65-A1AB-DA902A4B21B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE4AA631-9CE1-4A65-A1AB-DA902A4B21B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE4AA631-9CE1-4A65-A1AB-DA902A4B21B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE4AA631-9CE1-4A65-A1AB-DA902A4B21B1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0F234ED8-F098-4B80-8205-C4F41795C14A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F234ED8-F098-4B80-8205-C4F41795C14A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F234ED8-F098-4B80-8205-C4F41795C14A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F234ED8-F098-4B80-8205-C4F41795C14A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF2F4C17-03CD-430C-9D11-9F5AC43D6CC4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF2F4C17-03CD-430C-9D11-9F5AC43D6CC4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF2F4C17-03CD-430C-9D11-9F5AC43D6CC4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF2F4C17-03CD-430C-9D11-9F5AC43D6CC4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{41035181-3489-48E4-A8B5-C72EBEB94C3E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{41035181-3489-48E4-A8B5-C72EBEB94C3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{41035181-3489-48E4-A8B5-C72EBEB94C3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{41035181-3489-48E4-A8B5-C72EBEB94C3E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB9128A1-F86E-4809-BF6B-3440F0FB628B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB9128A1-F86E-4809-BF6B-3440F0FB628B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB9128A1-F86E-4809-BF6B-3440F0FB628B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB9128A1-F86E-4809-BF6B-3440F0FB628B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8931A227-7A24-445C-AE50-E4243CA053EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8931A227-7A24-445C-AE50-E4243CA053EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8931A227-7A24-445C-AE50-E4243CA053EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8931A227-7A24-445C-AE50-E4243CA053EC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C917E88E-409E-4B7F-8E31-F53F807FE9CB} = {357E275A-AF24-4194-993C-724141E5141B}
@@ -129,5 +173,13 @@ Global
 		{20C062B7-6124-4306-968F-F7BCC5C8B4FA} = {1ED90155-F0A1-4612-A37D-ECE771DB9421}
 		{A1680A74-9096-42D9-BE75-9A38440B46F9} = {1ED90155-F0A1-4612-A37D-ECE771DB9421}
 		{27C669AC-90E8-4F6F-B84C-41E6EFF03B62} = {1ED90155-F0A1-4612-A37D-ECE771DB9421}
+		{42FC3C26-1EF9-4902-A01E-E62BF419246F} = {090EE9D9-0584-430A-B334-668DDD1F99D5}
+		{0FA07131-0E56-4571-94B1-DBE15B7AB8DD} = {42FC3C26-1EF9-4902-A01E-E62BF419246F}
+		{BE4AA631-9CE1-4A65-A1AB-DA902A4B21B1} = {42FC3C26-1EF9-4902-A01E-E62BF419246F}
+		{0F234ED8-F098-4B80-8205-C4F41795C14A} = {42FC3C26-1EF9-4902-A01E-E62BF419246F}
+		{DF2F4C17-03CD-430C-9D11-9F5AC43D6CC4} = {42FC3C26-1EF9-4902-A01E-E62BF419246F}
+		{41035181-3489-48E4-A8B5-C72EBEB94C3E} = {8161A879-7D32-4130-9F3E-F10774B31A59}
+		{CB9128A1-F86E-4809-BF6B-3440F0FB628B} = {8161A879-7D32-4130-9F3E-F10774B31A59}
+		{8931A227-7A24-445C-AE50-E4243CA053EC} = {8161A879-7D32-4130-9F3E-F10774B31A59}
 	EndGlobalSection
 EndGlobal

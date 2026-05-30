@@ -64,6 +64,29 @@ services:
       ServiceAuth__Issuer: telegramlike-web
       ServiceAuth__Audience: telegramlike-services
 
+  presence:
+    build:
+      context: .
+      dockerfile: src/services/presence/TelegramLike.Presence.Api/Dockerfile
+    image: telegramlike-presence:latest
+    container_name: telegramlike-presence
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"
+      MongoDB__DatabaseName: telegramlike_presence
+      Redis__ConnectionString: "redis:6379"
+      ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
+      ServiceAuth__Issuer: telegramlike-web
+      ServiceAuth__Audience: telegramlike-services
+
   web:
     build:
       context: .
@@ -82,6 +105,8 @@ services:
         condition: service_healthy
       notifications:
         condition: service_started
+      presence:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"
@@ -91,6 +116,7 @@ services:
       RabbitMQ__Username: guest
       RabbitMQ__Password: guest
       NotificationsApi__BaseUrl: "http://notifications:8080"
+      PresenceApi__BaseUrl: "http://presence:8080"
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
       ServiceAuth__Issuer: telegramlike-web
       ServiceAuth__Audience: telegramlike-services

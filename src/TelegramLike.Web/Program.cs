@@ -9,6 +9,7 @@ using TelegramLike.Infrastructure;
 using TelegramLike.Web.Components;
 using TelegramLike.Web.Services;
 using TelegramLike.Web.Services.NotificationsApi;
+using TelegramLike.Web.Services.PresenceApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +50,13 @@ builder.Services.AddHttpClient<INotificationsApi, NotificationsApiClient>(client
 {
     var baseUrl = builder.Configuration["NotificationsApi:BaseUrl"]
                   ?? throw new InvalidOperationException("NotificationsApi:BaseUrl is not configured.");
+    client.BaseAddress = new Uri(baseUrl);
+}).AddHttpMessageHandler<ServiceAuthHandler>();
+
+builder.Services.AddHttpClient<IPresenceApi, PresenceApiClient>(client =>
+{
+    var baseUrl = builder.Configuration["PresenceApi:BaseUrl"]
+                  ?? throw new InvalidOperationException("PresenceApi:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl);
 }).AddHttpMessageHandler<ServiceAuthHandler>();
 
