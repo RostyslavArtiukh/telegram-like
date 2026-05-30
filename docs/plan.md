@@ -154,3 +154,17 @@
 - Bump RabbitMQ keepalive для typing exchange (зараз durable за замовчуванням — overhead для ephemeral; можна `Durable=false`)
 - Online polling замінити на push (UserCame/WentOnline integration events) — окремий день- Не показувати typing від себе у власному другому табі — фільтр `userId == _userId` (вже є)
 
+## День 18 (2026-05-30): Auto-mark notifications as read for active chat ✅
+- **UX bug fix:** badge notifications зростав навіть коли юзер активно у тому чаті де прийшло повідомлення.
+- **Notifications.Domain:** `INotificationRepository.MarkAllForChatAsReadAsync(recipientId, chatId, readAt)`
+- **Notifications.Application:** `MarkChatNotificationsAsReadCommand(RecipientId, ChatId)` + handler
+- **Notifications.Infrastructure:** Mongo filter `RecipientId == x AND Payload.ChatId == y AND Status != Read` → bulk update
+- **Notifications.Api:** `POST /notifications/chats/{chatId}/read` (auth required)
+- **Web BFF:** `INotificationsApi.MarkChatAsReadAsync(userId, chatId)` + `NotificationsApiClient`
+- **ChatView.razor:**
+  - На `OnInitializedAsync` → виклик `MarkChatNotificationsReadAsync()`
+  - У `ReloadMessagesAsync` → перевірка `grew = newCount > oldCount` → якщо так, теж викликає
+- **NavMenu badge** оновлюється через 10 сек (як було) — досить швидко для UX
+
+**TODO:**
+- Push для unread-count (зараз 10-сек polling) — окремий integration event `NotificationReadIntegrationEvent` через RabbitMQ + pubsub в Web (як typing).

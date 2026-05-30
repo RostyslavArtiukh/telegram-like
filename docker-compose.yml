@@ -126,6 +126,10 @@ services:
       ServiceAuth__Issuer: telegramlike-web
       ServiceAuth__Audience: telegramlike-services
       ServiceAuth__TokenLifetimeSeconds: "300"
+      DataProtection__KeysPath: /var/dp-keys
+    volumes:
+      - web_dp_keys:/var/dp-keys
 
 volumes:
   mongo_data:
+  web_dp_keys:

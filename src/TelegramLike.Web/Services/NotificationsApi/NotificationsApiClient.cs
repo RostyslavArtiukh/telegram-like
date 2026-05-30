@@ -56,5 +56,14 @@ internal sealed class NotificationsApiClient(HttpClient http) : INotificationsAp
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task MarkChatAsReadAsync(Guid userId, Guid chatId, CancellationToken ct = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/notifications/chats/{chatId}/read");
+        request.Options.Set(ServiceAuthHandler.UserIdKey, userId);
+
+        using var response = await http.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+    }
+
     private sealed record UnreadCountResponse(long Count);
 }

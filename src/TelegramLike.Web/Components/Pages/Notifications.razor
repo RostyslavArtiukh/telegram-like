@@ -7,6 +7,7 @@
 @inject CurrentUserAccessor CurrentUser
 @inject NavigationManager Nav
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 
 <PageTitle>Notifications</PageTitle>
 
@@ -60,8 +61,11 @@ else
 @code {
     private Guid _userId;
     private NotificationFeedApiDto? _feed;
-    private bool _unreadOnly;
+    // Default to unread-only so notifications cleared by chat-view (via MarkChatAsRead)
+    // disappear from the list automatically. User can toggle to see the full audit log.
+    private bool _unreadOnly = true;
     private bool _busy;
+    private Timer? _poller;
 
     protected override async Task OnInitializedAsync()
     {
@@ -69,11 +73,19 @@ else
         if (u is null) { Nav.NavigateTo("/login", forceLoad: true); return; }
         _userId = u.Value;
         await ReloadAsync();
+
+        _poller = new Timer(async _ => await InvokeAsync(ReloadAsync), null,
+            TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
     }
 
     private async Task ReloadAsync()
     {
-        _feed = await NotificationsApi.GetFeedAsync(_userId, unreadOnly: _unreadOnly);
+        try
+        {
+            _feed = await NotificationsApi.GetFeedAsync(_userId, unreadOnly: _unreadOnly);
+            StateHasChanged();
+        }
+        catch { /* keep last good state */ }
     }
 
     private async Task ToggleUnreadAsync(ChangeEventArgs e)
@@ -102,6 +114,11 @@ else
             await ReloadAsync();
         }
         finally { _busy = false; }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_poller is not null) await _poller.DisposeAsync();
     }
 
     private static string Describe(NotificationApiDto n) => n.Type switch

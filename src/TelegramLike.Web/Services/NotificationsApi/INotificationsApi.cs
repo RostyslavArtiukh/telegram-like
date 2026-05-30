@@ -16,4 +16,6 @@ public interface INotificationsApi
     Task MarkAsReadAsync(Guid userId, Guid notificationId, CancellationToken ct = default);
 
     Task MarkAllAsReadAsync(Guid userId, CancellationToken ct = default);
+
+    Task MarkChatAsReadAsync(Guid userId, Guid chatId, CancellationToken ct = default);
 }

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.DataProtection;
 using TelegramLike.Application.Common.Interfaces;
 using TelegramLike.Application.Identity.Commands.RegisterUser;
 using TelegramLike.Application.Identity.Queries.GetUserById;
@@ -13,6 +14,16 @@ using TelegramLike.Web.Services.PresenceApi;
 using TelegramLike.Web.Services.Typing;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Persist DataProtection keys across container restarts. Without this, every
+// rebuild generates ephemeral keys → existing auth cookies and antiforgery
+// tokens become undecryptable and every user has to re-login.
+var dataProtectionPath = builder.Configuration["DataProtection:KeysPath"]
+                         ?? Path.Combine(AppContext.BaseDirectory, "dp-keys");
+Directory.CreateDirectory(dataProtectionPath);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath))
+    .SetApplicationName("TelegramLike.Web");
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options => options.DetailedErrors = builder.Environment.IsDevelopment());

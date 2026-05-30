@@ -8,10 +8,12 @@
 @using TelegramLike.Application.Messaging.Queries
 @using TelegramLike.Application.Messaging.Queries.GetChatMessages
 @using TelegramLike.Web.Services
+@using TelegramLike.Web.Services.NotificationsApi
 @using TelegramLike.Web.Services.PresenceApi
 @using TelegramLike.Web.Services.Typing
 @inject IMediator Mediator
 @inject IPresenceApi PresenceApi
+@inject INotificationsApi NotificationsApi
 @inject ITypingPubSub TypingPubSub
 @inject CurrentUserAccessor CurrentUser
 @inject NavigationManager Nav
@@ -128,6 +130,7 @@ else
         await LoadUsernamesAsync();
         await ReloadMessagesAsync();
         await RefreshPresenceAsync();
+        await MarkChatNotificationsReadAsync();
 
         _typingSubscription = TypingPubSub.Subscribe(ChatId, OnRemoteTypingAsync);
 
@@ -170,10 +173,21 @@ else
         try
         {
             var page = await Mediator.Send(new GetChatMessagesQuery(ChatId, _userId));
+            var grew = page.Items.Count > _messages.Count;
             _messages = page.Items.ToList();
             StateHasChanged();
+
+            // If new messages arrived while we're actively viewing this chat,
+            // clear the matching notifications so NavMenu badge doesn't tick up.
+            if (grew) await MarkChatNotificationsReadAsync();
         }
         catch { /* keep last good state */ }
+    }
+
+    private async Task MarkChatNotificationsReadAsync()
+    {
+        try { await NotificationsApi.MarkChatAsReadAsync(_userId, ChatId); }
+        catch { /* best-effort */ }
     }
 
     private async Task RefreshPresenceAsync()

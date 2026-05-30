@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using TelegramLike.Notifications.Api.Mapping;
 using TelegramLike.Notifications.Application.Commands.MarkAllNotificationsAsRead;
+using TelegramLike.Notifications.Application.Commands.MarkChatNotificationsAsRead;
 using TelegramLike.Notifications.Application.Commands.MarkNotificationAsRead;
 using TelegramLike.Notifications.Application.Queries.GetNotificationFeed;
 using TelegramLike.Notifications.Application.Queries.GetUnreadCount;
@@ -111,6 +112,19 @@ notifications.MapPost("/read-all", async (
         return Results.Unauthorized();
 
     await mediator.Send(new MarkAllNotificationsAsReadCommand(userId), ct);
+    return Results.NoContent();
+});
+
+notifications.MapPost("/chats/{chatId:guid}/read", async (
+    Guid chatId,
+    HttpContext httpContext,
+    IMediator mediator,
+    CancellationToken ct) =>
+{
+    if (!TryGetUserId(httpContext, out var userId))
+        return Results.Unauthorized();
+
+    await mediator.Send(new MarkChatNotificationsAsReadCommand(userId, chatId), ct);
     return Results.NoContent();
 });
 

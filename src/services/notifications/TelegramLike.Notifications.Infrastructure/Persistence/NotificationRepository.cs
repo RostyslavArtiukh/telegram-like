@@ -46,4 +46,18 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
 
         return _notifications.UpdateManyAsync(filter, update, cancellationToken: ct);
     }
+
+    public Task MarkAllForChatAsReadAsync(Guid recipientId, Guid chatId, DateTime readAt, CancellationToken ct = default)
+    {
+        var filter = Builders<NotificationDocument>.Filter.And(
+            Builders<NotificationDocument>.Filter.Eq(n => n.RecipientId, recipientId),
+            Builders<NotificationDocument>.Filter.Eq(n => n.Payload.ChatId, chatId),
+            Builders<NotificationDocument>.Filter.Ne(n => n.Status, NotificationStatus.Read));
+
+        var update = Builders<NotificationDocument>.Update
+            .Set(n => n.Status, NotificationStatus.Read)
+            .Set(n => n.ReadAt, readAt);
+
+        return _notifications.UpdateManyAsync(filter, update, cancellationToken: ct);
+    }
 }
