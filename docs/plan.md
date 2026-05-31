@@ -254,3 +254,15 @@
 **TODO:**
 - Backfill: запустити одноразовий job який читає `chat_members` з Chats БД і насіє read-model. Тоді можна tighten StartTyping до fail-closed (`throw new InvalidOperationException` для non-members) — це справжня security boundary.
 - Опціонально: подібну read-model можна реюзати у Notifications/інших майбутніх сервісах якщо їм треба знати membership.
+
+## Step 26 (2026-05-31): Shared `telegramlike` RabbitMQ vhost ✅
+- **Тех-борг (cosmetic):** усі MassTransit DI використовували hardcoded `"/"` (дефолтний RabbitMQ vhost). Якщо broker shared з іншим app — exchanges/queues конфліктували б у management UI; нічого не відділяло TelegramLike топологію.
+- **Що НЕ робили (і чому):** справжній vhost-per-service (`/notifications`, `/presence` тощо) ламає cross-service routing — RabbitMQ не маршрутизує між vhost'ами без `rabbitmq-shovel` чи `rabbitmq-federation` plugins. Це M+ робота, не cosmetic. Свідомо обмежились до namespace-ізоляції на рівні всієї системи.
+- **DI patern:** у всіх 3 `AddIntegrationMessaging` (`Infrastructure`, `Notifications.Infrastructure`, `Presence.Infrastructure`) додано `var vhost = configuration["RabbitMQ:VirtualHost"] ?? "/"` + `cfg.Host(host, vhost, ...)`. Дефолт `/` зберігає local `dotnet run` working без compose.
+- **docker-compose:**
+  - `rabbitmq.environment.RABBITMQ_DEFAULT_VHOST: telegramlike` — RabbitMQ створить vhost при першому старті і guest-юзер автоматично отримає до нього доступ.
+  - Усі 3 сервіси (`web`, `notifications`, `presence`) отримали `RabbitMQ__VirtualHost: telegramlike`.
+- **Verify:** `docker exec telegramlike-rabbitmq rabbitmqctl list_vhosts` → тільки `telegramlike` (дефолтний `/` не існує бо `RABBITMQ_DEFAULT_VHOST` його замінив). `list_exchanges -p telegramlike` показує всі наші exchanges (`MessageSent`, `MemberJoined/Kicked/Left`, `TelegramLike.Contracts.*`). 115/115 тестів proходять (Testcontainers Rabbit/Mongo не зачеплені).
+
+**TODO:**
+- Якщо колись захочемо реальної per-service ізоляції — `rabbitmq-shovel` plugin із static config який forward-ить cross-service events між vhost'ами. Або federation з upstream/downstream. Не зараз.

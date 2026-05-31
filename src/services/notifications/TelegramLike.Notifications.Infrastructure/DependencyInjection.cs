@@ -38,6 +38,7 @@ public static class DependencyInjection
         var host = configuration["RabbitMQ:Host"] ?? "localhost";
         var username = configuration["RabbitMQ:Username"] ?? "guest";
         var password = configuration["RabbitMQ:Password"] ?? "guest";
+        var vhost = configuration["RabbitMQ:VirtualHost"] ?? "/";
 
         services.AddMassTransit(bus =>
         {
@@ -47,7 +48,7 @@ public static class DependencyInjection
 
             bus.UsingRabbitMq((ctx, cfg) =>
             {
-                cfg.Host(host, "/", h =>
+                cfg.Host(host, vhost, h =>
                 {
                     h.Username(username);
                     h.Password(password);

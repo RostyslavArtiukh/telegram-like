@@ -33,6 +33,11 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    environment:
+      # Namespace TelegramLike traffic in its own vhost so the broker stays
+      # tidy if another app shares it. True per-service vhosts would need
+      # shovel/federation and break cross-service routing — out of scope.
+      RABBITMQ_DEFAULT_VHOST: telegramlike
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -65,6 +70,7 @@ services:
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: guest
       RabbitMQ__Password: guest
+      RabbitMQ__VirtualHost: telegramlike
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
       ServiceAuth__Issuer: telegramlike-web
       ServiceAuth__Audience: telegramlike-services
@@ -98,6 +104,7 @@ services:
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: guest
       RabbitMQ__Password: guest
+      RabbitMQ__VirtualHost: telegramlike
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
       ServiceAuth__Issuer: telegramlike-web
       ServiceAuth__Audience: telegramlike-services
@@ -130,6 +137,7 @@ services:
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: guest
       RabbitMQ__Password: guest
+      RabbitMQ__VirtualHost: telegramlike
       NotificationsApi__BaseUrl: "http://notifications:8080"
       PresenceApi__BaseUrl: "http://presence:8080"
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"

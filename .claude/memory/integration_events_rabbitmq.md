@@ -44,7 +44,7 @@ metadata:
 - Outbox-level DLQ (Step 23): poison message після `Outbox:MaxRetries` (default 5) переходить у `DeadLetteredAt != null` стан і виключається з `GetPendingAsync`. Replay поки ручний (clear `DeadLetteredAt` + reset `Retries` через Mongo shell). RabbitMQ-side DLQ/retry policies (MassTransit `UseDelayedRedelivery`) — НЕ налаштовано.
 
 **Конфіги:**
-- `RabbitMQ:Host/Username/Password` у appsettings.json (у docker-compose — env vars `RabbitMQ__Host=rabbitmq`).
+- `RabbitMQ:Host/Username/Password/VirtualHost` у appsettings.json (у docker-compose — env vars `RabbitMQ__Host=rabbitmq`, `RabbitMQ__VirtualHost=telegramlike`). `VirtualHost` default — `/` для local dev; у docker — `telegramlike` (Step 26).
 - `Outbox:PollIntervalSeconds` (default 2), `Outbox:BatchSize` (default 50), `Outbox:MaxRetries` (default 5, після нього → DLQ).
 
 **Тести:**
