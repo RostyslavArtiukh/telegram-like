@@ -365,3 +365,16 @@
 - `IChatsApi.GetChatTypeAsync(chatId)` — для `IsBroadcast` flag (можна об'єднати з GetChatById endpoint).
 - `IChatsApi.IsModeratorAsync(chatId, userId)` — для `ActorIsModerator`.
 - Web BFF читає `IsPremium` з cookie/session перед `AddReactionCommand`.
+
+## Step 32 (2026-05-31): Chats/Messaging extraction — Phase 3 (Infrastructure) ✅
+- **Chats.Infrastructure**: скопійовано `ChatDocument` + `ChatMemberDocument` + `ChatRepository` (дві колекції з Mongo транзакцією) + `ChatQueryService`. Outbox під власним namespace (`OutboxPublisherOptions/Message/Document/IOutboxStore/MongoOutboxStore/IDomainEventDispatcher/OutboxDomainEventDispatcher/OutboxPublisherHostedService`) — повна автономність, ніяких залежностей від моноліту. `DependencyInjection.AddChatsInfrastructure` реєструє Mongo/Repos/Outbox/MassTransit з `vhost: telegramlike`.
+- **Messaging.Infrastructure**: скопійовано `MessageDocument` (з `AttachmentDocument/ReactionDocument/ForwardReferenceDocument`) + `MessageRepository` + `MessageQueryService` + `HiddenMessageRepository` + `MessageReadReceiptRepository`. Окремий Outbox bundle (як у Chats). `DependencyInjection.AddMessagingInfrastructure` аналогічно реєструє все.
+- **Колекції Mongo:** обидва сервіси використовують ту ж саму базу `telegramlike` поки що (single-DB, multiple-services підхід — без cross-service writes завдяки aggregate boundaries). Phase 7 розгляне per-service DB.
+- **Outbox isolation:** кожен сервіс має власну колекцію `outbox` (поки в спільній БД) і власний publisher loop — fanout до власних integration events працює незалежно.
+- **NuGet:** додано MassTransit 8.3, MassTransit.RabbitMQ 8.3, MediatR 14.1, MongoDB.Driver 3.8, Microsoft.Extensions.{Configuration/DI/Hosting/Logging/Options}.Abstractions 10.0.7.
+- **Тести:** 118/118 (нічого не змінено у production коді — нові Infrastructure проекти ще ніким не використовуються; integration tests з'являться у Phase 4 разом з Api).
+
+**TODO для Phase 4 (Api shells):**
+- 2× Program.cs з: JWT auth (Bearer + JwtServiceAuth scheme як у Notifications/Presence), HealthChecks (Mongo + masstransit-bus), OpenTelemetry → Jaeger, MediatR registration.
+- Minimal API endpoints за кожною Command/Query.
+- Dockerfile + appsettings.json.
