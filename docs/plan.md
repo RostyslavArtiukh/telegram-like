@@ -378,3 +378,27 @@
 - 2× Program.cs з: JWT auth (Bearer + JwtServiceAuth scheme як у Notifications/Presence), HealthChecks (Mongo + masstransit-bus), OpenTelemetry → Jaeger, MediatR registration.
 - Minimal API endpoints за кожною Command/Query.
 - Dockerfile + appsettings.json.
+
+## Step 33 (2026-05-31): Chats/Messaging extraction — Phase 4 (Api shells) ✅
+- **Chats.Api (port 8083):** Program.cs з JWT Bearer auth (issuer=telegramlike-web, audience=telegramlike-services, same secret як у Notifications/Presence), OpenTelemetry → Jaeger (`telegramlike.chats` service name), HealthChecks (Mongo + auto `masstransit-bus`), MediatR. 11 endpoints у групі `/chats` (всі `RequireAuthorization`):
+  - GET `/chats/my`, `/chats/{id}`, `/chats/{id}/members`
+  - POST `/chats/direct`, `/chats/group`, `/chats/broadcast` (повертають 201 + `ChatCreatedResponse`)
+  - POST `/chats/{id}/join`, `/chats/{id}/leave`, `/chats/{id}/members/{userId}/kick`, `/chats/{id}/members/{userId}/role`, `/chats/{id}/transfer-ownership`
+  - PATCH `/chats/{id}` (rename)
+- **Messaging.Api (port 8084):** аналогічно. 8 endpoints:
+  - POST `/messages/` (send), GET `/messages/{id}`
+  - POST `/messages/{id}/reactions`, DELETE `/messages/{id}/reactions/{emoji}`, POST `/messages/{id}/retract`, `/read`, `/hide`
+  - GET `/chats/{id}/messages` (paged)
+- **JsonStringEnumConverter** включено в обидва сервіси — enum'и (ChatType/MemberRole/MemberStatus/AttachmentType/Emoji) серіалізуються як strings, щоб Web BFF Phase 5 міг мати свої власні enum types без посилань на Chats.Domain/Messaging.Domain.
+- **`UserId` витягується з JWT** (`sub` claim → Guid). Body request DTOs (CreateGroupChatRequest тощо) НЕ містять userId — це йде з токена.
+- **`SafeSend`/`SafeSendVoid` helpers** обгортають handler-throws: `InvalidOperationException`/`ArgumentException` → 400, `UnauthorizedAccessException` → 403. Patern збігається з тим, що використано у Notifications.Api.
+- **Dockerfile** + **appsettings.json** (з окремими БД: `telegramlike_chats`, `telegramlike_messaging`) + **launchSettings.json** (8083/8084) — за зразком Notifications.Api.
+- **NuGet:** додано до обох Api: AspNetCore.HealthChecks.MongoDb 9.0, MediatR 14.1, Microsoft.AspNetCore.Authentication.JwtBearer 9.0, OpenTelemetry.{Exporter.OpenTelemetryProtocol,Extensions.Hosting,Instrumentation.AspNetCore,Instrumentation.Http} 1.15.x.
+- **Тести:** 118/118 (нічого не змінено у production коді — нові Api запускаються самостійно як shells, ще не підключені до docker-compose і Web BFF).
+
+**TODO для Phase 5 (Web BFF):**
+- Створити `IChatsApi` + `IMessagingApi` HttpClient-абстракції у `TelegramLike.Web/Services/`.
+- Перенести razor pages з `IMediator.Send(...)` на `IChatsApi.CreateGroupChatAsync(...)` тощо.
+- BFF робить `GetActiveRecipientsAsync` + `GetChatTypeAsync` + `IsModeratorAsync` через ChatsApi перед викликом MessagingApi (для відновлення Recipients/IsBroadcast/ActorIsModerator).
+- `IsPremium` з cookie/session.
+- JWT issuer = "telegramlike-web", token підписується тим же ServiceAuth:JwtSecret що використовується у Chats/Messaging Api.
