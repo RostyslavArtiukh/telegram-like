@@ -435,3 +435,26 @@
 - Видалити з моноліту `src/TelegramLike.Domain/Chats/`, `src/TelegramLike.Domain/Messaging/`, `src/TelegramLike.Application/Chats/`, `src/TelegramLike.Application/Messaging/`, `src/TelegramLike.Infrastructure/Persistence/MongoDB/Repositories/{Chat*,Message*,HiddenMessage*}`.
 - Прибрати з `TelegramLike.Infrastructure/DependencyInjection.cs` реєстрацію `IChatRepository`/`IMessageRepository`/тощо + IntegrationEvent mappers Chats/Messaging.
 - Видалити з `TelegramLike.Application.Tests` + `TelegramLike.Infrastructure.Tests` тести для Chats/Messaging.
+
+## Step 36 (2026-05-31): Chats/Messaging extraction — Phase 6 (Monolith cleanup) ✅
+- **Видалено з `TelegramLike.Domain`:** усі папки `Chats/` (19 файлів — Aggregates/Entities/Events/Repositories/ValueObjects) та `Messaging/` (14 файлів). Лишилися лише `Common/` і `Identity/`.
+- **Видалено з `TelegramLike.Application`:** усі папки `Chats/` (32 файли — Commands + Validators + Queries + IntegrationEvents) та `Messaging/` (22 файли). Видалено також `Common/Interfaces/IChatQueryService.cs`, `IMessageQueryService.cs`, `IHiddenMessageRepository.cs`, `IMessageReadReceiptRepository.cs`. Лишилися `Common/Interfaces/IPasswordHasher.cs` + `ISessionService.cs`, `Common/IntegrationEvents/IIntegrationEventMapper.cs` (зберігаємо для майбутніх Identity-events), і весь `Identity/`.
+- **Видалено з `TelegramLike.Infrastructure`:** усі 11 Mongo repo файлів для Chat/ChatMember/ChatQueryService/Message/MessageQueryService/HiddenMessage/MessageReadReceipt. Лишилися лише `UserDocument.cs` + `UserRepository.cs`.
+- **Тримінг `TelegramLike.Infrastructure/DependencyInjection.cs`:**
+  - Прибрано всі `IChatRepository`/`IChatQueryService`/`IMessageRepository`/`IMessageQueryService`/`IHiddenMessageRepository`/`IMessageReadReceiptRepository` реєстрації — `AddRepositories` тепер реєструє тільки `IUserRepository`.
+  - Прибрано 7 `IIntegrationEventMapper` реєстрацій з `AddOutbox`. Outbox stack (Options/Store/Dispatcher/HostedService) **залишено** — дрімає до того часу як з'являться нові Identity events. Коментар у коді пояснює це рішення.
+  - `AddIntegrationMessaging` залишено — Web BFF продовжує реєструвати pubsub consumers (UserTyping/NewMessage/ChatChanged/Presence) через `configureBus` callback.
+- **Видалення тестових проектів:**
+  - `tests/TelegramLike.Domain.Tests/Chats/` (3 files) і `tests/TelegramLike.Domain.Tests/Messaging/` (1 file) — видалено; Domain.Tests тепер має тільки Identity (7 тестів).
+  - `tests/TelegramLike.Application.Tests/` — **видалено повністю** (тільки Chats+Messaging тести були). Прибрано з .sln.
+  - `tests/TelegramLike.Infrastructure.Tests/` — **видалено повністю** (ChatRepositoryIntegrationTests + OutboxIntegrationTests, обидва залежали від монолітного Domain/Application). Прибрано з .sln. Outbox функціональність тестується тепер per-service (Notifications.Infrastructure.Tests, Presence.Infrastructure.Tests мають свої інтеграційні тести).
+- **Build clean.** Тестів **57/57** (зменшилось з 118 за рахунок видалених Chats/Messaging тестів; вони відтепер живуть у новій структурі тестів коли вона з'явиться у Phase 7+).
+- **Web BFF та monolith більше не мають жодного compile-time зв'язку з Chats/Messaging Domain/Application** — реалізації existed ONLY у `src/services/{chats,messaging}/`. Моноліт = Identity + BFF + спільна Infrastructure (Mongo/Redis/RabbitMQ wiring + outbox shell).
+- **Runtime caveat:** без запущених Chats.Api (8083) і Messaging.Api (8084) razor pages впадуть на HTTP requests. Phase 7 додасть це у docker-compose.
+
+**TODO для Phase 7:**
+- `docker-compose.yml`: 2 нові services `chats` + `messaging` з healthchecks (`depends_on: mongo healthy, rabbitmq healthy`).
+- `Web` додає `depends_on: chats/messaging healthy`.
+- env vars: `ChatsApi__BaseUrl=http://chats:8080`, `MessagingApi__BaseUrl=http://messaging:8080`, `ServiceAuth__*` (той самий JWT secret).
+- Healthcheck routes у нових Api вже існують (Phase 4), curl присутній у Dockerfile.
+- Smoke test: створити group chat → надіслати message → побачити у NavMenu unread badge.
