@@ -53,6 +53,11 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
+      interval: 10s
+      start_period: 20s
+      retries: 5
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"
@@ -80,6 +85,11 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
+      interval: 10s
+      start_period: 20s
+      retries: 5
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"
@@ -109,9 +119,9 @@ services:
       rabbitmq:
         condition: service_healthy
       notifications:
-        condition: service_started
+        condition: service_healthy
       presence:
-        condition: service_started
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"

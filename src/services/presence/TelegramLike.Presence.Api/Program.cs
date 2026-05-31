@@ -3,7 +3,10 @@ using System.Security.Claims;
 using System.Text;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using MongoDB.Driver;
 using TelegramLike.Presence.Application.Commands.GoOffline;
 using TelegramLike.Presence.Application.Commands.Heartbeat;
 using TelegramLike.Presence.Application.Commands.StartTyping;
@@ -45,10 +48,40 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 
+var redisConnectionString = builder.Configuration["Redis:ConnectionString"]
+                            ?? throw new InvalidOperationException("Redis:ConnectionString is not configured.");
+
+// MassTransit auto-registers a "masstransit-bus" health check with the "ready"
+// tag, so we only add Mongo and Redis probes here. Avoiding the AspNetCore
+// RabbitMQ health-check package dodges a version clash with MassTransit 8.3.
+builder.Services.AddHealthChecks()
+    .AddMongoDb(
+        sp => sp.GetRequiredService<IMongoClient>(),
+        name: "mongo",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "ready" })
+    .AddRedis(
+        redisConnectionString: redisConnectionString,
+        name: "redis",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "ready" });
+
 var app = builder.Build();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Liveness: the process is up. No external probes.
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+});
+
+// Readiness: all downstream dependencies (Mongo, RabbitMQ, Redis) are reachable.
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = c => c.Tags.Contains("ready")
+});
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 

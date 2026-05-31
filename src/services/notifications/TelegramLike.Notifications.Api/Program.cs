@@ -3,7 +3,10 @@ using System.Security.Claims;
 using System.Text;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using MongoDB.Driver;
 using TelegramLike.Notifications.Api.Mapping;
 using TelegramLike.Notifications.Application.Commands.MarkAllNotificationsAsRead;
 using TelegramLike.Notifications.Application.Commands.MarkChatNotificationsAsRead;
@@ -45,11 +48,36 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 
+// MassTransit auto-registers a "masstransit-bus" health check with the "ready"
+// tag (it goes Healthy once the RabbitMQ bus is connected) — we only need to
+// add the database probe ourselves. Avoiding AspNetCore.HealthChecks.Rabbitmq
+// here also dodges a RabbitMQ.Client major-version clash with MassTransit 8.3.
+builder.Services.AddHealthChecks()
+    .AddMongoDb(
+        sp => sp.GetRequiredService<IMongoClient>(),
+        name: "mongo",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "ready" });
+
 var app = builder.Build();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Liveness: the process is up and the pipeline responds. No external probes.
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+});
+
+// Readiness: all downstream dependencies (Mongo, RabbitMQ) are reachable.
+// docker-compose `depends_on: condition: service_healthy` waits on this.
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = c => c.Tags.Contains("ready")
+});
+
+// Legacy alias kept so callers that already use /health keep working.
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 var notifications = app.MapGroup("/notifications").RequireAuthorization();

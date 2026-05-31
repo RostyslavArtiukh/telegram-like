@@ -216,3 +216,21 @@
 **TODO:**
 - Endpoint/CLI для replay DLQ messages (manual ack: clear `DeadLetteredAt` + reset `Retries`) — поки операція ручна через Mongo shell.
 - Той самий patern для consumers у Notifications (RabbitMQ has own DLX, але app-level fail handling теж знадобиться).
+
+## Step 24 (2026-05-31): Health checks + compose `depends_on: service_healthy` ✅
+- **Тех-борг:** `web` сервіс мав `depends_on: notifications/presence: condition: service_started` — стартував коли downstream-процеси тільки відкрились на порту, але не обов'язково готові обслуговувати. На холодному старті compose-стеку перші запити з UI летіли у не-ready сервіс і отримували 5xx, поки той ще під'єднувався до Mongo/RabbitMQ/Redis.
+- **Apis (Notifications + Presence):**
+  - NuGet: `AspNetCore.HealthChecks.MongoDb` 9.0.0, `AspNetCore.HealthChecks.Redis` 9.0.0 (тільки Presence).
+  - **Чому НЕ `AspNetCore.HealthChecks.Rabbitmq`:** ця бібліотека у 9.x тягне `RabbitMQ.Client 7.x` (async API), а MassTransit 8.3 побудований на `RabbitMQ.Client 6.x` (sync) — на старті падає `MissingMethodException: ConnectionFactory.CreateConnection(IList<string>, string)`. **MassTransit сам авто-реєструє `masstransit-bus` health check з тегом `"ready"`**, тому ніяких додаткових пакетів не треба.
+  - Wiring у Program.cs: `AddHealthChecks().AddMongoDb(...).AddRedis(...)` з тегом `"ready"`.
+  - Два endpoints: `/health/live` (predicate `_ => false` — лише доводить що pipeline жива) і `/health/ready` (`Tags.Contains("ready")` — Mongo + RabbitMQ + Redis якщо є). Legacy `/health` лишився щоб старі smoke-скрипти не зламались.
+- **Dockerfiles:** `apt-get install curl` у final image (потрібен для compose healthcheck CMD).
+- **docker-compose.yml:**
+  - `notifications` і `presence` отримали `healthcheck: curl -fsS http://localhost:8080/health/ready` (interval 10s, retries 5, start_period 20s).
+  - `web.depends_on.notifications/presence` тепер `condition: service_healthy` (раніше `service_started`).
+- **Smoke verify:** `docker compose up -d notifications presence` → дочекатись `healthy` → `curl http://localhost:8081/health/ready` повертає `Healthy`, те саме для :8082. `web` стартує тільки коли обидва сервіси `healthy`.
+- **Тести:** 107/107 (нічого не зламалося, нових тестів не додано — perf/health checks — runtime-only поведінка, юніт-тести не дають value).
+
+**TODO:**
+- Healthcheck для `web` (Blazor) — можна додати окремий aspnet HealthChecks UI для observability на одній сторінці. Зараз `web` стартує без depends_on healthcheck на самого себе (це і не треба).
+- Окремий liveness vs readiness у kubernetes-стилі: liveness restart pod якщо процес завис; readiness виключає з load balancer. У docker-compose різниці немає, але код вже готовий до k8s.
