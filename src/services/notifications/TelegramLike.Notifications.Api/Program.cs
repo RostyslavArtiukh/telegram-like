@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using TelegramLike.Notifications.Api.Mapping;
 using TelegramLike.Notifications.Application.Commands.MarkAllNotificationsAsRead;
 using TelegramLike.Notifications.Application.Commands.MarkChatNotificationsAsRead;
@@ -47,6 +49,21 @@ builder.Services
         };
     });
 builder.Services.AddAuthorization();
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService(
+        serviceName: "telegramlike.notifications",
+        serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0"))
+    .WithTracing(t =>
+    {
+        t.AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddSource("MassTransit");
+
+        var otlpEndpoint = builder.Configuration["Tracing:OtlpEndpoint"];
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+            t.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+    });
 
 // MassTransit auto-registers a "masstransit-bus" health check with the "ready"
 // tag (it goes Healthy once the RabbitMQ bus is connected) — we only need to

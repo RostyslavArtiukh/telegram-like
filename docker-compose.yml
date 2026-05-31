@@ -26,6 +26,18 @@ services:
       - "6379:6379"
     command: redis-server --save "" --appendonly no
 
+  jaeger:
+    # all-in-one bundles collector + storage + UI. Accepts OTLP gRPC on 4317
+    # and serves the UI on 16686. Memory-only storage — fine for local dev.
+    image: jaegertracing/all-in-one:1.60
+    container_name: telegramlike-jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC receiver
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: telegramlike-rabbitmq
@@ -71,6 +83,7 @@ services:
       RabbitMQ__Username: guest
       RabbitMQ__Password: guest
       RabbitMQ__VirtualHost: telegramlike
+      Tracing__OtlpEndpoint: "http://jaeger:4317"
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
       ServiceAuth__Issuer: telegramlike-web
       ServiceAuth__Audience: telegramlike-services
@@ -105,6 +118,7 @@ services:
       RabbitMQ__Username: guest
       RabbitMQ__Password: guest
       RabbitMQ__VirtualHost: telegramlike
+      Tracing__OtlpEndpoint: "http://jaeger:4317"
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
       ServiceAuth__Issuer: telegramlike-web
       ServiceAuth__Audience: telegramlike-services
@@ -138,6 +152,7 @@ services:
       RabbitMQ__Username: guest
       RabbitMQ__Password: guest
       RabbitMQ__VirtualHost: telegramlike
+      Tracing__OtlpEndpoint: "http://jaeger:4317"
       NotificationsApi__BaseUrl: "http://notifications:8080"
       PresenceApi__BaseUrl: "http://presence:8080"
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"

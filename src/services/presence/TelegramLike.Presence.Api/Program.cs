@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using TelegramLike.Presence.Application.Commands.GoOffline;
 using TelegramLike.Presence.Application.Commands.Heartbeat;
 using TelegramLike.Presence.Application.Commands.StartTyping;
@@ -50,6 +52,21 @@ builder.Services.AddAuthorization();
 
 var redisConnectionString = builder.Configuration["Redis:ConnectionString"]
                             ?? throw new InvalidOperationException("Redis:ConnectionString is not configured.");
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService(
+        serviceName: "telegramlike.presence",
+        serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0"))
+    .WithTracing(t =>
+    {
+        t.AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddSource("MassTransit");
+
+        var otlpEndpoint = builder.Configuration["Tracing:OtlpEndpoint"];
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+            t.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+    });
 
 // MassTransit auto-registers a "masstransit-bus" health check with the "ready"
 // tag, so we only add Mongo and Redis probes here. Avoiding the AspNetCore

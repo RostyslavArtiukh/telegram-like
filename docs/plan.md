@@ -266,3 +266,24 @@
 
 **TODO:**
 - Якщо колись захочемо реальної per-service ізоляції — `rabbitmq-shovel` plugin із static config який forward-ить cross-service events між vhost'ами. Або federation з upstream/downstream. Не зараз.
+
+## Step 27 (2026-05-31): OpenTelemetry tracing → Jaeger ✅
+- **Тех-борг:** не було способу побачити end-to-end flow Web → Notifications/Presence — лог-кореляція ручна (greps по timestamp). Тепер кожен HTTP-запит і кожна RabbitMQ-подія мають traceId, що пов'язує всі spans в одну стрічку.
+- **Інструментація:**
+  - `OpenTelemetry.Extensions.Hosting` + `OpenTelemetry.Instrumentation.AspNetCore` (incoming HTTP) + `OpenTelemetry.Instrumentation.Http` (outgoing HttpClient у Web) + `OpenTelemetry.Exporter.OpenTelemetryProtocol` (OTLP/gRPC).
+  - `AddSource("MassTransit")` — MassTransit має свій `ActivitySource`, тому publish/consume автоматично потрапляють у трейс. Trace context (traceparent) injects/extracts через RabbitMQ message headers.
+  - **Не покрито:** MongoDB.Driver і StackExchange.Redis spans — потребують окремих instrumentation packages. Перші big-picture spans важливіші, додам пізніше якщо буде потреба.
+- **Resource attributes:** `service.name` = `telegramlike.web` / `.notifications` / `.presence`; `service.version` з assembly version.
+- **OTLP endpoint:** конфіг `Tracing:OtlpEndpoint`. Якщо порожній — exporter не реєструється (silent no-op для `dotnet run` без compose). У docker — `http://jaeger:4317`.
+- **docker-compose:**
+  - Новий сервіс `jaeger` — `jaegertracing/all-in-one:1.60`. Ports `16686` (UI), `4317` (OTLP gRPC). Memory-only storage. `COLLECTOR_OTLP_ENABLED=true` щоб приймати OTLP (раніше було тільки Jaeger native protocol).
+  - Web/Notifications/Presence отримали `Tracing__OtlpEndpoint=http://jaeger:4317`.
+  - **Notice:** спочатку взяв тег `1.62`, але такого нема в Docker Hub — actual latest 1.x branch це `1.60` (далі Jaeger перейшов на v2 з іншою CLI). Зафіксував `1.60`.
+- **Smoke verify:** `docker compose up -d` → всі сервіси healthy → `curl http://localhost:16686/api/services` повертає `["telegramlike.web", "telegramlike.notifications", "telegramlike.presence"]`. ASP.NET Core spans з повним набором тегів (`http.request.method`, `http.response.status_code`, `url.path`, `network.protocol.version`).
+- **Що побачите при реальному flow:** заходимо у Web → відкриваємо чат → надсилаємо повідомлення → у Jaeger UI: span "POST /chats/.../send" (Web) → child "INSERT messages" (Mongo, як додамо) → "outbox.publish MessageSentIntegrationEvent" (MassTransit) → через RabbitMQ → "consume MessageSentIntegrationEvent" (Notifications) → child "INSERT notifications". Усе одна traceID.
+- **Тести:** 115/115 (OTel не зачіпає тестову поверхню — exporter NoOp у тестах бо `Tracing:OtlpEndpoint` не виставлено).
+
+**TODO:**
+- Mongo + Redis instrumentation (`MongoDB.Driver.Core.Extensions.DiagnosticSources` + `OpenTelemetry.Instrumentation.StackExchangeRedis`). Дадуть DB-level spans з query times, дуже корисно для perf.
+- Sampling policy: зараз 100% trace rate (always-on). Для prod треба `TraceIdRatioBased(0.1)` або head-based sampling щоб не залити Jaeger.
+- Metrics + Logs через OTel (зараз тільки traces). Той самий exporter може шлити три типи signal-ів.

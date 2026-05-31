@@ -7,6 +7,7 @@
 - [microservices_migration.md](microservices_migration.md) — Інкрементальна міграція з monolith у мікросервіси; прогрес і архітектурні рішення
 - [service_auth_jwt.md](service_auth_jwt.md) — JWT auth між Web BFF і downstream сервісами; рецепт додавання auth до нового сервісу
 - [realtime_blazor_pubsub.md](realtime_blazor_pubsub.md) — Real-time UI через RabbitMQ → in-memory pubsub → Blazor circuit (без окремого SignalR Hub)
+- [observability_tracing.md](observability_tracing.md) — OpenTelemetry → Jaeger; як додавати spans і пропагація через HTTP+RabbitMQ
 - [testing_setup.md](testing_setup.md) — xUnit + FluentAssertions + NSubstitute + Testcontainers; directConnection fix для Mongo
 - [permissions_preference.md](permissions_preference.md) — Юзер не хоче постійних prompts; широкий allowlist у settings.local.json
 - [nomenclature_step_not_day.md](nomenclature_step_not_day.md) — Маркувати нові ітерації як "Step N" а не "Day N" (продовжувати нумерацію після Day 21)

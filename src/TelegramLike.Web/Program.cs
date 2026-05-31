@@ -3,6 +3,8 @@ using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using TelegramLike.Application.Common.Interfaces;
 using TelegramLike.Application.Identity.Commands.RegisterUser;
 using TelegramLike.Application.Identity.Queries.GetUserById;
@@ -26,6 +28,27 @@ Directory.CreateDirectory(dataProtectionPath);
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath))
     .SetApplicationName("TelegramLike.Web");
+
+// End-to-end traces from this Web BFF down to Notifications/Presence and through
+// RabbitMQ. MassTransit publishes its own ActivitySource named "MassTransit", so
+// adding it as a source captures outbox-publish + consumer spans automatically.
+// OTLP endpoint defaults to the Jaeger sidecar in docker-compose; for local
+// `dotnet run` without compose, leave Tracing:OtlpEndpoint unset and tracing
+// becomes a no-op exporter (won't fail).
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService(
+        serviceName: "telegramlike.web",
+        serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0"))
+    .WithTracing(t =>
+    {
+        t.AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddSource("MassTransit");
+
+        var otlpEndpoint = builder.Configuration["Tracing:OtlpEndpoint"];
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+            t.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+    });
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options => options.DetailedErrors = builder.Environment.IsDevelopment());
