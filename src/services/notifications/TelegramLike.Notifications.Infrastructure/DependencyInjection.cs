@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddMongoDB(configuration);
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<INotificationQueryService, NotificationQueryService>();
+        services.AddHostedService<NotificationIndexInitializer>();
         services.AddIntegrationMessaging(configuration);
         return services;
     }

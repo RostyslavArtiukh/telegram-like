@@ -1,6 +1,8 @@
 using FluentAssertions;
 using MassTransit;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using TelegramLike.Contracts.Notifications;
 using TelegramLike.Notifications.Application.Commands.FanoutChatNotification;
 using TelegramLike.Notifications.Domain.Aggregates;
 using TelegramLike.Notifications.Domain.Repositories;
@@ -13,7 +15,13 @@ public class FanoutChatNotificationCommandHandlerTests
     private readonly INotificationRepository _notifications = Substitute.For<INotificationRepository>();
     private readonly IPublishEndpoint _publish = Substitute.For<IPublishEndpoint>();
 
-    private FanoutChatNotificationCommandHandler Handler => new(_notifications, _publish);
+    private FanoutChatNotificationCommandHandler Handler => new(
+        _notifications, _publish, NullLogger<FanoutChatNotificationCommandHandler>.Instance);
+
+    private void StubAcceptAll() =>
+        _notifications.AddManyIgnoringDuplicatesAsync(
+                Arg.Any<IReadOnlyCollection<Notification>>(), Arg.Any<CancellationToken>())
+            .Returns(call => ((IReadOnlyCollection<Notification>)call[0]).Count);
 
     [Fact]
     public async Task Creates_one_notification_per_recipient_except_actor()
@@ -24,8 +32,9 @@ public class FanoutChatNotificationCommandHandlerTests
         var member2 = Guid.NewGuid();
 
         IReadOnlyCollection<Notification>? captured = null;
-        _notifications.AddManyAsync(Arg.Do<IReadOnlyCollection<Notification>>(n => captured = n), Arg.Any<CancellationToken>())
-            .Returns(Task.CompletedTask);
+        _notifications.AddManyIgnoringDuplicatesAsync(
+                Arg.Do<IReadOnlyCollection<Notification>>(n => captured = n), Arg.Any<CancellationToken>())
+            .Returns(call => ((IReadOnlyCollection<Notification>)call[0]).Count);
 
         await Handler.Handle(
             new FanoutChatNotificationCommand(
@@ -33,6 +42,7 @@ public class FanoutChatNotificationCommandHandlerTests
                 ActorId: actor,
                 Type: NotificationType.NewMessage,
                 Recipients: new[] { member1, member2 },
+                SourceEventId: Guid.NewGuid(),
                 MessageId: Guid.NewGuid()),
             CancellationToken.None);
 
@@ -47,8 +57,9 @@ public class FanoutChatNotificationCommandHandlerTests
         var other = Guid.NewGuid();
 
         IReadOnlyCollection<Notification>? captured = null;
-        _notifications.AddManyAsync(Arg.Do<IReadOnlyCollection<Notification>>(n => captured = n), Arg.Any<CancellationToken>())
-            .Returns(Task.CompletedTask);
+        _notifications.AddManyIgnoringDuplicatesAsync(
+                Arg.Do<IReadOnlyCollection<Notification>>(n => captured = n), Arg.Any<CancellationToken>())
+            .Returns(call => ((IReadOnlyCollection<Notification>)call[0]).Count);
 
         await Handler.Handle(
             new FanoutChatNotificationCommand(
@@ -56,6 +67,7 @@ public class FanoutChatNotificationCommandHandlerTests
                 ActorId: actor,
                 Type: NotificationType.NewMessage,
                 Recipients: new[] { other, actor },
+                SourceEventId: Guid.NewGuid(),
                 MessageId: Guid.NewGuid()),
             CancellationToken.None);
 
@@ -71,10 +83,11 @@ public class FanoutChatNotificationCommandHandlerTests
                 ActorId: Guid.NewGuid(),
                 Type: NotificationType.NewMessage,
                 Recipients: [],
+                SourceEventId: Guid.NewGuid(),
                 MessageId: Guid.NewGuid()),
             CancellationToken.None);
 
-        await _notifications.DidNotReceive().AddManyAsync(
+        await _notifications.DidNotReceive().AddManyIgnoringDuplicatesAsync(
             Arg.Any<IReadOnlyCollection<Notification>>(), Arg.Any<CancellationToken>());
     }
 
@@ -87,6 +100,7 @@ public class FanoutChatNotificationCommandHandlerTests
                 ActorId: Guid.NewGuid(),
                 Type: NotificationType.NewMessage,
                 Recipients: new[] { Guid.NewGuid() },
+                SourceEventId: Guid.NewGuid(),
                 MessageId: null),
             CancellationToken.None);
 
@@ -96,15 +110,38 @@ public class FanoutChatNotificationCommandHandlerTests
     [Fact]
     public async Task MemberJoined_without_message_id_succeeds()
     {
+        StubAcceptAll();
+
         await Handler.Handle(
             new FanoutChatNotificationCommand(
                 ChatId: Guid.NewGuid(),
                 ActorId: Guid.NewGuid(),
                 Type: NotificationType.MemberJoined,
-                Recipients: new[] { Guid.NewGuid() }),
+                Recipients: new[] { Guid.NewGuid() },
+                SourceEventId: Guid.NewGuid()),
             CancellationToken.None);
 
-        await _notifications.Received(1).AddManyAsync(
+        await _notifications.Received(1).AddManyIgnoringDuplicatesAsync(
             Arg.Any<IReadOnlyCollection<Notification>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Skips_unread_count_publish_when_all_were_duplicates()
+    {
+        _notifications.AddManyIgnoringDuplicatesAsync(
+                Arg.Any<IReadOnlyCollection<Notification>>(), Arg.Any<CancellationToken>())
+            .Returns(0);
+
+        await Handler.Handle(
+            new FanoutChatNotificationCommand(
+                ChatId: Guid.NewGuid(),
+                ActorId: Guid.NewGuid(),
+                Type: NotificationType.NewMessage,
+                Recipients: new[] { Guid.NewGuid() },
+                SourceEventId: Guid.NewGuid(),
+                MessageId: Guid.NewGuid()),
+            CancellationToken.None);
+
+        await _publish.DidNotReceiveWithAnyArgs().Publish<UnreadCountChangedIntegrationEvent>(default!);
     }
 }

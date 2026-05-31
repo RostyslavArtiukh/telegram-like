@@ -10,6 +10,8 @@ public interface INotificationRepository
 
     Task AddManyAsync(IReadOnlyCollection<Notification> notifications, CancellationToken ct = default);
 
+    Task<int> AddManyIgnoringDuplicatesAsync(IReadOnlyCollection<Notification> notifications, CancellationToken ct = default);
+
     Task UpdateAsync(Notification notification, CancellationToken ct = default);
 
     Task MarkAllAsReadAsync(Guid recipientId, DateTime readAt, CancellationToken ct = default);

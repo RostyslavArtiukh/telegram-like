@@ -15,7 +15,7 @@ public class NotificationTests
     {
         var recipient = Guid.NewGuid();
 
-        var n = Notification.Create(recipient, NotificationType.NewMessage, AnyPayload());
+        var n = Notification.Create(recipient, NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
 
         n.RecipientId.Should().Be(recipient);
         n.Status.Should().Be(NotificationStatus.Pending);
@@ -26,14 +26,31 @@ public class NotificationTests
     [Fact]
     public void Create_with_empty_recipient_throws()
     {
-        var act = () => Notification.Create(Guid.Empty, NotificationType.NewMessage, AnyPayload());
+        var act = () => Notification.Create(Guid.Empty, NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
         act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Create_with_empty_source_event_id_throws()
+    {
+        var act = () => Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), Guid.Empty);
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Create_persists_source_event_id_for_idempotency()
+    {
+        var sourceEventId = Guid.NewGuid();
+
+        var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), sourceEventId);
+
+        n.SourceEventId.Should().Be(sourceEventId);
     }
 
     [Fact]
     public void MarkAsDelivered_transitions_pending_to_delivered()
     {
-        var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload());
+        var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
 
         n.MarkAsDelivered();
 
@@ -43,7 +60,7 @@ public class NotificationTests
     [Fact]
     public void MarkAsDelivered_after_read_is_noop()
     {
-        var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload());
+        var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
         n.MarkAsRead();
 
         n.MarkAsDelivered();
@@ -54,7 +71,7 @@ public class NotificationTests
     [Fact]
     public void MarkAsRead_sets_read_at_and_raises_event()
     {
-        var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload());
+        var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
 
         n.MarkAsRead();
 
@@ -66,7 +83,7 @@ public class NotificationTests
     [Fact]
     public void MarkAsRead_twice_does_not_raise_extra_event()
     {
-        var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload());
+        var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
         n.MarkAsRead();
         n.ClearDomainEvents();
 

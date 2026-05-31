@@ -187,4 +187,17 @@
 - **NavMenu.razor:** замість `Timer` тепер `Subscribe(_userId, OnUnreadChangedAsync)` → refetch через `INotificationsApi.GetUnreadCountAsync` → `StateHasChanged`. Polling Timer видалений.
 - Цей patern третій раз reused (typing/messages/unread-count) — підтверджує що `IXPubSub` + `IConsumer` + RabbitMQ події = working real-time для Blazor Server без окремого SignalR Hub.
 
+## Step 22 (2026-05-31): Notification fanout — ідемпотентність ✅
+- **Bug clousure:** RabbitMQ at-least-once + outbox-publisher retry → одна `MessageSentIntegrationEvent` могла бути доставлена двічі → у юзера створювалось 2 Notification документи + badge стрибав на +2. Тепер консьюмери ідемпотентні.
+- **Domain:** `Notification` отримав поле `SourceEventId` (з валідацією `≠ Guid.Empty`); `Create(...)` приймає його 4-м параметром.
+- **Application:** `FanoutChatNotificationCommand` має `SourceEventId`; усі 3 консьюмери (`MessageSentConsumer` / `MemberJoinedConsumer` / `MemberKickedConsumer`) пробросують `context.Message.EventId` як source-id.
+- **Infrastructure:**
+  - `INotificationRepository.AddManyIgnoringDuplicatesAsync(...)` — `InsertManyAsync` з `IsOrdered=false`, ловить `MongoBulkWriteException`, рахує duplicate-key (code 11000) як "вже вставлено", решту прокидає.
+  - `NotificationIndexInitializer : IHostedService` на старті створює unique compound index `{RecipientId, SourceEventId}` з `PartialFilterExpression: Exists("SourceEventId")` — partial щоб legacy документи без поля не падали.
+- **Handler:** якщо всі notifications виявились дублями (`inserted == 0`) — не публікує `UnreadCountChangedIntegrationEvent` (нічого не змінилось, нащо будити UI).
+- **Tests:** +2 domain tests (empty source-event-id throws, source-event-id persists), +1 application test (skips publish при 0 inserted). Інтеграційний тест на duplicate-insert не доданий (потребує Docker, можна додати наступним кроком).
+- **Що НЕ змінилось:** existing data не торкнули — partial index ігнорує old rows. Перший relaunch створює індекс, далі — захист працює.
+- **Naming:** перший запис під новим "Step N" іменуванням (замість "Day N"), див. memory `nomenclature_step_not_day.md`.
+
+
 **Наслідок:** усі UI-критичні події тепер push: typing, нові повідомлення, unread count. Polling залишився тільки у `Notifications.razor` (3 сек page state) і `RefreshPresenceAsync` у ChatView (3 сек online dots). Обидва теж можна push-ити при потребі.

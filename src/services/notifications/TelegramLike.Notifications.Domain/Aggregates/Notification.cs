@@ -12,6 +12,7 @@ public sealed class Notification : AggregateRoot
     public NotificationStatus Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? ReadAt { get; private set; }
+    public Guid SourceEventId { get; private set; }
 
     private Notification() { }
 
@@ -22,7 +23,8 @@ public sealed class Notification : AggregateRoot
         NotificationPayload payload,
         NotificationStatus status,
         DateTime createdAt,
-        DateTime? readAt)
+        DateTime? readAt,
+        Guid sourceEventId)
         : base(id)
     {
         RecipientId = recipientId;
@@ -31,12 +33,19 @@ public sealed class Notification : AggregateRoot
         Status = status;
         CreatedAt = createdAt;
         ReadAt = readAt;
+        SourceEventId = sourceEventId;
     }
 
-    public static Notification Create(Guid recipientId, NotificationType type, NotificationPayload payload)
+    public static Notification Create(
+        Guid recipientId,
+        NotificationType type,
+        NotificationPayload payload,
+        Guid sourceEventId)
     {
         if (recipientId == Guid.Empty)
             throw new ArgumentException("RecipientId cannot be empty.", nameof(recipientId));
+        if (sourceEventId == Guid.Empty)
+            throw new ArgumentException("SourceEventId cannot be empty.", nameof(sourceEventId));
 
         var notification = new Notification(
             Guid.NewGuid(),
@@ -45,7 +54,8 @@ public sealed class Notification : AggregateRoot
             payload,
             NotificationStatus.Pending,
             DateTime.UtcNow,
-            readAt: null);
+            readAt: null,
+            sourceEventId);
 
         notification.RaiseDomainEvent(new NotificationCreatedEvent(
             notification.Id, recipientId, type, payload));
@@ -60,8 +70,9 @@ public sealed class Notification : AggregateRoot
         NotificationPayload payload,
         NotificationStatus status,
         DateTime createdAt,
-        DateTime? readAt)
-        => new(id, recipientId, type, payload, status, createdAt, readAt);
+        DateTime? readAt,
+        Guid sourceEventId)
+        => new(id, recipientId, type, payload, status, createdAt, readAt, sourceEventId);
 
     public void MarkAsDelivered()
     {

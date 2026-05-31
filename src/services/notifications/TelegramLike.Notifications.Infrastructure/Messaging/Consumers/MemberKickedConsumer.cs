@@ -14,6 +14,7 @@ internal sealed class MemberKickedConsumer(IMediator mediator) : IConsumer<Membe
                 ChatId: context.Message.ChatId,
                 ActorId: context.Message.KickedBy,
                 Type: NotificationType.MemberKicked,
-                Recipients: context.Message.Recipients),
+                Recipients: context.Message.Recipients,
+                SourceEventId: context.Message.EventId),
             context.CancellationToken);
 }

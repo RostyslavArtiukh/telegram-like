@@ -15,6 +15,7 @@ internal sealed class MessageSentConsumer(IMediator mediator) : IConsumer<Messag
                 ActorId: context.Message.AuthorId,
                 Type: NotificationType.NewMessage,
                 Recipients: context.Message.Recipients,
+                SourceEventId: context.Message.EventId,
                 MessageId: context.Message.MessageId),
             context.CancellationToken);
 }

@@ -10,4 +10,5 @@ public sealed record FanoutChatNotificationCommand(
     Guid ActorId,
     NotificationType Type,
     IReadOnlyList<Guid> Recipients,
+    Guid SourceEventId,
     Guid? MessageId = null) : IRequest;

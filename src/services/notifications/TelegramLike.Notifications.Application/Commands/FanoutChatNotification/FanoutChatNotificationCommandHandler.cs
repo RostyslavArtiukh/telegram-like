@@ -1,5 +1,6 @@
 using MassTransit;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using TelegramLike.Contracts.Notifications;
 using TelegramLike.Notifications.Domain.Aggregates;
 using TelegramLike.Notifications.Domain.Repositories;
@@ -9,7 +10,8 @@ namespace TelegramLike.Notifications.Application.Commands.FanoutChatNotification
 
 public sealed class FanoutChatNotificationCommandHandler(
     INotificationRepository notificationRepository,
-    IPublishEndpoint publishEndpoint)
+    IPublishEndpoint publishEndpoint,
+    ILogger<FanoutChatNotificationCommandHandler> logger)
     : IRequestHandler<FanoutChatNotificationCommand>
 {
     public async Task Handle(FanoutChatNotificationCommand request, CancellationToken cancellationToken)
@@ -35,10 +37,17 @@ public sealed class FanoutChatNotificationCommandHandler(
         };
 
         var notifications = recipients
-            .Select(r => Notification.Create(r, request.Type, payload))
+            .Select(r => Notification.Create(r, request.Type, payload, request.SourceEventId))
             .ToList();
 
-        await notificationRepository.AddManyAsync(notifications, cancellationToken);
+        var inserted = await notificationRepository.AddManyIgnoringDuplicatesAsync(notifications, cancellationToken);
+
+        if (inserted < notifications.Count)
+            logger.LogInformation(
+                "Fanout {EventId}: {Inserted}/{Total} new notifications (rest were redeliveries)",
+                request.SourceEventId, inserted, notifications.Count);
+
+        if (inserted == 0) return;
 
         await publishEndpoint.Publish(new UnreadCountChangedIntegrationEvent(
             EventId: Guid.NewGuid(),

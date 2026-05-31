@@ -27,6 +27,33 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
         return _notifications.InsertManyAsync(docs, cancellationToken: ct);
     }
 
+    public async Task<int> AddManyIgnoringDuplicatesAsync(
+        IReadOnlyCollection<Notification> notifications,
+        CancellationToken ct = default)
+    {
+        if (notifications.Count == 0) return 0;
+
+        var docs = notifications.Select(NotificationDocument.FromDomain).ToList();
+        try
+        {
+            await _notifications.InsertManyAsync(
+                docs,
+                new InsertManyOptions { IsOrdered = false },
+                ct);
+            return docs.Count;
+        }
+        catch (MongoBulkWriteException<NotificationDocument> ex)
+        {
+            // Duplicate-key (11000) errors come from the unique (RecipientId, SourceEventId) index
+            // → safe to ignore: another redelivery of the same integration event already wrote this row.
+            // Anything else is a real failure → rethrow.
+            var nonDuplicate = ex.WriteErrors.Where(e => e.Category != ServerErrorCategory.DuplicateKey).ToList();
+            if (nonDuplicate.Count > 0) throw;
+
+            return docs.Count - ex.WriteErrors.Count;
+        }
+    }
+
     public Task UpdateAsync(Notification notification, CancellationToken ct = default)
         => _notifications.ReplaceOneAsync(
             Builders<NotificationDocument>.Filter.Eq(n => n.Id, notification.Id),

@@ -15,7 +15,8 @@ public class NotificationRepositoryIntegrationTests(MongoFixture fx)
     private static Notification New(Guid recipient) => Notification.Create(
         recipient,
         NotificationType.NewMessage,
-        NotificationPayload.ForNewMessage(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+        NotificationPayload.ForNewMessage(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()),
+        Guid.NewGuid());
 
     [Fact]
     public async Task AddMany_then_GetUnreadCount_matches_input()

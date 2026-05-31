@@ -14,6 +14,7 @@ internal sealed class MemberJoinedConsumer(IMediator mediator) : IConsumer<Membe
                 ChatId: context.Message.ChatId,
                 ActorId: context.Message.UserId,
                 Type: NotificationType.MemberJoined,
-                Recipients: context.Message.Recipients),
+                Recipients: context.Message.Recipients,
+                SourceEventId: context.Message.EventId),
             context.CancellationToken);
 }

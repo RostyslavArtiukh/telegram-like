@@ -26,6 +26,10 @@ internal sealed class NotificationDocument
 
     public DateTime? ReadAt { get; set; }
 
+    [BsonRepresentation(BsonType.String)]
+    [BsonIgnoreIfDefault]
+    public Guid SourceEventId { get; set; }
+
     public static NotificationDocument FromDomain(Notification notification) => new()
     {
         Id = notification.Id,
@@ -39,7 +43,8 @@ internal sealed class NotificationDocument
         },
         Status = notification.Status,
         CreatedAt = notification.CreatedAt,
-        ReadAt = notification.ReadAt
+        ReadAt = notification.ReadAt,
+        SourceEventId = notification.SourceEventId
     };
 
     public Notification ToDomain() => Notification.Reconstitute(
@@ -49,7 +54,8 @@ internal sealed class NotificationDocument
         NotificationPayload.Reconstitute(Payload.ChatId, Payload.MessageId, Payload.ActorId),
         Status,
         CreatedAt,
-        ReadAt);
+        ReadAt,
+        SourceEventId);
 }
 
 internal sealed class NotificationPayloadDocument
