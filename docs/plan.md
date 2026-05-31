@@ -234,3 +234,23 @@
 **TODO:**
 - Healthcheck для `web` (Blazor) — можна додати окремий aspnet HealthChecks UI для observability на одній сторінці. Зараз `web` стартує без depends_on healthcheck на самого себе (це і не треба).
 - Окремий liveness vs readiness у kubernetes-стилі: liveness restart pod якщо процес завис; readiness виключає з load balancer. У docker-compose різниці немає, але код вже готовий до k8s.
+
+## Step 25 (2026-05-31): Local membership read-model у Presence ✅
+- **Тех-борг (з Day 15):** при винесенні Presence у окремий сервіс прибрали `IChatRepository.GetByIdAsync` виклик у `StartTypingCommandHandler` (Presence БД не має таблиці чатів). Замість справжньої membership-валідації — trust JWT-authenticated caller. Тепер відновлено через event-driven локальну read-модель.
+- **Contracts:** новий `MemberLeftIntegrationEvent(EventId, OccurredAt, ChatId, UserId)`. У monolith додано mapper `MemberLeftEventMapper` + registered у `AddOutbox` — domain event `MemberLeftEvent` тепер дренує у outbox як інші membership-події.
+- **Presence.Application:** `IChatMembershipReadModel` interface з 3 операціями: `IsActiveMemberAsync`, `UpsertActiveAsync`, `RemoveAsync`.
+- **Presence.Infrastructure:**
+  - `MongoChatMembershipReadModel` — колекція `chat_memberships` у `telegramlike_presence`. Document Id = `"{chatId:N}:{userId:N}"` (composite key — природня унікальність + idempotent upserts без окремого індексу).
+  - 3 consumers (`MemberJoinedConsumer` / `MemberKickedConsumer` / `MemberLeftConsumer`) — тонкі pass-through до read-model. Зареєстровані у `AddMassTransit(bus => bus.AddConsumer<>())` + `ConfigureEndpoints` (раніше у Presence ConfigureEndpoints не викликався — лише publish-only).
+- **StartTypingCommandHandler:** перед `typingService.StartTypingAsync` запитує `IChatMembershipReadModel.IsActiveMemberAsync`. **Fail-open поведінка:** якщо read-model не знає про пару — лог warning і пропускає (бо існуючі чати створені до цієї фічі НЕ у read-model). Це навмисний тимчасовий компроміс — закоментовано у коді, plan-ується замінити на fail-closed коли буде backfill.
+- **Tests:** +6 integration tests у Presence.Infrastructure (`ChatMembershipReadModelIntegrationTests`) — Mongo Testcontainers, upsert/remove/idempotency/isolation. +2 unit у Presence.Application (`StartTypingCommandHandlerTests`) — active member path і fail-open warning path. 115/115 pass (поспіл з Step 23: 107).
+- **Side fix:** `Testcontainers.Redis` bump 3.10.0 → 4.12.0 через сумісність із новим `Testcontainers.MongoDb` 4.12.0 (старі major-version core несумісні).
+
+**Гарантії:**
+- Presence сервіс лишається **autonomous** — не має доступу до Chats БД. Read-model це local materialized view на свої події з RabbitMQ.
+- **Eventually consistent:** є вікно ~outbox poll (2с) + RabbitMQ delivery між Join і фактичним відбиттям у read-model. Для UX typing — несуттєво.
+- **Idempotent:** RabbitMQ at-least-once → upsert повторно безпечний (composite key); remove повторно — no-op.
+
+**TODO:**
+- Backfill: запустити одноразовий job який читає `chat_members` з Chats БД і насіє read-model. Тоді можна tighten StartTyping до fail-closed (`throw new InvalidOperationException` для non-members) — це справжня security boundary.
+- Опціонально: подібну read-model можна реюзати у Notifications/інших майбутніх сервісах якщо їм треба знати membership.

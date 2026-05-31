@@ -86,6 +86,7 @@ public static class DependencyInjection
         services.AddSingleton<IIntegrationEventMapper, MessageSentEventMapper>();
         services.AddSingleton<IIntegrationEventMapper, MemberJoinedEventMapper>();
         services.AddSingleton<IIntegrationEventMapper, MemberKickedEventMapper>();
+        services.AddSingleton<IIntegrationEventMapper, MemberLeftEventMapper>();
 
         services.AddScoped<IOutboxStore, MongoOutboxStore>();
         services.AddScoped<IDomainEventDispatcher, OutboxDomainEventDispatcher>();

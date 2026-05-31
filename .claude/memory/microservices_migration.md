@@ -107,12 +107,25 @@ metadata:
 - **JWT auth повністю reused** — той же `ServiceAuthHandler` (Web) тепер обслуговує і Notifications, і Presence. `UserIdKey` перенесено з `NotificationsApiClient` на `ServiceAuthHandler` (shared option key).
 - Web BFF: `IPresenceApi` + `PresenceApiClient` за паттерном Notifications. Реєстрація `AddHttpClient<IPresenceApi, PresenceApiClient>().AddHttpMessageHandler<ServiceAuthHandler>()`.
 - `MainLayout.razor` шле heartbeat кожні 20 сек через `IPresenceApi`, GoOffline на dispose.
-- **Cross-context dropped:** `StartTypingCommandHandler` більше НЕ викликає `IChatRepository.GetByIdAsync` — Presence-сервіс не має доступу до Chats БД. Зараз trust JWT-authenticated caller. Для відновлення — підписатись на `MemberJoined/Left/Kicked` integration events і будувати local read model.
+- **Cross-context dropped:** `StartTypingCommandHandler` більше НЕ викликає `IChatRepository.GetByIdAsync` — Presence-сервіс не має доступу до Chats БД. Зараз trust JWT-authenticated caller. **Step 25 (2026-05-31): відновлено** через подписку на `MemberJoined/Kicked/Left` integration events → local read-model `chat_memberships` у `telegramlike_presence`. Fail-open поки нема backfill існуючих чатів.
 - Видалено з monolith: всі Presence файли (Domain/Application/Infrastructure) + 3 інтерфейси у Application/Common/Interfaces/.
 - Тести: новий `TelegramLike.Presence.{Domain,Application,Infrastructure}.Tests` (18 тестів). Окрема `RedisFixture` у Infrastructure.Tests (тільки Redis, без Mongo).
 - 102 тести зелені (9 test projects).
 
 **Що цей день довів:** паттерн з Day 12+14 reusable. Виносити сервіс ≈ година роботи (5 csproj move + Api shell з copy-paste JWT setup + BFF client за template + 1 razor edit + tests move).
+
+### Step 25 (2026-05-31) ✅ — Local membership read-model у Presence
+**Why:** після Day 15 Presence trust-ав JWT caller для membership check (бо нема доступу до Chats БД). Реальна перевірка повернута через event-driven локальну read-модель — patern який буде reused для майбутніх extractions.
+
+**How to apply:** коли наступний сервіс потребує знати стан з іншого контексту — НЕ роби HTTP-виклик у Chats; підпишись на відповідні integration events і будуй local materialized view. Composite Mongo Id (`"{x:N}:{y:N}"`) дає природній dedup + idempotent upsert без окремого unique index.
+
+**Конкретно зроблено:**
+- Новий `MemberLeftIntegrationEvent` у Contracts + mapper у monolith Application (Joined/Kicked вже існували з Day 11).
+- Presence.Application: `IChatMembershipReadModel` (IsActiveMemberAsync / UpsertActiveAsync / RemoveAsync).
+- Presence.Infrastructure: `MongoChatMembershipReadModel` (колекція `chat_memberships` з composite Id) + 3 тонких consumer'и (`MemberJoinedConsumer` → upsert, `MemberKickedConsumer`/`MemberLeftConsumer` → remove). `AddIntegrationMessaging` тепер реєструє consumers + `ConfigureEndpoints` (раніше тільки publish-only).
+- `StartTypingCommandHandler` отримав `IChatMembershipReadModel` залежність + `ILogger`. **Fail-open**: якщо read-model не знає про пару → лог warning і пропускає. Tighten до fail-closed чекає backfill.
+- Tests: 6 integration (Mongo Testcontainers) + 2 unit для StartTyping. 115 passing.
+- Side fix: `Testcontainers.Redis` bump 3.10.0 → 4.12.0 щоб бути сумісним з новим `Testcontainers.MongoDb` 4.12.0 у тому ж проекті.
 
 ### Наступне (кандидати для винесення)
 - **Messaging** + **Chats** разом — найскладніше, бо тісно зв'язані (SendMessage перевіряє ActiveMember у chat). Або:

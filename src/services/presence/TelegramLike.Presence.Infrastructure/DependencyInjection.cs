@@ -7,6 +7,7 @@ using TelegramLike.Presence.Application.Abstractions;
 using TelegramLike.Presence.Application.Queries;
 using TelegramLike.Presence.Domain.Repositories;
 using TelegramLike.Presence.Infrastructure.Caching;
+using TelegramLike.Presence.Infrastructure.Messaging.Consumers;
 using TelegramLike.Presence.Infrastructure.Persistence;
 
 namespace TelegramLike.Presence.Infrastructure;
@@ -22,6 +23,7 @@ public static class DependencyInjection
 
         services.AddScoped<IUserPresenceRepository, UserPresenceRepository>();
         services.AddScoped<IUserPresenceQueryService, UserPresenceQueryService>();
+        services.AddScoped<IChatMembershipReadModel, MongoChatMembershipReadModel>();
 
         var heartbeatTtl = TimeSpan.FromSeconds(
             int.TryParse(configuration["Presence:HeartbeatTtlSeconds"], out var hb) ? hb : 30);
@@ -57,13 +59,19 @@ public static class DependencyInjection
 
     private static void AddIntegrationMessaging(this IServiceCollection services, IConfiguration configuration)
     {
-        // Presence публікує UserTypingIntegrationEvent. Не підписується ні на що.
+        // Presence публікує UserTypingIntegrationEvent + споживає membership events
+        // (MemberJoined/Kicked/Left) з Chats для побудови локальної read-моделі —
+        // потрібно для StartTyping membership-check без cross-context call.
         var host = configuration["RabbitMQ:Host"] ?? "localhost";
         var username = configuration["RabbitMQ:Username"] ?? "guest";
         var password = configuration["RabbitMQ:Password"] ?? "guest";
 
         services.AddMassTransit(bus =>
         {
+            bus.AddConsumer<MemberJoinedConsumer>();
+            bus.AddConsumer<MemberKickedConsumer>();
+            bus.AddConsumer<MemberLeftConsumer>();
+
             bus.UsingRabbitMq((ctx, cfg) =>
             {
                 cfg.Host(host, "/", h =>
@@ -71,6 +79,8 @@ public static class DependencyInjection
                     h.Username(username);
                     h.Password(password);
                 });
+
+                cfg.ConfigureEndpoints(ctx);
             });
         });
     }

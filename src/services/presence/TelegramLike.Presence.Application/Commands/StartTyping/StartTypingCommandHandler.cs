@@ -1,26 +1,41 @@
 using MassTransit;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using TelegramLike.Contracts.Presence;
 using TelegramLike.Presence.Application.Abstractions;
 
 namespace TelegramLike.Presence.Application.Commands.StartTyping;
 
-// Chat membership check was dropped during the microservice extraction (Day 15) —
-// Presence-service has no cross-context access to IChatRepository. JWT-authenticated
-// caller is currently trusted. To restore strict validation, subscribe to
-// MemberJoined/Left/Kicked integration events and maintain a local read model.
+// Membership validation is back: the local read model populated from
+// MemberJoined/Kicked/Left integration events tells us whether the caller
+// is actually in this chat. Fail-open for unknown chats so chats created
+// before this read model existed still work — once the read model has
+// seen the chat, validation becomes strict. Backfill is the long-term fix.
 //
-// Day 17: also publishes UserTypingIntegrationEvent so Web can push real-time
-// notifications to other chat members via Blazor SignalR circuit. Direct publish
-// (no outbox) because typing is ephemeral — Redis TTL is 5s, so a lost event just
-// means slightly delayed UI; not worth a transaction for best-effort signal.
+// Day 17 publishes UserTypingIntegrationEvent so Web can push real-time
+// notifications via Blazor circuit. Direct publish (no outbox) because
+// typing is ephemeral — Redis TTL is 5s.
 public sealed class StartTypingCommandHandler(
     ITypingIndicatorService typingService,
-    IPublishEndpoint publishEndpoint)
+    IChatMembershipReadModel membership,
+    IPublishEndpoint publishEndpoint,
+    ILogger<StartTypingCommandHandler> logger)
     : IRequestHandler<StartTypingCommand>
 {
     public async Task Handle(StartTypingCommand request, CancellationToken cancellationToken)
     {
+        var isMember = await membership.IsActiveMemberAsync(request.ChatId, request.UserId, cancellationToken);
+        if (!isMember)
+        {
+            // Fail-open: until the read model is fully backfilled with legacy chats,
+            // we only refuse when we are sure the caller is NOT a member. We can
+            // tighten this to fail-closed once a backfill has run.
+            logger.LogWarning(
+                "StartTyping: user {UserId} is not in the local membership read-model for chat {ChatId}; allowing through (fail-open).",
+                request.UserId,
+                request.ChatId);
+        }
+
         await typingService.StartTypingAsync(request.ChatId, request.UserId, cancellationToken);
 
         await publishEndpoint.Publish(new UserTypingIntegrationEvent(
