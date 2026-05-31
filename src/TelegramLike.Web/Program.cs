@@ -11,6 +11,7 @@ using TelegramLike.Application.Identity.Queries.GetUserById;
 using TelegramLike.Infrastructure;
 using TelegramLike.Web.Components;
 using TelegramLike.Web.Services;
+using TelegramLike.Web.Services.ChatChanged;
 using TelegramLike.Web.Services.NewMessage;
 using TelegramLike.Web.Services.NotificationsApi;
 using TelegramLike.Web.Services.PresenceApi;
@@ -74,12 +75,16 @@ builder.Services.AddValidatorsFromAssembly(typeof(RegisterUserCommand).Assembly)
 builder.Services.AddSingleton<ITypingPubSub, TypingPubSub>();
 builder.Services.AddSingleton<INewMessagePubSub, NewMessagePubSub>();
 builder.Services.AddSingleton<IUnreadCountPubSub, UnreadCountPubSub>();
+builder.Services.AddSingleton<IChatChangedPubSub, ChatChangedPubSub>();
 
 builder.Services.AddInfrastructure(builder.Configuration, bus =>
 {
     bus.AddConsumer<UserTypingConsumer>();
     bus.AddConsumer<NewMessageConsumer>();
     bus.AddConsumer<UnreadCountChangedConsumer>();
+    bus.AddConsumer<MessageRetractedConsumer>();
+    bus.AddConsumer<ReactionAddedConsumer>();
+    bus.AddConsumer<ReactionRemovedConsumer>();
 });
 
 builder.Services.Configure<ServiceAuthOptions>(opts =>

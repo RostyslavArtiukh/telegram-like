@@ -287,3 +287,16 @@
 - Mongo + Redis instrumentation (`MongoDB.Driver.Core.Extensions.DiagnosticSources` + `OpenTelemetry.Instrumentation.StackExchangeRedis`). Дадуть DB-level spans з query times, дуже корисно для perf.
 - Sampling policy: зараз 100% trace rate (always-on). Для prod треба `TraceIdRatioBased(0.1)` або head-based sampling щоб не залити Jaeger.
 - Metrics + Logs через OTel (зараз тільки traces). Той самий exporter може шлити три типи signal-ів.
+
+## Step 28 (2026-05-31): Real-time для MessageRetracted + ReactionAdded/Removed ✅
+- **Тех-борг:** після Day 20 нові повідомлення приходили push'ем, але retract і reactions ChatView не бачив поки користувач не оновив сторінку — UI випадав із "живого" feel що з'явився для send.
+- **Patern:** третій раз reused (Day 17 typing, Day 20 new-message, Day 21 unread; Day 25 теж re-used як read-model але інший use-case). `IXPubSub` + RabbitMQ integration event + Web consumer + Razor subscription. Тепер з ним стало ясно що оптимальна форма — **один pubsub на UI-action**, а не на event-type: ChatView потребує один callback (reload), не три.
+- **Contracts:** 3 нових integration events (`MessageRetractedIntegrationEvent`, `ReactionAddedIntegrationEvent`, `ReactionRemovedIntegrationEvent`) — без `Recipients`, бо ці події УI-only (Web їх consume-ить, fanout не потрібен).
+- **Application:** 3 mappers (`MessageRetractedEventMapper`, `ReactionAddedEventMapper`, `ReactionRemovedEventMapper`). Зареєстровані у `AddOutbox` → `MessageRepository.UpdateAsync` тепер дренує всі ці події через outbox автоматично (вже raise-лись у `Message.Retract`/`AddReaction`/`RemoveReaction` ще з Day 6).
+- **Web (нова папка `Services/ChatChanged/`):** `IChatChangedPubSub` (Subscribe(chatId, Func<Task>) + PublishAsync(chatId)) + impl + 3 thin consumers (`MessageRetractedConsumer`, `ReactionAddedConsumer`, `ReactionRemovedConsumer`) — всі три просто викликають `pubsub.PublishAsync(ChatId)`. Зареєстровано у `Program.cs` як singleton + 3 `bus.AddConsumer<>()`.
+- **ChatView.razor:** новий `_chatChangedSubscription = ChatChangedPubSub.Subscribe(ChatId, OnChatChangedAsync)` + `OnChatChangedAsync` → `ReloadMessagesAsync()` → `InvokeAsync(StateHasChanged)`. Dispose у `DisposeAsync`. **+1 subscription у Razor проти +3 якщо робити окремі pubsub-и** — головна перевага уніфікованого pubsub.
+- **Тести:** 0 нових. Patern + mappers + consumers — pass-throughs; кожен шар окремо вже tested через попередні Day 17/20/21 (MessageSentEvent → outbox → mapper → RabbitMQ → consumer → pubsub → ChatView). 115/115 passing.
+
+**TODO:**
+- Optimistic UI для send/retract — поки `Retract` чекає round-trip outbox+RabbitMQ (~2.5s). Локально показувати "[retracted]" одразу.
+- `ReactionAdded` race: коли локальний юзер тицяє emoji у власне повідомлення, чекає round-trip щоб побачити свою ж reaction. Окрема ergonomics-fix.

@@ -8,6 +8,7 @@
 @using TelegramLike.Application.Messaging.Queries
 @using TelegramLike.Application.Messaging.Queries.GetChatMessages
 @using TelegramLike.Web.Services
+@using TelegramLike.Web.Services.ChatChanged
 @using TelegramLike.Web.Services.NewMessage
 @using TelegramLike.Web.Services.NotificationsApi
 @using TelegramLike.Web.Services.PresenceApi
@@ -17,6 +18,7 @@
 @inject INotificationsApi NotificationsApi
 @inject ITypingPubSub TypingPubSub
 @inject INewMessagePubSub NewMessagePubSub
+@inject IChatChangedPubSub ChatChangedPubSub
 @inject CurrentUserAccessor CurrentUser
 @inject NavigationManager Nav
 @rendermode InteractiveServer
@@ -115,6 +117,7 @@ else
     private Timer? _poller;
     private IDisposable? _typingSubscription;
     private IDisposable? _newMessageSubscription;
+    private IDisposable? _chatChangedSubscription;
     private readonly Dictionary<Guid, DateTime> _typingExpiry = new();
     private List<Guid> _othersTyping = [];
     private int _onlineCount;
@@ -137,6 +140,7 @@ else
 
         _typingSubscription = TypingPubSub.Subscribe(ChatId, OnRemoteTypingAsync);
         _newMessageSubscription = NewMessagePubSub.Subscribe(ChatId, OnNewMessageAsync);
+        _chatChangedSubscription = ChatChangedPubSub.Subscribe(ChatId, OnChatChangedAsync);
 
         // Poller no longer pulls messages — they arrive via push (NewMessagePubSub).
         // Kept for presence refresh + sweeping expired typing tokens.
@@ -151,6 +155,14 @@ else
     }
 
     private async Task OnNewMessageAsync(Guid _)
+    {
+        await ReloadMessagesAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // Single callback for MessageRetracted / ReactionAdded / ReactionRemoved.
+    // All three need the same UI action (reload the visible message list).
+    private async Task OnChatChangedAsync()
     {
         await ReloadMessagesAsync();
         await InvokeAsync(StateHasChanged);
@@ -286,6 +298,7 @@ else
     {
         _typingSubscription?.Dispose();
         _newMessageSubscription?.Dispose();
+        _chatChangedSubscription?.Dispose();
         if (_poller is not null) await _poller.DisposeAsync();
         try { await PresenceApi.StopTypingAsync(_userId, ChatId); } catch { }
     }
