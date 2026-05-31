@@ -1,4 +1,6 @@
+using MassTransit;
 using MediatR;
+using TelegramLike.Contracts.Presence;
 using TelegramLike.Presence.Application.Abstractions;
 using TelegramLike.Presence.Domain.Aggregates;
 using TelegramLike.Presence.Domain.Repositories;
@@ -8,7 +10,8 @@ namespace TelegramLike.Presence.Application.Commands.Heartbeat;
 
 public sealed class HeartbeatCommandHandler(
     IUserPresenceRepository presenceRepository,
-    IPresenceCache presenceCache)
+    IPresenceCache presenceCache,
+    IPublishEndpoint publishEndpoint)
     : IRequestHandler<HeartbeatCommand>
 {
     public async Task Handle(HeartbeatCommand request, CancellationToken cancellationToken)
@@ -25,5 +28,12 @@ public sealed class HeartbeatCommandHandler(
 
         presence.GoOnline(DateTime.UtcNow);
         await presenceRepository.UpsertAsync(presence, cancellationToken);
+
+        // Only the offline→online transition publishes; subsequent heartbeats
+        // see Status==Online and skip both the upsert and the event.
+        await publishEndpoint.Publish(new UserCameOnlineIntegrationEvent(
+            EventId: Guid.NewGuid(),
+            OccurredAt: DateTime.UtcNow,
+            UserId: request.UserId), cancellationToken);
     }
 }

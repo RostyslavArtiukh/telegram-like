@@ -300,3 +300,24 @@
 **TODO:**
 - Optimistic UI для send/retract — поки `Retract` чекає round-trip outbox+RabbitMQ (~2.5s). Локально показувати "[retracted]" одразу.
 - `ReactionAdded` race: коли локальний юзер тицяє emoji у власне повідомлення, чекає round-trip щоб побачити свою ж reaction. Окрема ergonomics-fix.
+
+## Step 29 (2026-05-31): Online presence push (гібрид push + safety-net polling) ✅
+- **Тех-борг:** ChatView мав 3-секундний polling що ходив на `/presence/batch` для оновлення online-dots — останній regular polling у app. Заміна на push, з low-rate fallback для edge case browser-close.
+- **Чому не тільки push:** explicit `GoOffline` POST публікує event миттєво, але якщо юзер просто закриває tab, ніхто не викликає `/presence/offline` — heartbeat припиняється і Redis TTL (30s) знімає presence без emission events. Тож **гібрид:** push для свідомих переходів (миттєвий UX), polling як safety net для browser-close (~30s найгірший випадок stale UI).
+- **Contracts:** `UserCameOnlineIntegrationEvent` + `UserWentOfflineIntegrationEvent` (тільки `UserId` — broadcast на всіх Web instances хто підписаний).
+- **Presence.Application:**
+  - `HeartbeatCommandHandler` отримав `IPublishEndpoint`. **Publish тільки на transition offline→online** (під existing if-guard `if (presence.Status == OnlineStatus.Online) return;`); subsequent heartbeats тихі.
+  - `GoOfflineCommandHandler` отримав `IPublishEndpoint`. Publish тільки коли реально transit Online→Offline.
+  - **Direct publish (без outbox)** — як `UserTypingIntegrationEvent` (Day 17). Presence ефемерний; втрата події не критична — fallback polling + наступний heartbeat виправлять.
+- **Web (нова папка `Services/Presence/`):** `IPresencePubSub.Subscribe(userId, Func<bool, Task>)` + impl + 2 consumers + DI reg. Per-user subscription (на відміну від per-chat для typing/messages) — presence per-юзер state. ChatView subscribe-ається до кожного active member чату.
+- **ChatView.razor:**
+  - `SubscribeToPresenceForMembers()` — для кожного member з `_chat.Members` (active, не сам юзер) робить `PresencePubSub.Subscribe(userId, OnPresenceChangedAsync)`, зберігає у `_presenceSubscriptions` list. Dispose всіх у `DisposeAsync`.
+  - `OnPresenceChangedAsync(bool _)` → `RefreshPresenceAsync()` (re-fetch batch). UI зберігає тільки `_onlineCount` aggregate, тож на transition простіше переоб'явити цілий batch ніж тримати per-user dict.
+  - **Poller** змінив поведінку: timer тіктає кожні 3s, але `RefreshPresenceAsync` викликає тільки кожен 10-тий тік (~30s) — лічильник `_pollTick`. Typing sweep лишається на 3s (5s TTL вимагає frequent ticks).
+- **Тести:** +3 нових (`HeartbeatCommandHandlerTests`: publish-assertion на cold start; +1 doesn't-publish коли already online; новий `GoOfflineCommandHandlerTests` з 3 тестів). 118/118 passing.
+
+**Що цей крок завершує:** усі real-time UI оновлення тепер push'ові. Залишилось **тільки одне місце з polling-ом** — typing sweeper у ChatView (3s, для TTL expiry без events) і 30-секундна presence safety net. Усе інше event-driven.
+
+**TODO:**
+- Background job у Presence: при Redis TTL expiry для presence-ключа emit `UserWentOfflineIntegrationEvent` (через keyspace notifications або periodic Redis SCAN + diff проти Mongo). Тоді можна повністю прибрати ChatView presence polling.
+- `Notifications.razor` 3-сек page state polling — теж залишилось, окремий крок.

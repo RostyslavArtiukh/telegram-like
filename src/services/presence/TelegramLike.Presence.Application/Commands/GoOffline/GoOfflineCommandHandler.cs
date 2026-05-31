@@ -1,4 +1,6 @@
+using MassTransit;
 using MediatR;
+using TelegramLike.Contracts.Presence;
 using TelegramLike.Presence.Application.Abstractions;
 using TelegramLike.Presence.Domain.Repositories;
 using TelegramLike.Presence.Domain.ValueObjects;
@@ -7,7 +9,8 @@ namespace TelegramLike.Presence.Application.Commands.GoOffline;
 
 public sealed class GoOfflineCommandHandler(
     IUserPresenceRepository presenceRepository,
-    IPresenceCache presenceCache)
+    IPresenceCache presenceCache,
+    IPublishEndpoint publishEndpoint)
     : IRequestHandler<GoOfflineCommand>
 {
     public async Task Handle(GoOfflineCommand request, CancellationToken cancellationToken)
@@ -22,5 +25,12 @@ public sealed class GoOfflineCommandHandler(
 
         presence.GoOffline(DateTime.UtcNow);
         await presenceRepository.UpsertAsync(presence, cancellationToken);
+
+        // Browser-close path won't reach this code (no GoOffline call); that
+        // case is covered by Redis TTL + ChatView's 30s polling fallback.
+        await publishEndpoint.Publish(new UserWentOfflineIntegrationEvent(
+            EventId: Guid.NewGuid(),
+            OccurredAt: DateTime.UtcNow,
+            UserId: request.UserId), cancellationToken);
     }
 }

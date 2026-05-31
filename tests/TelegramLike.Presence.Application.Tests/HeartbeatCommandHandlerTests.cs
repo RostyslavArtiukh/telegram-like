@@ -1,5 +1,7 @@
 using FluentAssertions;
+using MassTransit;
 using NSubstitute;
+using TelegramLike.Contracts.Presence;
 using TelegramLike.Presence.Application.Abstractions;
 using TelegramLike.Presence.Application.Commands.Heartbeat;
 using TelegramLike.Presence.Domain.Aggregates;
@@ -12,8 +14,9 @@ public class HeartbeatCommandHandlerTests
 {
     private readonly IUserPresenceRepository _repo = Substitute.For<IUserPresenceRepository>();
     private readonly IPresenceCache _cache = Substitute.For<IPresenceCache>();
+    private readonly IPublishEndpoint _publish = Substitute.For<IPublishEndpoint>();
 
-    private HeartbeatCommandHandler Handler => new(_repo, _cache);
+    private HeartbeatCommandHandler Handler => new(_repo, _cache, _publish);
 
     [Fact]
     public async Task Empty_user_id_throws()
@@ -39,7 +42,7 @@ public class HeartbeatCommandHandlerTests
     }
 
     [Fact]
-    public async Task Already_online_only_touches_cache()
+    public async Task Already_online_only_touches_cache_and_does_not_publish()
     {
         var userId = Guid.NewGuid();
         var existing = UserPresence.CreateOffline(userId);
@@ -50,10 +53,13 @@ public class HeartbeatCommandHandlerTests
 
         await _cache.Received(1).TouchAsync(userId, Arg.Any<CancellationToken>());
         await _repo.DidNotReceive().UpsertAsync(Arg.Any<UserPresence>(), Arg.Any<CancellationToken>());
+        await _publish.DidNotReceive().Publish(
+            Arg.Any<UserCameOnlineIntegrationEvent>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Was_offline_transitions_back_to_online()
+    public async Task Was_offline_transitions_back_to_online_and_publishes_event()
     {
         var userId = Guid.NewGuid();
         var existing = UserPresence.CreateOffline(userId);
@@ -63,6 +69,9 @@ public class HeartbeatCommandHandlerTests
 
         await _repo.Received(1).UpsertAsync(
             Arg.Is<UserPresence>(p => p.Status == OnlineStatus.Online),
+            Arg.Any<CancellationToken>());
+        await _publish.Received(1).Publish(
+            Arg.Is<UserCameOnlineIntegrationEvent>(e => e.UserId == userId),
             Arg.Any<CancellationToken>());
     }
 }

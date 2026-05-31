@@ -14,6 +14,7 @@ using TelegramLike.Web.Services;
 using TelegramLike.Web.Services.ChatChanged;
 using TelegramLike.Web.Services.NewMessage;
 using TelegramLike.Web.Services.NotificationsApi;
+using TelegramLike.Web.Services.Presence;
 using TelegramLike.Web.Services.PresenceApi;
 using TelegramLike.Web.Services.Typing;
 using TelegramLike.Web.Services.UnreadCount;
@@ -76,6 +77,7 @@ builder.Services.AddSingleton<ITypingPubSub, TypingPubSub>();
 builder.Services.AddSingleton<INewMessagePubSub, NewMessagePubSub>();
 builder.Services.AddSingleton<IUnreadCountPubSub, UnreadCountPubSub>();
 builder.Services.AddSingleton<IChatChangedPubSub, ChatChangedPubSub>();
+builder.Services.AddSingleton<IPresencePubSub, PresencePubSub>();
 
 builder.Services.AddInfrastructure(builder.Configuration, bus =>
 {
@@ -85,6 +87,8 @@ builder.Services.AddInfrastructure(builder.Configuration, bus =>
     bus.AddConsumer<MessageRetractedConsumer>();
     bus.AddConsumer<ReactionAddedConsumer>();
     bus.AddConsumer<ReactionRemovedConsumer>();
+    bus.AddConsumer<UserCameOnlineConsumer>();
+    bus.AddConsumer<UserWentOfflineConsumer>();
 });
 
 builder.Services.Configure<ServiceAuthOptions>(opts =>
