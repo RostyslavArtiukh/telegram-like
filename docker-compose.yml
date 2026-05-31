@@ -123,6 +123,70 @@ services:
       ServiceAuth__Issuer: telegramlike-web
       ServiceAuth__Audience: telegramlike-services
 
+  chats:
+    build:
+      context: .
+      dockerfile: src/services/chats/TelegramLike.Chats.Api/Dockerfile
+    image: telegramlike-chats:latest
+    container_name: telegramlike-chats
+    restart: unless-stopped
+    ports:
+      - "8083:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
+      interval: 10s
+      start_period: 20s
+      retries: 5
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"
+      MongoDB__DatabaseName: telegramlike_chats
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+      RabbitMQ__VirtualHost: telegramlike
+      Tracing__OtlpEndpoint: "http://jaeger:4317"
+      ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
+      ServiceAuth__Issuer: telegramlike-web
+      ServiceAuth__Audience: telegramlike-services
+
+  messaging:
+    build:
+      context: .
+      dockerfile: src/services/messaging/TelegramLike.Messaging.Api/Dockerfile
+    image: telegramlike-messaging:latest
+    container_name: telegramlike-messaging
+    restart: unless-stopped
+    ports:
+      - "8084:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
+      interval: 10s
+      start_period: 20s
+      retries: 5
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"
+      MongoDB__DatabaseName: telegramlike_messaging
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+      RabbitMQ__VirtualHost: telegramlike
+      Tracing__OtlpEndpoint: "http://jaeger:4317"
+      ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
+      ServiceAuth__Issuer: telegramlike-web
+      ServiceAuth__Audience: telegramlike-services
+
   web:
     build:
       context: .
@@ -143,6 +207,10 @@ services:
         condition: service_healthy
       presence:
         condition: service_healthy
+      chats:
+        condition: service_healthy
+      messaging:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"
@@ -155,6 +223,8 @@ services:
       Tracing__OtlpEndpoint: "http://jaeger:4317"
       NotificationsApi__BaseUrl: "http://notifications:8080"
       PresenceApi__BaseUrl: "http://presence:8080"
+      ChatsApi__BaseUrl: "http://chats:8080"
+      MessagingApi__BaseUrl: "http://messaging:8080"
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
       ServiceAuth__Issuer: telegramlike-web
       ServiceAuth__Audience: telegramlike-services

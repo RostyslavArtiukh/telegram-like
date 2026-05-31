@@ -458,3 +458,21 @@
 - env vars: `ChatsApi__BaseUrl=http://chats:8080`, `MessagingApi__BaseUrl=http://messaging:8080`, `ServiceAuth__*` (той самий JWT secret).
 - Healthcheck routes у нових Api вже існують (Phase 4), curl присутній у Dockerfile.
 - Smoke test: створити group chat → надіслати message → побачити у NavMenu unread badge.
+
+## Step 37 (2026-05-31): Chats/Messaging extraction — Phase 7 (docker-compose wiring) ✅
+- Додано в `docker-compose.yml` 2 нові сервіси: `chats` (port 8083:8080) і `messaging` (port 8084:8080):
+  - `depends_on: mongodb service_healthy + rabbitmq service_healthy`
+  - `healthcheck: curl -fsS http://localhost:8080/health/ready` (Phase 4 уже додав curl до Dockerfile)
+  - окремі Mongo БД: `telegramlike_chats`, `telegramlike_messaging`
+  - спільний RabbitMQ vhost `telegramlike`, спільний Jaeger OTLP, спільний JWT secret
+- `web` тепер `depends_on chats + messaging service_healthy` і отримує `ChatsApi__BaseUrl=http://chats:8080` + `MessagingApi__BaseUrl=http://messaging:8080`.
+- `docker compose config --quiet` пройшов — синтаксис валідний (9 services: jaeger/mongo/rabbitmq/redis + notifications/presence/chats/messaging + web).
+- **Smoke-test `docker compose up` НЕ виконано** у цій сесії — користувач відклав ручне тестування. Залишається TODO: register → create group → send message → перевірити NavMenu unread badge + tracing у Jaeger.
+
+**TODO для Phase 8 (opt):**
+- Messaging local membership read-model (за зразком Step 25 для Presence):
+  - `IChatMembershipReadModel` в `Messaging.Application.Common`
+  - `MongoChatMembershipReadModel` (колекція `chat_memberships` з composite Id `"chatId:userId"`)
+  - 3 consumers (`MemberJoined`/`Kicked`/`Left`) у Messaging.Infrastructure
+  - `SendMessageCommandHandler` + `AddReactionCommandHandler` + `MarkAsReadCommandHandler` — strict-validation замість fail-open
+- Відновить strict `IsActiveMember` check, який Phase 2 видалив для розв'язки cross-context dependency.
