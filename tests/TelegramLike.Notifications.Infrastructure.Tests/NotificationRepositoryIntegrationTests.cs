@@ -78,4 +78,37 @@ public class NotificationRepositoryIntegrationTests(MongoFixture fx)
         loaded!.Status.Should().Be(NotificationStatus.Read);
         loaded.ReadAt.Should().NotBeNull();
     }
+
+    [Fact]
+    public async Task AddManyIgnoringDuplicates_dedupes_redelivered_event_per_recipient()
+    {
+        await NotificationIndexInitializer.EnsureIndexesAsync(fx.Database);
+
+        var repo = NewRepo();
+        var query = NewQuery();
+        var recipient = Guid.NewGuid();
+        var sourceEventId = Guid.NewGuid();
+        var payload = NotificationPayload.ForNewMessage(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+
+        // First delivery — both recipients land
+        var firstBatch = new[]
+        {
+            Notification.Create(recipient, NotificationType.NewMessage, payload, sourceEventId),
+            Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, payload, sourceEventId)
+        };
+        var firstInserted = await repo.AddManyIgnoringDuplicatesAsync(firstBatch);
+
+        // Simulate RabbitMQ redelivery — same SourceEventId, same recipient
+        var secondBatch = new[]
+        {
+            Notification.Create(recipient, NotificationType.NewMessage, payload, sourceEventId)
+        };
+        var secondInserted = await repo.AddManyIgnoringDuplicatesAsync(secondBatch);
+
+        firstInserted.Should().Be(2);
+        secondInserted.Should().Be(0);
+
+        var count = await query.GetUnreadCountAsync(recipient);
+        count.Should().Be(1, "the redelivered event must NOT create a second notification");
+    }
 }
