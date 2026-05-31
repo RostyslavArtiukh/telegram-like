@@ -1,19 +1,31 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
+using TelegramLike.Messaging.Application.Common.Interfaces;
 using TelegramLike.Messaging.Domain.Aggregates;
 using TelegramLike.Messaging.Domain.Repositories;
 using TelegramLike.Messaging.Domain.ValueObjects;
 
 namespace TelegramLike.Messaging.Application.Commands.SendMessage;
 
-public sealed class SendMessageCommandHandler(IMessageRepository messageRepository)
+public sealed class SendMessageCommandHandler(
+    IMessageRepository messageRepository,
+    IChatMembershipReadModel membership,
+    ILogger<SendMessageCommandHandler> logger)
     : IRequestHandler<SendMessageCommand, Guid>
 {
     public async Task<Guid> Handle(SendMessageCommand request, CancellationToken cancellationToken)
     {
-        // Membership / role / broadcast-permission checks have moved to the Web BFF.
-        // Messaging trusts the JWT-authenticated caller; Phase 8 will reintroduce
-        // strict validation via a local membership read model populated from
-        // Chats integration events.
+        // Phase 8: strict membership check, fail-open until the read model is
+        // backfilled for legacy chats (created before this consumer existed).
+        var isMember = await membership.IsActiveMemberAsync(request.ChatId, request.AuthorId, cancellationToken);
+        if (!isMember)
+        {
+            logger.LogWarning(
+                "SendMessage: author {AuthorId} is not in the local membership read-model for chat {ChatId}; allowing through (fail-open).",
+                request.AuthorId,
+                request.ChatId);
+        }
+
         if (request.ReplyToMessageId.HasValue)
         {
             var replyTarget = await messageRepository.GetByIdAsync(request.ReplyToMessageId.Value, cancellationToken)

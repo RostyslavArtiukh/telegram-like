@@ -6,6 +6,7 @@ using TelegramLike.Messaging.Application.Common.Interfaces;
 using TelegramLike.Messaging.Application.Common.IntegrationEvents;
 using TelegramLike.Messaging.Application.IntegrationEvents;
 using TelegramLike.Messaging.Domain.Repositories;
+using TelegramLike.Messaging.Infrastructure.Messaging.Consumers;
 using TelegramLike.Messaging.Infrastructure.Outbox;
 using TelegramLike.Messaging.Infrastructure.Persistence;
 
@@ -22,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IMessageQueryService, MessageQueryService>();
         services.AddScoped<IHiddenMessageRepository, HiddenMessageRepository>();
         services.AddScoped<IMessageReadReceiptRepository, MessageReadReceiptRepository>();
+        services.AddScoped<IChatMembershipReadModel, MongoChatMembershipReadModel>();
         services.AddOutbox(configuration);
         services.AddIntegrationMessaging(configuration);
         return services;
@@ -69,6 +71,12 @@ public static class DependencyInjection
 
         services.AddMassTransit(bus =>
         {
+            // Membership events from Chats build the local read model so handlers
+            // can run strict IsActiveMember checks without calling Chats back.
+            bus.AddConsumer<MemberJoinedConsumer>();
+            bus.AddConsumer<MemberKickedConsumer>();
+            bus.AddConsumer<MemberLeftConsumer>();
+
             bus.UsingRabbitMq((ctx, cfg) =>
             {
                 cfg.Host(host, vhost, h =>

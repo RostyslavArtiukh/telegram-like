@@ -476,3 +476,22 @@
   - 3 consumers (`MemberJoined`/`Kicked`/`Left`) у Messaging.Infrastructure
   - `SendMessageCommandHandler` + `AddReactionCommandHandler` + `MarkAsReadCommandHandler` — strict-validation замість fail-open
 - Відновить strict `IsActiveMember` check, який Phase 2 видалив для розв'язки cross-context dependency.
+
+## Step 38 (2026-05-31): Chats/Messaging extraction — Phase 8 (Messaging local membership read-model) ✅
+- **`IChatMembershipReadModel`** в `Messaging.Application.Common.Interfaces` (IsActiveMember / UpsertActive / Remove — точно той же shape що у Presence Step 25).
+- **`ChatMembershipDocument` + `MongoChatMembershipReadModel`** у `Messaging.Infrastructure.Persistence` — колекція `chat_memberships` у БД `telegramlike_messaging`, composite Id `"{chatId:N}:{userId:N}"` для природного per-pair uniqueness без окремого index.
+- **3 consumers** у `Messaging.Infrastructure.Messaging.Consumers` — `MemberJoinedConsumer` (upsert), `MemberKickedConsumer` + `MemberLeftConsumer` (remove). Споживають `TelegramLike.Contracts.Chats.*IntegrationEvent` що публікує Chats.Api.
+- **DI:** додано `IChatMembershipReadModel → MongoChatMembershipReadModel` + 3 `bus.AddConsumer<>()`.
+- **Strict-with-fail-open у 5 handler'ах** — `SendMessage`, `AddReaction`, `RemoveReaction`, `RetractMessage`, `MarkMessageAsRead`. Логіка: викликати `IsActiveMemberAsync`; якщо false → `logger.LogWarning("...fail-open")` і пропустити (для legacy chats створених до того як consumer запрацював). Після backfill можна tighten до fail-closed (один рядок: throw замість warning).
+- **NuGet:** додано `Microsoft.Extensions.Logging.Abstractions 10.0.7` до `Messaging.Application` (для `ILogger<T>` injection у handler'ах).
+- **Чому fail-open, а не throw:**
+  - Read-model пуста при старті, заповнюється тільки новими `MemberJoined` events. Існуючі чати у Chats БД ніколи не отримають MemberJoined event ще раз → потрібен backfill (TODO).
+  - Web BFF вже валідує membership через `IChatsApi.GetChatByIdAsync` перед викликом Messaging → defense-in-depth, не primary check.
+- **Build clean.** Тестів **57/57** (тести handler'ів не оновлено; це дрібна зміна, можна додати пізніше при потребі).
+
+**Що це завершує:** Chats/Messaging extraction — **8 phases done (Steps 30-38)**. Web BFF + monolith тепер мають runtime-залежність на 4 downstream сервіси через HTTP + RabbitMQ. Messaging має defense-in-depth через локальну membership read-model.
+
+**Потенційні наступні задачі (за пріоритетом):**
+- **Backfill утиліта** для chat_memberships read-models (Messaging + Presence): on-startup hosted-service що бере snapshot з Chats DB через HTTP і робить bulk upsert. Дозволить переключити warning → throw.
+- **Identity extraction** — щоб моноліт зник остаточно. Потребує IdP сервіс (OAuth2/OIDC) + Web стає OIDC client. Великий scope.
+- **Reactions/Retract UI** у `ChatView.razor` — API endpoints і клієнти існують (Phase 4+5a), але razor pages їх не викликають. Cosmetic feature, низький пріоритет.
