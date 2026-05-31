@@ -1,4 +1,4 @@
-namespace TelegramLike.Web.Services.NotificationsApi;
+namespace TelegramLike.Web.Services.ServiceAuth;
 
 public sealed class ServiceAuthOptions
 {

@@ -4,11 +4,8 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace TelegramLike.Web.Services.NotificationsApi;
+namespace TelegramLike.Web.Services.ServiceAuth;
 
-/// Issues short-lived HMAC-signed JWTs that Web (BFF) attaches to outbound
-/// service-to-service HTTP calls. Downstream services validate the signature
-/// to confirm the caller is the BFF and trust the `sub` claim as the user ID.
 internal sealed class ServiceTokenIssuer(IOptions<ServiceAuthOptions> options)
 {
     private readonly ServiceAuthOptions _opts = options.Value;

@@ -1,13 +1,7 @@
 using System.Net.Http.Headers;
 
-namespace TelegramLike.Web.Services.NotificationsApi;
+namespace TelegramLike.Web.Services.ServiceAuth;
 
-/// Reads the caller-supplied `userId` from request.Options (set by per-service typed
-/// HttpClients), mints a short-lived HMAC-signed JWT for that user, and attaches it
-/// as Bearer. We avoid resolving Blazor's AuthenticationStateProvider here because
-/// the handler lives in a different DI scope than the Razor circuit.
-///
-/// `UserIdKey` is the shared option key — all downstream service clients write to it.
 internal sealed class ServiceAuthHandler(ServiceTokenIssuer tokenIssuer) : DelegatingHandler
 {
     public static readonly HttpRequestOptionsKey<Guid> UserIdKey = new("ServiceAuth.UserId");

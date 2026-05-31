@@ -13,9 +13,12 @@ using TelegramLike.Web.Components;
 using TelegramLike.Web.Services;
 using TelegramLike.Web.Services.ChatChanged;
 using TelegramLike.Web.Services.NewMessage;
+using TelegramLike.Web.Services.ChatsApi;
+using TelegramLike.Web.Services.MessagingApi;
 using TelegramLike.Web.Services.NotificationsApi;
 using TelegramLike.Web.Services.Presence;
 using TelegramLike.Web.Services.PresenceApi;
+using TelegramLike.Web.Services.ServiceAuth;
 using TelegramLike.Web.Services.Typing;
 using TelegramLike.Web.Services.UnreadCount;
 
@@ -112,6 +115,20 @@ builder.Services.AddHttpClient<IPresenceApi, PresenceApiClient>(client =>
 {
     var baseUrl = builder.Configuration["PresenceApi:BaseUrl"]
                   ?? throw new InvalidOperationException("PresenceApi:BaseUrl is not configured.");
+    client.BaseAddress = new Uri(baseUrl);
+}).AddHttpMessageHandler<ServiceAuthHandler>();
+
+builder.Services.AddHttpClient<IChatsApi, ChatsApiClient>(client =>
+{
+    var baseUrl = builder.Configuration["ChatsApi:BaseUrl"]
+                  ?? throw new InvalidOperationException("ChatsApi:BaseUrl is not configured.");
+    client.BaseAddress = new Uri(baseUrl);
+}).AddHttpMessageHandler<ServiceAuthHandler>();
+
+builder.Services.AddHttpClient<IMessagingApi, MessagingApiClient>(client =>
+{
+    var baseUrl = builder.Configuration["MessagingApi:BaseUrl"]
+                  ?? throw new InvalidOperationException("MessagingApi:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl);
 }).AddHttpMessageHandler<ServiceAuthHandler>();
 

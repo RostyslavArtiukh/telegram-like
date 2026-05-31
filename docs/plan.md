@@ -402,3 +402,19 @@
 - BFF робить `GetActiveRecipientsAsync` + `GetChatTypeAsync` + `IsModeratorAsync` через ChatsApi перед викликом MessagingApi (для відновлення Recipients/IsBroadcast/ActorIsModerator).
 - `IsPremium` з cookie/session.
 - JWT issuer = "telegramlike-web", token підписується тим же ServiceAuth:JwtSecret що використовується у Chats/Messaging Api.
+
+## Step 34 (2026-05-31): Chats/Messaging extraction — Phase 5a (Web HttpClient clients) ✅
+- **ServiceAuth refactor:** перенесено `ServiceAuthOptions`/`ServiceTokenIssuer`/`ServiceAuthHandler` з `Services/NotificationsApi/` у спільну `Services/ServiceAuth/` папку (namespace `TelegramLike.Web.Services.ServiceAuth`). Оновлено посилання у NotificationsApiClient + PresenceApiClient.
+- **`IChatsApi` + `ChatsApiClient`** (port 8083): 12 методів — GetMyChats/GetChatById/GetChatMembers; CreateDirectChat/CreateGroupChat/CreateBroadcastChannel (всі повертають Guid); JoinChat/LeaveChat/KickMember/ChangeMemberRole/TransferOwnership/RenameChat. Плюс 3 BFF-only helpers що деривуються з GetChatMembers/GetChatById: **GetActiveRecipientsAsync**, **GetChatTypeAsync**, **IsModeratorAsync**.
+- **`IMessagingApi` + `MessagingApiClient`** (port 8084): SendMessageAsync (full attachments+reply+forward); GetMessageByIdAsync; GetChatMessagesAsync (paged); AddReaction/RemoveReaction; RetractMessage; MarkAsRead; HideMessage.
+- **Web-local contract enums** (`ChatTypeContract`, `MemberRoleContract`, `MemberStatusContract`, `AttachmentTypeContract`, `EmojiContract`) з `[JsonConverter(typeof(JsonStringEnumConverter))]`. Імена і порядок співпадають з Chats/Messaging Domain enums — щоб JSON serialization як strings працювала однаково в обох сторонах. **Web BFF більше не залежить від Chats.Domain/Messaging.Domain.**
+- **Web-local contract DTOs:** `ChatSummaryContract/ChatDetailsContract/ChatMemberContract` і `MessageContract/MessagePageContract/AttachmentContract/ReactionContract/SendMessageAttachmentContract`.
+- **Program.cs:** додано `AddHttpClient<IChatsApi>` та `AddHttpClient<IMessagingApi>` з `ServiceAuthHandler` як message handler — повторно використовується той же JWT issuer і той же secret що для Notifications/Presence.
+- **appsettings.json:** додано `ChatsApi:BaseUrl=http://localhost:8083` і `MessagingApi:BaseUrl=http://localhost:8084`.
+- **Razor сторінки ще не змінено** — продовжують використовувати `IMediator.Send` з монолітом. Phase 5b їх переписує.
+- **Build clean.** 118/118 тестів.
+
+**TODO для Phase 5b:**
+- Переписати `Home.razor` (список чатів + створення direct/group/broadcast + join/leave) з `IMediator` на `IChatsApi`.
+- Переписати `ChatView.razor` (повідомлення + реакції + retract + read + hide + типінг + членство) з `IMediator` на `IChatsApi`+`IMessagingApi`.
+- BFF enrichment: перед `SendMessageAsync` викликати `GetActiveRecipientsAsync` + `GetChatTypeAsync`; перед `RetractMessageAsync` — `IsModeratorAsync`. `IsPremium` поки що hardcode=false (Phase 6 додасть з session).

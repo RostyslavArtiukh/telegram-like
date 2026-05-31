@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using TelegramLike.Web.Services.NotificationsApi;
+using TelegramLike.Web.Services.ServiceAuth;
 
 namespace TelegramLike.Web.Services.PresenceApi;
 

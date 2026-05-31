@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using TelegramLike.Contracts.Notifications;
+using TelegramLike.Web.Services.ServiceAuth;
 
 namespace TelegramLike.Web.Services.NotificationsApi;
 
