@@ -127,12 +127,32 @@ metadata:
 - Tests: 6 integration (Mongo Testcontainers) + 2 unit для StartTyping. 115 passing.
 - Side fix: `Testcontainers.Redis` bump 3.10.0 → 4.12.0 щоб бути сумісним з новим `Testcontainers.MongoDb` 4.12.0 у тому ж проекті.
 
-### Наступне (кандидати для винесення)
-- **Messaging** + **Chats** разом — найскладніше, бо тісно зв'язані (SendMessage перевіряє ActiveMember у chat). Або:
-  - Залишити їх разом як "core messaging service"
-  - Розбити пізніше через event-driven local read models
-- **Identity** — обережно, бо auth провайдер. Якщо виносити, потрібен IdP-сервіс (OAuth2/OIDC) і Web стає client.
-- Або **не виносити більше** — три сервіси (Notifications, Presence + monolith з Chats/Messaging/Identity) це вже валідна архітектура. Кожне розбиття додає operational complexity.
+### Steps 30–36 (2026-05-31) ✅ — Chats + Messaging extraction (8-phase)
+**Why:** доказати що паттерн Notifications+Presence масштабується на найскладнішу пару тісно-зв'язаних контекстів. Розбито на 2 сервіси `chats` (port 8083) + `messaging` (port 8084) — пов'язану функціональність легше evolve окремо, ніж склеювати назад.
+
+**How to apply:** для майбутніх extractions використовуй цю 6-phase recipe (Phase 7 docker-compose ще TODO):
+1. **Phase 1 (Step 30):** scaffold + Domain — `dotnet new classlib/web` всі 4 csproj per service, скопіювати Domain з namespace rewrite (PowerShell `Get-ChildItem | ForEach-Object` + `[System.IO.File]::WriteAllText` з namespace replacement), власна копія base types (`Common/AggregateRoot.cs`/`Entity.cs`/`IDomainEvent.cs`).
+2. **Phase 2 (Step 31):** Application — скопіювати handlers + validators + queries + mappers, **дропнути cross-context dependencies** (IChatRepository з Messaging, IUserRepository з Chats) — замість них додати command parameters (`Recipients: IReadOnlyList<Guid>`, `IsBroadcast: bool`, `ActorIsPremium: bool`, `ActorIsModerator: bool`) які Web BFF enrich'ить. **Acceptable regression:** fail-open до часу як Phase 8 додасть local read-models.
+3. **Phase 3 (Step 32):** Infrastructure — Mongo repos + autonomous Outbox bundle per service (повна копія, не shared) + MassTransit DI з vhost.
+4. **Phase 4 (Step 33):** Api shells — Program.cs з JWT Bearer auth (same secret для всіх сервісів), HealthChecks (Mongo + auto `masstransit-bus`), OpenTelemetry → Jaeger, MediatR, Minimal API endpoints з groupRoute, **JsonStringEnumConverter** для stable enum payloads. Dockerfile + appsettings + launchSettings.
+5. **Phase 5a (Step 34):** Web HttpClient clients — `IFooApi` + `FooApiClient` через існуючий `ServiceAuthHandler`. **Web-local contract enums + DTOs** з `[JsonStringEnumConverter]` — Web більше не залежить від Service.Domain.
+6. **Phase 5b (Step 35):** Razor pages — `IMediator.Send` → API clients. **BFF-side enrichment робиться локально** з вже-завантаженого `ChatDetailsContract` (recipients = active members - author) — без додаткового HTTP round-trip.
+7. **Phase 6 (Step 36):** Cleanup monolith — видалити `Domain/{Chats,Messaging}/`, `Application/{Chats,Messaging}/`, `Infrastructure/Persistence/MongoDB/Repositories/{Chat*,Message*,HiddenMessage*}`, trim DI (зняти IRepository/IQueryService реєстрації + IIntegrationEventMapper singletons; Outbox stack лишається dormant для майбутніх Identity events). Видалити obsolete test проекти повністю через `dotnet sln remove` + `rm -rf`.
+
+**Phase 7 TODO:** docker-compose з обома новими сервісами + healthchecks + `web` depends_on chats/messaging healthy + env vars (`ChatsApi__BaseUrl=http://chats:8080`).
+**Phase 8 TODO (opt):** Messaging local membership read-model з Chats integration events для відновлення strict `IsActiveMember` check у `SendMessage` (як Presence у Step 25).
+
+**Що цей етап довів:**
+- 6 phases × кілька годин = чистий extraction двох найскладніших контекстів. Кожна phase окремий commit, кожна reversible.
+- **Web BFF тепер pure BFF** — тільки Identity handlers через IMediator + усі інші domain calls через HTTP clients.
+- 57/57 тестів (зменшилось з 118, тільки за рахунок видалення dead монолітних тестів — нової логіки не сламано).
+- **Monolith ≈ Identity + BFF + Infrastructure shell** (1 IUserRepository + dormant Outbox). Identity можна виносити наступним.
+
+### Поточний стан архітектури (після Step 36)
+- **Monolith (Web BFF):** Identity Domain/Application/Infrastructure + Web (Blazor Server) + HttpClient'и до 4 downstream services.
+- **4 downstream services:** Notifications (8081), Presence (8082), Chats (8083), Messaging (8084).
+- **Shared infra:** Mongo (per-service DB), Redis (presence/sessions), RabbitMQ (vhost `telegramlike`), Jaeger (OTel collector).
+- **Що ще НЕ виносили:** Identity (потрібен IdP-сервіс OAuth2/OIDC для повної екстракції; зараз ОК як частина BFF).
 
 ## Що **не** робимо у міграції (поки)
 - Service discovery (Consul/eureka) — DNS у docker-compose досить
