@@ -79,6 +79,8 @@ public static class DependencyInjection
                 opts.PollIntervalSeconds = poll;
             if (int.TryParse(configuration["Outbox:BatchSize"], out var batch))
                 opts.BatchSize = batch;
+            if (int.TryParse(configuration["Outbox:MaxRetries"], out var maxRetries))
+                opts.MaxRetries = maxRetries;
         });
 
         services.AddSingleton<IIntegrationEventMapper, MessageSentEventMapper>();

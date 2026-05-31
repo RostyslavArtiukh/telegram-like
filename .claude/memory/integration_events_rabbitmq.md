@@ -22,7 +22,7 @@ metadata:
 - **IIntegrationEventMapper** — інтерфейс в `Application/Common/IntegrationEvents/`. Один мапер на тип domain event. Реєструється як Singleton, dispatcher отримує `IEnumerable<IIntegrationEventMapper>` і будує `Dictionary<Type, IIntegrationEventMapper>`.
 - **IDomainEventDispatcher** (internal у Infrastructure/Outbox) — приймає `IEnumerable<IDomainEvent>` + `IClientSessionHandle`, мапить, серіалізує (`System.Text.Json`), пише в outbox у тій же транзакції.
 - **Outbox**: `outbox` Mongo-колекція + `IOutboxStore` (internal). Поля: `Id`, `EventType` (assembly-qualified), `Payload` (JSON), `OccurredAt`, `SentAt?`, `Retries`.
-- **OutboxPublisherHostedService** — BackgroundService, кожні `Outbox:PollIntervalSeconds` сек тягне `SentAt == null`, deserialize по `Type.GetType(EventType)`, `IPublishEndpoint.Publish(payload, type)`, `MarkSentAsync`. На exception — `IncrementRetryAsync` + лог.
+- **OutboxPublisherHostedService** — BackgroundService, кожні `Outbox:PollIntervalSeconds` сек тягне `SentAt == null && DeadLetteredAt == null`, deserialize по `Type.GetType(EventType)`, `IPublishEndpoint.Publish(payload, type)`, `MarkSentAsync`. На exception — `RecordFailureAsync(id, error, maxRetries)` (інкрементить Retries + пише LastError + ставить DeadLetteredAt коли досягло MaxRetries, Step 23).
 - **Consumers** — у `Infrastructure/Messaging/Consumers/`. Тонкі: приймають integration event, викликають `IMediator.Send(<Command>)`. `MessageSentConsumer` викликає `FanoutChatNotificationCommand`.
 
 **How to apply (новий integration event):**
@@ -41,13 +41,13 @@ metadata:
 - Atomic save+outbox: так (Mongo транзакція).
 - At-least-once delivery: так — якщо publish впав, повідомлення лишається `SentAt == null` і буде повторно опубліковано.
 - Order: best-effort (sort by OccurredAt) — не строгий FIFO в межах consumer'а.
-- Без DLQ і retry policies — дефолти MassTransit. Додавати при потребі.
+- Outbox-level DLQ (Step 23): poison message після `Outbox:MaxRetries` (default 5) переходить у `DeadLetteredAt != null` стан і виключається з `GetPendingAsync`. Replay поки ручний (clear `DeadLetteredAt` + reset `Retries` через Mongo shell). RabbitMQ-side DLQ/retry policies (MassTransit `UseDelayedRedelivery`) — НЕ налаштовано.
 
 **Конфіги:**
 - `RabbitMQ:Host/Username/Password` у appsettings.json (у docker-compose — env vars `RabbitMQ__Host=rabbitmq`).
-- `Outbox:PollIntervalSeconds` (default 2), `Outbox:BatchSize` (default 50).
+- `Outbox:PollIntervalSeconds` (default 2), `Outbox:BatchSize` (default 50), `Outbox:MaxRetries` (default 5, після нього → DLQ).
 
 **Тести:**
 - `MessageSentEventMapperTests` (Application.Tests) — unit на маппінг.
-- `OutboxIntegrationTests` (Infrastructure.Tests) — Testcontainers Mongo, перевіряє: `AddAsync` пише в outbox в одній транзакції з messages; `MarkSentAsync`/`IncrementRetryAsync` працюють; payload коректно серіалізується/десеріалізується.
+- `OutboxIntegrationTests` (Infrastructure.Tests) — Testcontainers Mongo, перевіряє: `AddAsync` пише в outbox в одній транзакції з messages; `MarkSentAsync` працює; `RecordFailureAsync` бампить counter без DLQ нижче ліміту; `RecordFailureAsync` перемикає у DLQ після `maxRetries` і виключає з pending.
 - MassTransit test harness для consumer'ів — поки не додано. TODO якщо буде потрібен e2e тест.

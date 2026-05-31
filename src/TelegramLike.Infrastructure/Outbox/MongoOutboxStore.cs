@@ -23,7 +23,7 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
         CancellationToken ct = default)
     {
         var docs = await _outbox
-            .Find(d => d.SentAt == null)
+            .Find(d => d.SentAt == null && d.DeadLetteredAt == null)
             .SortBy(d => d.OccurredAt)
             .Limit(batchSize)
             .ToListAsync(ct);
@@ -37,9 +37,46 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
             Builders<OutboxDocument>.Update.Set(d => d.SentAt, DateTime.UtcNow),
             cancellationToken: ct);
 
-    public Task IncrementRetryAsync(Guid id, CancellationToken ct = default) =>
-        _outbox.UpdateOneAsync(
-            Builders<OutboxDocument>.Filter.Eq(d => d.Id, id),
-            Builders<OutboxDocument>.Update.Inc(d => d.Retries, 1),
-            cancellationToken: ct);
+    public async Task RecordFailureAsync(
+        Guid id,
+        string error,
+        int maxRetries,
+        CancellationToken ct = default)
+    {
+        // FindOneAndUpdate returns the post-update document, so we can decide
+        // dead-lettering in a second update without races on Retries.
+        var filter = Builders<OutboxDocument>.Filter.Eq(d => d.Id, id);
+        var update = Builders<OutboxDocument>.Update
+            .Inc(d => d.Retries, 1)
+            .Set(d => d.LastError, error);
+
+        var options = new FindOneAndUpdateOptions<OutboxDocument>
+        {
+            ReturnDocument = ReturnDocument.After
+        };
+
+        var updated = await _outbox.FindOneAndUpdateAsync(filter, update, options, ct);
+        if (updated is null) return;
+
+        if (updated.Retries >= maxRetries && updated.DeadLetteredAt is null)
+        {
+            await _outbox.UpdateOneAsync(
+                filter,
+                Builders<OutboxDocument>.Update.Set(d => d.DeadLetteredAt, DateTime.UtcNow),
+                cancellationToken: ct);
+        }
+    }
+
+    public async Task<IReadOnlyList<OutboxMessage>> GetDeadLetteredAsync(
+        int batchSize,
+        CancellationToken ct = default)
+    {
+        var docs = await _outbox
+            .Find(d => d.DeadLetteredAt != null)
+            .SortBy(d => d.DeadLetteredAt)
+            .Limit(batchSize)
+            .ToListAsync(ct);
+
+        return docs.Select(d => d.ToMessage()).ToList();
+    }
 }

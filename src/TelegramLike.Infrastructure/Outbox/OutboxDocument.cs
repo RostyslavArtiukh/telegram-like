@@ -20,6 +20,12 @@ internal sealed class OutboxDocument
 
     public int Retries { get; set; }
 
+    [BsonIgnoreIfNull]
+    public DateTime? DeadLetteredAt { get; set; }
+
+    [BsonIgnoreIfNull]
+    public string? LastError { get; set; }
+
     public static OutboxDocument FromMessage(OutboxMessage message) => new()
     {
         Id = message.Id,
@@ -27,9 +33,11 @@ internal sealed class OutboxDocument
         Payload = message.Payload,
         OccurredAt = message.OccurredAt,
         SentAt = message.SentAt,
-        Retries = message.Retries
+        Retries = message.Retries,
+        DeadLetteredAt = message.DeadLetteredAt,
+        LastError = message.LastError
     };
 
     public OutboxMessage ToMessage() =>
-        new(Id, EventType, Payload, OccurredAt, SentAt, Retries);
+        new(Id, EventType, Payload, OccurredAt, SentAt, Retries, DeadLetteredAt, LastError);
 }

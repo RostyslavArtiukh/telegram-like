@@ -6,4 +6,6 @@ internal sealed record OutboxMessage(
     string Payload,
     DateTime OccurredAt,
     DateTime? SentAt = null,
-    int Retries = 0);
+    int Retries = 0,
+    DateTime? DeadLetteredAt = null,
+    string? LastError = null);

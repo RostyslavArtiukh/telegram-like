@@ -201,3 +201,18 @@
 
 
 **Наслідок:** усі UI-критичні події тепер push: typing, нові повідомлення, unread count. Polling залишився тільки у `Notifications.razor` (3 сек page state) і `RefreshPresenceAsync` у ChatView (3 сек online dots). Обидва теж можна push-ити при потребі.
+
+## Step 23 (2026-05-31): Outbox — DLQ + max retries ✅
+- **Тех-борг:** `OutboxPublisherHostedService` робив `IncrementRetryAsync` на будь-який fail без верхньої межі — poison message (bad payload, unresolvable EventType, постійний broker reject) міг крутитись нескінченно і займати слот у кожному batch.
+- **Options:** `OutboxPublisherOptions.MaxRetries` (default 5, перевизначається через `Outbox:MaxRetries`).
+- **Store API:**
+  - `IncrementRetryAsync(id)` замінено на `RecordFailureAsync(id, error, maxRetries)` — у одній операції інкрементить `Retries`, пише `LastError`, і якщо `Retries >= maxRetries` ставить `DeadLetteredAt = UtcNow` другим update'ом.
+  - `GetPendingAsync` тепер фільтрує `SentAt == null && DeadLetteredAt == null` — DLQ-документи не повертаються більше.
+  - Новий `GetDeadLetteredAsync(batchSize)` для майбутньої operability (UI/CLI для replay).
+- **Document:** `OutboxDocument` отримав поля `DeadLetteredAt: DateTime?`, `LastError: string?` (обидва `[BsonIgnoreIfNull]` — non-breaking для існуючих документів).
+- **Logging:** publisher логує `LogWarning` для звичайного retry і `LogError` коли message переходить у DLQ.
+- **Tests:** +2 integration tests у `OutboxIntegrationTests` (один на retry counter без DLQ, інший на DLQ flip після `maxRetries`). Старий `IncrementRetryAsync_bumps_counter` замінено на нові. 107/107 passing.
+
+**TODO:**
+- Endpoint/CLI для replay DLQ messages (manual ack: clear `DeadLetteredAt` + reset `Retries`) — поки операція ручна через Mongo shell.
+- Той самий patern для consumers у Notifications (RabbitMQ has own DLX, але app-level fail handling теж знадобиться).

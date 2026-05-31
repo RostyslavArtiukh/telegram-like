@@ -19,9 +19,10 @@ internal sealed class OutboxPublisherHostedService(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation(
-            "OutboxPublisher started. Poll interval: {Interval}s, batch size: {Batch}",
+            "OutboxPublisher started. Poll interval: {Interval}s, batch size: {Batch}, max retries: {MaxRetries}",
             _options.PollIntervalSeconds,
-            _options.BatchSize);
+            _options.BatchSize,
+            _options.MaxRetries);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -74,12 +75,28 @@ internal sealed class OutboxPublisherHostedService(
             }
             catch (Exception ex)
             {
-                logger.LogError(
-                    ex,
-                    "Failed to publish outbox message {MessageId} (type {EventType})",
-                    message.Id,
-                    message.EventType);
-                await store.IncrementRetryAsync(message.Id, ct);
+                var nextAttempt = message.Retries + 1;
+                if (nextAttempt >= _options.MaxRetries)
+                {
+                    logger.LogError(
+                        ex,
+                        "Outbox message {MessageId} (type {EventType}) dead-lettered after {Attempts} attempts",
+                        message.Id,
+                        message.EventType,
+                        nextAttempt);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        ex,
+                        "Failed to publish outbox message {MessageId} (type {EventType}); attempt {Attempt}/{Max}",
+                        message.Id,
+                        message.EventType,
+                        nextAttempt,
+                        _options.MaxRetries);
+                }
+
+                await store.RecordFailureAsync(message.Id, ex.Message, _options.MaxRetries, ct);
             }
         }
     }
