@@ -418,3 +418,20 @@
 - Переписати `Home.razor` (список чатів + створення direct/group/broadcast + join/leave) з `IMediator` на `IChatsApi`.
 - Переписати `ChatView.razor` (повідомлення + реакції + retract + read + hide + типінг + членство) з `IMediator` на `IChatsApi`+`IMessagingApi`.
 - BFF enrichment: перед `SendMessageAsync` викликати `GetActiveRecipientsAsync` + `GetChatTypeAsync`; перед `RetractMessageAsync` — `IsModeratorAsync`. `IsPremium` поки що hardcode=false (Phase 6 додасть з session).
+
+## Step 35 (2026-05-31): Chats/Messaging extraction — Phase 5b (Razor → API clients) ✅
+- **Home.razor:** прибрано `IMediator` повністю. `GetMyChatsAsync`/`CreateGroupChatAsync`/`JoinChatAsync` йдуть через `IChatsApi`. UI використовує `ChatSummaryContract` замість Application DTO.
+- **ChatView.razor:**
+  - `GetChatByIdQuery` → `IChatsApi.GetChatByIdAsync`
+  - `GetChatMessagesQuery` → `IMessagingApi.GetChatMessagesAsync`
+  - `SendMessageCommand` → `IMessagingApi.SendMessageAsync` з **BFF enrichment**: recipients = всі active members крім автора, isBroadcast = `_chat.Type == Broadcast` (обидва з вже-завантаженого `ChatDetailsContract` — без додаткового HTTP round-trip).
+  - `MemberStatus.Active` → `MemberStatusContract.Active`; `ChatType` → `ChatTypeContract`.
+  - `IMediator` лишився **тільки для `GetUsernamesByIdsQuery`** (Identity, що ще в моноліті).
+- **Reactions/Retract/MarkAsRead/Hide ще не використовуються у UI** — Application-layer присутні, API endpoints присутні, але razor-сторінки їх не викликають (cosmetic features, які monolith теж не використовував).
+- **Monolith Application/Infrastructure для Chats/Messaging ще не видалено** — лишається working (паралельні шляхи), щоб не зламати в один комміт. Phase 6 викине.
+- **Build clean.** 118/118 тестів. **Web BFF більше не викликає monolith Chats/Messaging Mediator handlers під час runtime** для розглянутих flows (тільки compile-time через `TelegramLike.Infrastructure` reference, який ще тягне Chats/Messaging Domain/Application). Phase 6 розірве compile-time.
+
+**TODO для Phase 6:**
+- Видалити з моноліту `src/TelegramLike.Domain/Chats/`, `src/TelegramLike.Domain/Messaging/`, `src/TelegramLike.Application/Chats/`, `src/TelegramLike.Application/Messaging/`, `src/TelegramLike.Infrastructure/Persistence/MongoDB/Repositories/{Chat*,Message*,HiddenMessage*}`.
+- Прибрати з `TelegramLike.Infrastructure/DependencyInjection.cs` реєстрацію `IChatRepository`/`IMessageRepository`/тощо + IntegrationEvent mappers Chats/Messaging.
+- Видалити з `TelegramLike.Application.Tests` + `TelegramLike.Infrastructure.Tests` тести для Chats/Messaging.

@@ -1,12 +1,8 @@
 @page "/"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
-@using MediatR
-@using TelegramLike.Application.Chats.Commands.CreateGroupChat
-@using TelegramLike.Application.Chats.Commands.JoinChat
-@using TelegramLike.Application.Chats.Queries
-@using TelegramLike.Application.Chats.Queries.GetMyChats
 @using TelegramLike.Web.Services
-@inject IMediator Mediator
+@using TelegramLike.Web.Services.ChatsApi
+@inject IChatsApi ChatsApi
 @inject CurrentUserAccessor CurrentUser
 @inject NavigationManager Nav
 @rendermode InteractiveServer
@@ -87,7 +83,7 @@
 </div>
 
 @code {
-    private IReadOnlyList<ChatSummaryDto>? _chats;
+    private IReadOnlyList<ChatSummaryContract>? _chats;
     private CreateGroupModel _form = new();
     private string? _error;
     private string? _joinError;
@@ -105,7 +101,7 @@
 
     private async Task ReloadAsync()
     {
-        _chats = await Mediator.Send(new GetMyChatsQuery(_userId));
+        _chats = await ChatsApi.GetMyChatsAsync(_userId);
     }
 
     private async Task CreateAsync()
@@ -114,7 +110,7 @@
         _busy = true;
         try
         {
-            var id = await Mediator.Send(new CreateGroupChatCommand(_userId, _form.Name));
+            var id = await ChatsApi.CreateGroupChatAsync(_userId, _form.Name);
             _form = new CreateGroupModel();
             await ReloadAsync();
             Nav.NavigateTo($"/chat/{id}");
@@ -130,7 +126,7 @@
         _busy = true;
         try
         {
-            await Mediator.Send(new JoinChatCommand(chatId, _userId));
+            await ChatsApi.JoinChatAsync(_userId, chatId);
             Nav.NavigateTo($"/chat/{chatId}");
         }
         catch (Exception ex) { _joinError = ex.Message; }

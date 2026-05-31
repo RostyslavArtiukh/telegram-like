@@ -1,20 +1,19 @@
 @page "/chat/{ChatId:guid}"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @using MediatR
-@using TelegramLike.Application.Chats.Queries
-@using TelegramLike.Application.Chats.Queries.GetChatById
 @using TelegramLike.Application.Identity.Queries.GetUsernamesByIds
-@using TelegramLike.Application.Messaging.Commands.SendMessage
-@using TelegramLike.Application.Messaging.Queries
-@using TelegramLike.Application.Messaging.Queries.GetChatMessages
 @using TelegramLike.Web.Services
 @using TelegramLike.Web.Services.ChatChanged
+@using TelegramLike.Web.Services.ChatsApi
+@using TelegramLike.Web.Services.MessagingApi
 @using TelegramLike.Web.Services.NewMessage
-@using TelegramLike.Web.Services.Presence
 @using TelegramLike.Web.Services.NotificationsApi
+@using TelegramLike.Web.Services.Presence
 @using TelegramLike.Web.Services.PresenceApi
 @using TelegramLike.Web.Services.Typing
 @inject IMediator Mediator
+@inject IChatsApi ChatsApi
+@inject IMessagingApi MessagingApi
 @inject IPresenceApi PresenceApi
 @inject INotificationsApi NotificationsApi
 @inject ITypingPubSub TypingPubSub
@@ -44,7 +43,7 @@ else
             <h3 class="mb-1">@(_chat.Name ?? "Direct chat")</h3>
             <small class="text-muted">
                 @_chat.Type ·
-                @_chat.Members.Count(m => m.Status == TelegramLike.Domain.Chats.ValueObjects.MemberStatus.Active) active
+                @_chat.Members.Count(m => m.Status == MemberStatusContract.Active) active
                 @if (_onlineCount > 0)
                 {
                     <span class="text-success">· @_onlineCount online</span>
@@ -110,8 +109,8 @@ else
     [Parameter] public Guid ChatId { get; set; }
 
     private Guid _userId;
-    private ChatDetailsDto? _chat;
-    private List<MessageDto> _messages = [];
+    private ChatDetailsContract? _chat;
+    private List<MessageContract> _messages = [];
     private SendModel _send = new();
     private string? _loadError;
     private string? _sendError;
@@ -147,10 +146,6 @@ else
 
         SubscribeToPresenceForMembers();
 
-        // Poller stays for two reasons after Step 29: (1) sweep expired typing
-        // tokens (5s TTL, so we need a frequent tick), (2) presence safety net —
-        // browser-close skips GoOffline, Redis TTL handles it after 30s but no
-        // event is published, so we re-fetch presence every 10 ticks (~30s).
         _poller = new Timer(async _ => await InvokeAsync(PollAsync), null,
             TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
     }
@@ -168,7 +163,7 @@ else
         if (_chat is null) return;
 
         foreach (var member in _chat.Members
-            .Where(m => m.Status == TelegramLike.Domain.Chats.ValueObjects.MemberStatus.Active)
+            .Where(m => m.Status == MemberStatusContract.Active)
             .Where(m => m.UserId != _userId))
         {
             _presenceSubscriptions.Add(PresencePubSub.Subscribe(member.UserId, OnPresenceChangedAsync));
@@ -177,9 +172,6 @@ else
 
     private async Task OnPresenceChangedAsync(bool _)
     {
-        // We don't track per-user state locally (UI only shows an aggregate
-        // count), so a transition re-fetches the batch. Cheap — only fires on
-        // real transitions, not every heartbeat.
         await RefreshPresenceAsync();
         await InvokeAsync(StateHasChanged);
     }
@@ -190,8 +182,6 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    // Single callback for MessageRetracted / ReactionAdded / ReactionRemoved.
-    // All three need the same UI action (reload the visible message list).
     private async Task OnChatChangedAsync()
     {
         await ReloadMessagesAsync();
@@ -202,7 +192,7 @@ else
     {
         try
         {
-            _chat = await Mediator.Send(new GetChatByIdQuery(ChatId));
+            _chat = await ChatsApi.GetChatByIdAsync(_userId, ChatId);
             if (_chat is null) _loadError = "Chat not found.";
         }
         catch (Exception ex) { _loadError = ex.Message; }
@@ -224,13 +214,11 @@ else
     {
         try
         {
-            var page = await Mediator.Send(new GetChatMessagesQuery(ChatId, _userId));
+            var page = await MessagingApi.GetChatMessagesAsync(_userId, ChatId);
             var grew = page.Items.Count > _messages.Count;
             _messages = page.Items.ToList();
             StateHasChanged();
 
-            // If new messages arrived while we're actively viewing this chat,
-            // clear the matching notifications so NavMenu badge doesn't tick up.
             if (grew) await MarkChatNotificationsReadAsync();
         }
         catch { /* keep last good state */ }
@@ -248,7 +236,7 @@ else
         try
         {
             var members = _chat.Members
-                .Where(m => m.Status == TelegramLike.Domain.Chats.ValueObjects.MemberStatus.Active)
+                .Where(m => m.Status == MemberStatusContract.Active)
                 .Select(m => m.UserId)
                 .Where(id => id != _userId)
                 .ToList();
@@ -310,12 +298,28 @@ else
     private async Task SendAsync()
     {
         if (string.IsNullOrWhiteSpace(_send.Text)) return;
+        if (_chat is null) return;
 
         _sendError = null;
         _sending = true;
         try
         {
-            await Mediator.Send(new SendMessageCommand(ChatId, _userId, _send.Text));
+            // BFF enrichment: Messaging has no access to Chats data, so we resolve
+            // recipients (all active members except author) and broadcast flag here.
+            var recipients = _chat.Members
+                .Where(m => m.Status == MemberStatusContract.Active && m.UserId != _userId)
+                .Select(m => m.UserId)
+                .ToList();
+
+            var isBroadcast = _chat.Type == ChatTypeContract.Broadcast;
+
+            await MessagingApi.SendMessageAsync(
+                authorUserId: _userId,
+                chatId: ChatId,
+                text: _send.Text,
+                recipients: recipients,
+                isBroadcast: isBroadcast);
+
             _send = new SendModel();
             await ReloadMessagesAsync();
             try { await PresenceApi.StopTypingAsync(_userId, ChatId); } catch { }
