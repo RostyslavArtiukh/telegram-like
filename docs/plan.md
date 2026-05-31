@@ -346,3 +346,22 @@
 - **Phase 6:** Видалити з monolith Chats+Messaging Domain/Application/Infrastructure; monolith лишається Identity-only + BFF.
 - **Phase 7:** docker-compose: 2 нові сервіси + JWT propagation + healthcheck.
 - **Phase 8 (opt):** Messaging local membership read-model з Chats integration events для відновлення strict `IsActiveMember` check у `SendMessage`.
+
+## Step 31 (2026-05-31): Chats/Messaging extraction — Phase 2 (Application) ✅
+- **Chats.Application:** усе перенесено (12 command handlers + validators + 3 query handlers + 3 mappers). Cross-context **`IUserRepository`** залежність у 3 create handlers (CreateGroupChat/CreateBroadcastChannel/CreateDirectChat) **прибрана** — Identity лишається у monolith, Chats trust JWT-authenticated caller. Створено local `IIntegrationEventMapper` interface і `IChatQueryService` interface у `Chats.Application.Common/`.
+- **Messaging.Application:** усе перенесено (7 command handlers + validator + 2 query handlers + 4 mappers). Cross-context **`IChatRepository`** і **`IUserRepository`** залежності прибрані:
+  - `SendMessageCommand` тепер приймає `Recipients: IReadOnlyList<Guid>` + `IsBroadcast: bool` як параметри — Web BFF тягне з `ChatsApi` перед викликом.
+  - `AddReactionCommand` приймає `ActorIsPremium: bool` — Web BFF читає з session і пробросує (не IUserRepository call).
+  - `RetractMessageCommand` приймає `ActorIsModerator: bool` — Web BFF робить role-check через `ChatsApi`.
+  - `MarkMessageAsReadCommand` приймає `IsBroadcast: bool` — також з Web BFF.
+  - `GetChatMessagesQuery` — прибрано membership check (Web BFF).
+- Створено local interfaces у `Messaging.Application.Common/`: `IIntegrationEventMapper`, `IMessageReadReceiptRepository`, `IHiddenMessageRepository`, `IMessageQueryService`.
+- **Important regression (документовано в коді):** Messaging тепер **fail-open для всіх членів**. Якщо хтось обходить Web BFF, може send/read/retract/react у будь-якому чаті. Phase 8 поверне strict-validation через local `IChatMembershipReadModel` (patern Step 25).
+- **Monolith лишився повністю недоторканим.** Нові Application проекти — parallel copy, не використовуються нікиде поки.
+- **Тести:** 118/118 (нічого не змінено у production коді).
+
+**TODO для Phase 5 (Web BFF):**
+- `IChatsApi.GetActiveRecipientsAsync(chatId, excludeUserId)` — для `SendMessageCommand.Recipients`.
+- `IChatsApi.GetChatTypeAsync(chatId)` — для `IsBroadcast` flag (можна об'єднати з GetChatById endpoint).
+- `IChatsApi.IsModeratorAsync(chatId, userId)` — для `ActorIsModerator`.
+- Web BFF читає `IsPremium` з cookie/session перед `AddReactionCommand`.
