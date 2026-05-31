@@ -321,3 +321,28 @@
 **TODO:**
 - Background job у Presence: при Redis TTL expiry для presence-ключа emit `UserWentOfflineIntegrationEvent` (через keyspace notifications або periodic Redis SCAN + diff проти Mongo). Тоді можна повністю прибрати ChatView presence polling.
 - `Notifications.razor` 3-сек page state polling — теж залишилось, окремий крок.
+
+## Step 30 (2026-05-31): Chats/Messaging extraction — Phase 1 (scaffold + Domain) ✅
+- **Архітектурні рішення** (узгоджено з юзером):
+  - **Два окремих сервіси** `chats` + `messaging` замість одного об'єднаного. True DDD-розділ; Messaging пізніше будуватиме local membership read-model з Chats (як Presence Step 25).
+  - **Cross-context `user.IsPremium`** для reaction limit → Web BFF пропихатиме `IsPremium` як параметр у `AddReactionCommand`. Уникаємо cross-service queries.
+  - **Phase 1 scope:** тільки створити 8 нових проектів і перенести Domain layer — без зачіпання monolith. Application/Infrastructure/Api/BFF — окремі фази.
+- **Створено:** 8 csproj:
+  - `src/services/chats/TelegramLike.Chats.{Domain, Application, Infrastructure, Api}/`
+  - `src/services/messaging/TelegramLike.Messaging.{Domain, Application, Infrastructure, Api}/`
+  - ProjectReferences ланцюжком: Api → Infrastructure → Application → Domain.
+- **Base types скопійовано** у кожен `Domain/Common/` (`AggregateRoot`, `Entity`, `IDomainEvent`) з namespaces `TelegramLike.Chats.Domain.Common` / `TelegramLike.Messaging.Domain.Common` — кожен Domain незалежний.
+- **Chats.Domain отримав 19 файлів** (агрегати Chat/DirectChat/GroupChat/BroadcastChannel, Member entity, 10 events, IChatRepository, 4 VOs). Namespaces переписані з `TelegramLike.Domain.Chats` → `TelegramLike.Chats.Domain`.
+- **Messaging.Domain отримав 14 файлів** (Message agg, Reaction entity, 4 events, IMessageRepository, 7 VOs). Namespaces — `TelegramLike.Messaging.Domain`.
+- **Сross-deps confirmed clean:** Chats не посилається на Messaging і навпаки — кожен domain самодостатній.
+- **Monolith лишився повністю недоторканим:** `src/TelegramLike.Domain/Chats|Messaging/` працює як раніше, всі razor pages і tests працюють як раніше. Це навмисний "additive-only" крок щоб нічого не зламати.
+- **Тести:** 118/118 (нічого нового; новий код — copy без логіки).
+
+**TODO (наступні Phase):**
+- **Phase 2:** Application layer (Commands/Queries/Handlers + IntegrationEvent mappers) у обидва сервіси + Contracts ще не зачеплено (events лишаються у `TelegramLike.Contracts`).
+- **Phase 3:** Infrastructure (Mongo repos для chats/chat_members/messages/message_read_receipts/hidden_messages + outbox + MassTransit).
+- **Phase 4:** Api shells (JWT auth + HealthChecks + OpenTelemetry, як для Notifications/Presence).
+- **Phase 5:** Web BFF clients (`IChatsApi`/`IMessagingApi`); переписати razor pages з `IMediator.Send` на HttpClient API.
+- **Phase 6:** Видалити з monolith Chats+Messaging Domain/Application/Infrastructure; monolith лишається Identity-only + BFF.
+- **Phase 7:** docker-compose: 2 нові сервіси + JWT propagation + healthcheck.
+- **Phase 8 (opt):** Messaging local membership read-model з Chats integration events для відновлення strict `IsActiveMember` check у `SendMessage`.
