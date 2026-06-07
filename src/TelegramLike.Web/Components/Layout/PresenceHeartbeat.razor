@@ -1,0 +1,43 @@
+@rendermode InteractiveServer
+@using TelegramLike.Web.Services
+@using TelegramLike.Web.Services.PresenceApi
+@inject IPresenceApi PresenceApi
+@inject CurrentUserAccessor CurrentUser
+@implements IAsyncDisposable
+
+@* Headless interactive island. Kept separate from MainLayout so the heartbeat
+   runs on a persistent circuit (the layout itself is statically server-rendered),
+   while the rest of the layout stays static SSR. *@
+
+@code {
+    private Timer? _heartbeat;
+    private Guid? _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userId = await CurrentUser.GetUserIdAsync();
+        if (_userId is null) return;
+
+        await SendHeartbeatAsync();
+        _heartbeat = new Timer(async _ => await InvokeAsync(SendHeartbeatAsync), null,
+            TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20));
+    }
+
+    private async Task SendHeartbeatAsync()
+    {
+        if (_userId is null) return;
+        try { await PresenceApi.HeartbeatAsync(_userId.Value); }
+        catch { /* presence is best-effort */ }
+    }
+
+    // No explicit GoOffline here: enhanced navigation re-creates this island on
+    // every page change, so calling GoOffline on dispose would briefly clear the
+    // presence key and make the user flicker offline between pages. Offline is
+    // instead driven purely by the Redis heartbeat TTL — once heartbeats stop
+    // (real tab close / sign-out), the key expires within ~TTL and the user goes
+    // offline. The new island's immediate heartbeat keeps the key alive across navigations.
+    public async ValueTask DisposeAsync()
+    {
+        if (_heartbeat is not null) await _heartbeat.DisposeAsync();
+    }
+}

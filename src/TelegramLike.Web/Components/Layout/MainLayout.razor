@@ -1,9 +1,4 @@
 @inherits LayoutComponentBase
-@using TelegramLike.Web.Services
-@using TelegramLike.Web.Services.PresenceApi
-@inject IPresenceApi PresenceApi
-@inject CurrentUserAccessor CurrentUser
-@implements IAsyncDisposable
 
 <div class="page">
     <div class="sidebar">
@@ -17,39 +12,10 @@
     </main>
 </div>
 
+<PresenceHeartbeat />
+
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
-
-@code {
-    private Timer? _heartbeat;
-    private Guid? _userId;
-
-    protected override async Task OnInitializedAsync()
-    {
-        _userId = await CurrentUser.GetUserIdAsync();
-        if (_userId is null) return;
-
-        await SendHeartbeatAsync();
-        _heartbeat = new Timer(async _ => await InvokeAsync(SendHeartbeatAsync), null,
-            TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20));
-    }
-
-    private async Task SendHeartbeatAsync()
-    {
-        if (_userId is null) return;
-        try { await PresenceApi.HeartbeatAsync(_userId.Value); }
-        catch { /* presence is best-effort */ }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_heartbeat is not null) await _heartbeat.DisposeAsync();
-        if (_userId is not null)
-        {
-            try { await PresenceApi.GoOfflineAsync(_userId.Value); } catch { }
-        }
-    }
-}
