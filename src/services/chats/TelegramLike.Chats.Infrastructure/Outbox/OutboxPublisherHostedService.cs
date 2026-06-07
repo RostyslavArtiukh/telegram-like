@@ -9,7 +9,6 @@ namespace TelegramLike.Chats.Infrastructure.Outbox;
 
 internal sealed class OutboxPublisherHostedService(
     IServiceScopeFactory scopeFactory,
-    IPublishEndpoint publishEndpoint,
     IOptions<OutboxPublisherOptions> options,
     ILogger<OutboxPublisherHostedService> logger) : BackgroundService
 {
@@ -54,6 +53,7 @@ internal sealed class OutboxPublisherHostedService(
     {
         using var scope = scopeFactory.CreateScope();
         var store = scope.ServiceProvider.GetRequiredService<IOutboxStore>();
+        var publishEndpoint = scope.ServiceProvider.GetRequiredService<IPublishEndpoint>();
 
         var pending = await store.GetPendingAsync(_options.BatchSize, ct);
         if (pending.Count == 0) return;
