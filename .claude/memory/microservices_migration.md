@@ -154,6 +154,25 @@ metadata:
 - **Shared infra:** Mongo (per-service DB), Redis (presence/sessions), RabbitMQ (vhost `telegramlike`), Jaeger (OTel collector).
 - **Що ще НЕ виносили:** Identity (потрібен IdP-сервіс OAuth2/OIDC для повної екстракції; зараз ОК як частина BFF).
 
+### Steps 39–45 (2026-06-07) 🚧 — Identity extraction (останній контекст → standalone IdP). PAUSED після Phase 4.
+**Архітектурні рішення (узгоджено з юзером):**
+- **Identity стає IdP** (не просто user-сервіс): випуск JWT переїжджає з Web → Identity. Усі 4 наявні сервіси треба переконфігурувати `ValidIssuer` з `telegramlike-web` → `telegramlike-identity` (Phase 5). Web більше не issuer — він exchange'ить session token на access-token у Identity і форвардить.
+- **Browser login лишає Redis session-token handoff** (як зараз): `/login` → session token → `/auth/signin` обмінює на cookie. `RedisSessionService` переїхав у Identity.
+- Identity — **останній контекст**, тож Phase 6 **розчиняє моноліт**: видаляємо `TelegramLike.Domain/Application/Infrastructure`, Web стає pure BFF (тільки Contracts + 5 HttpClient'ів). MassTransit-шину Web (pubsub consumers) переносимо з `Infrastructure.AddIntegrationMessaging` у Web-локальний extension.
+
+**Зроблено й запушено (origin/master):** новий сервіс `src/services/identity/` (port 8085, БД `telegramlike_identity`):
+- Phase 1 (Step 39): scaffold 4 csproj + Domain (User/VOs/events/IUserRepository, namespace `TelegramLike.Identity.Domain`).
+- Phase 2 (Step 40): Application — RegisterUser/LoginUser + validators, GetUserById/GetUsernamesByIds/GetUserIdByUsername; `IPasswordHasher`/`ISessionService` переїхали; **новий `IAccessTokenIssuer`** + `ExchangeSessionQuery` (session→access JWT+claims, тонкі Api endpoints).
+- Phase 3 (Step 41): Infrastructure — UserRepository/UserDocument, BcryptPasswordHasher, RedisSessionService, **`AccessTokenIssuer`** (HMAC, `iss=telegramlike-identity`). `AddIdentityInfrastructure`. БЕЗ RabbitMQ/outbox (Identity не має integration events).
+- Phase 4 (Step 42): Api shell 8085 — public `/auth/register`, `/auth/login`, `/auth/token`; authed `/users/{id}`, `/users/by-ids`, `/users/by-username` (валідує власні токени). MediatR+ValidationBehavior+FluentValidation, Mongo+Redis health, OTel. **Smoke-перевірено локально** (register→login→token→authed, 401 без токена, 400 дубль). Той самий shared JWT secret що в усіх сервісах.
+
+**Phase 5 (Step 43) — НЕ зроблено, готовий дизайн (наступна сесія):**
+- ⚠️ **Scope-пастка:** `ServiceAuthHandler` (DelegatingHandler) пулиться IHttpClientFactory ОКРЕМО від Blazor circuit-scope. Інжектити scoped auth-state (CurrentUserAccessor) у handler НЕ МОЖНА — токен одного юзера прилетить іншому. Тому план «handler сам читає session_token» **хибний**.
+- **Коректно:** scoped `ServiceTokenProvider` (інжектиться в КЛІЄНТИ, не в handler) резолвить access-token у circuit-scope: `CurrentUserAccessor.GetSessionTokenAsync()` → `IIdentityAuthApi.ExchangeAsync` → cache (IMemoryCache, TTL < token lifetime). Кладе токен у `request.Options`; handler лише чіпляє `Bearer` (як зараз робиться з `UserIdKey`/userId).
+- **Файли Phase 5:** `CurrentUserAccessor` (+GetSessionTokenAsync читає `session_token` claim — він вже сетиться у [Web/Program.cs](src/TelegramLike.Web/Program.cs) /auth/signin); новий `Web/Services/IdentityApi/` — `IIdentityAuthApi` (register/login/exchange, **plain client без handler**) + `IIdentityUsersApi` (user-queries, **з handler**); `ServiceTokenProvider`; переробити `ServiceAuthHandler` (читати `AccessTokenKey` замість мінтити, прибрати `ServiceTokenIssuer`); 4 клієнти (Presence/Chats/Messaging — 1 chokepoint-helper кожен, Notifications — 5 inline) сетять access-token замість `UserIdKey`; `Program.cs` DI (AddMemoryCache, 2 identity clients, прибрати ServiceTokenIssuer); `/auth/signin` → `ExchangeAsync`; razor Login/Register → `IIdentityAuthApi`, ChatView(premium)/Home(direct-chat) → `IIdentityUsersApi`; **4 сервіси appsettings `ServiceAuth:Issuer`→`telegramlike-identity`** (атомарно з Web, інакше downstream 401).
+- userId-параметри в 4 клієнтах лишаються (vestigial для auth, але йдуть у URL/body де треба) — не чіпати сигнатури/razor-call-sites.
+- План-файл: `C:\Users\Ros\.claude\plans\optimized-squishing-quail.md`.
+
 ## Що **не** робимо у міграції (поки)
 - Service discovery (Consul/eureka) — DNS у docker-compose досить
 - Distributed tracing (OpenTelemetry, Jaeger) — окремий день
