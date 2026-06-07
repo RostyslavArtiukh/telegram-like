@@ -1,8 +1,11 @@
 @page "/"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using MediatR
+@using TelegramLike.Application.Identity.Queries.GetUserIdByUsername
 @using TelegramLike.Web.Services
 @using TelegramLike.Web.Services.ChatsApi
 @inject IChatsApi ChatsApi
+@inject IMediator Mediator
 @inject CurrentUserAccessor CurrentUser
 @inject NavigationManager Nav
 @rendermode InteractiveServer
@@ -31,8 +34,9 @@
                             <a href="/chat/@chat.ChatId" class="text-decoration-none fw-semibold">
                                 @(chat.Name ?? "(direct)")
                             </a>
+                            <span class="badge @TypeBadgeClass(chat.Type) ms-2">@chat.Type</span>
                             <small class="text-muted ms-2">
-                                @chat.Type · @chat.ActiveMemberCount member(s) · you are @chat.MyRole
+                                @chat.ActiveMemberCount member(s) · you are @chat.MyRole
                             </small>
                         </div>
                         <code class="text-muted small">@chat.ChatId</code>
@@ -46,20 +50,58 @@
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">Create a group chat</h5>
-                <EditForm Model="@_form" OnValidSubmit="CreateAsync" FormName="create-group">
+                <EditForm Model="@_group" OnValidSubmit="CreateGroupAsync" FormName="create-group">
                     <DataAnnotationsValidator />
                     <div class="mb-3">
                         <label class="form-label">Name</label>
-                        <InputText class="form-control" @bind-Value="_form.Name" />
+                        <InputText class="form-control" @bind-Value="_group.Name" />
                     </div>
-                    @if (!string.IsNullOrEmpty(_error))
+                    @if (!string.IsNullOrEmpty(_groupError))
                     {
-                        <div class="alert alert-danger">@_error</div>
+                        <div class="alert alert-danger">@_groupError</div>
                     }
                     <button type="submit" class="btn btn-primary" disabled="@_busy">
-                        @(_busy ? "Creating…" : "Create")
+                        @(_busy ? "Creating…" : "Create group")
                     </button>
                 </EditForm>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5 class="card-title">Create a broadcast channel</h5>
+                <p class="card-text small text-muted">
+                    Only owners/admins can post; everyone else joins as a viewer.
+                </p>
+                <EditForm Model="@_broadcast" OnValidSubmit="CreateBroadcastAsync" FormName="create-broadcast">
+                    <DataAnnotationsValidator />
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <InputText class="form-control" @bind-Value="_broadcast.Name" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(_broadcastError))
+                    {
+                        <div class="alert alert-danger">@_broadcastError</div>
+                    }
+                    <button type="submit" class="btn btn-primary" disabled="@_busy">
+                        @(_busy ? "Creating…" : "Create channel")
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6 class="card-title">Start a direct chat</h6>
+                <p class="card-text small text-muted">Enter the other person's username:</p>
+                <div class="input-group">
+                    <input class="form-control" placeholder="username" @bind="_directUsername" />
+                    <button class="btn btn-outline-secondary" @onclick="CreateDirectAsync" disabled="@_busy">Start</button>
+                </div>
+                @if (!string.IsNullOrEmpty(_directError))
+                {
+                    <div class="alert alert-danger mt-2 mb-0 small">@_directError</div>
+                }
             </div>
         </div>
 
@@ -84,9 +126,13 @@
 
 @code {
     private IReadOnlyList<ChatSummaryContract>? _chats;
-    private CreateGroupModel _form = new();
-    private string? _error;
+    private CreateChatModel _group = new();
+    private CreateChatModel _broadcast = new();
+    private string? _groupError;
+    private string? _broadcastError;
+    private string? _directError;
     private string? _joinError;
+    private string? _directUsername;
     private string? _joinId;
     private bool _busy;
     private Guid _userId;
@@ -104,18 +150,51 @@
         _chats = await ChatsApi.GetMyChatsAsync(_userId);
     }
 
-    private async Task CreateAsync()
+    private async Task CreateGroupAsync()
     {
-        _error = null;
+        _groupError = null;
         _busy = true;
         try
         {
-            var id = await ChatsApi.CreateGroupChatAsync(_userId, _form.Name);
-            _form = new CreateGroupModel();
-            await ReloadAsync();
+            var id = await ChatsApi.CreateGroupChatAsync(_userId, _group.Name);
+            _group = new CreateChatModel();
             Nav.NavigateTo($"/chat/{id}");
         }
-        catch (Exception ex) { _error = ex.Message; }
+        catch (Exception ex) { _groupError = ex.Message; }
+        finally { _busy = false; }
+    }
+
+    private async Task CreateBroadcastAsync()
+    {
+        _broadcastError = null;
+        _busy = true;
+        try
+        {
+            var id = await ChatsApi.CreateBroadcastChannelAsync(_userId, _broadcast.Name);
+            _broadcast = new CreateChatModel();
+            Nav.NavigateTo($"/chat/{id}");
+        }
+        catch (Exception ex) { _broadcastError = ex.Message; }
+        finally { _busy = false; }
+    }
+
+    private async Task CreateDirectAsync()
+    {
+        _directError = null;
+        if (string.IsNullOrWhiteSpace(_directUsername)) { _directError = "Enter a username."; return; }
+
+        _busy = true;
+        try
+        {
+            var peerId = await Mediator.Send(new GetUserIdByUsernameQuery(_directUsername.Trim()));
+            if (peerId is null) { _directError = "User not found."; return; }
+            if (peerId == _userId) { _directError = "You can't start a direct chat with yourself."; return; }
+
+            var id = await ChatsApi.CreateDirectChatAsync(_userId, peerId.Value);
+            _directUsername = null;
+            Nav.NavigateTo($"/chat/{id}");
+        }
+        catch (Exception ex) { _directError = ex.Message; }
         finally { _busy = false; }
     }
 
@@ -133,7 +212,15 @@
         finally { _busy = false; }
     }
 
-    private sealed class CreateGroupModel
+    private static string TypeBadgeClass(ChatTypeContract type) => type switch
+    {
+        ChatTypeContract.Direct => "bg-secondary",
+        ChatTypeContract.Group => "bg-primary",
+        ChatTypeContract.Broadcast => "bg-info text-dark",
+        _ => "bg-secondary"
+    };
+
+    private sealed class CreateChatModel
     {
         [System.ComponentModel.DataAnnotations.Required]
         [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using TelegramLike.Application.Common.Behaviors;
 using TelegramLike.Application.Common.Interfaces;
 using TelegramLike.Application.Identity.Commands.RegisterUser;
 using TelegramLike.Application.Identity.Queries.GetUserById;
@@ -72,7 +73,10 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUserAccessor>();
 
 builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(RegisterUserCommand).Assembly));
+{
+    cfg.RegisterServicesFromAssembly(typeof(RegisterUserCommand).Assembly);
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+});
 
 builder.Services.AddValidatorsFromAssembly(typeof(RegisterUserCommand).Assembly);
 
