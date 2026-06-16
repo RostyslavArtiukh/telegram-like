@@ -8,6 +8,14 @@ Telegram-like messenger. Migrated from a modular monolith to **microservices + a
   - identity **8085** · notifications **8081** · presence **8082** · chats **8083** · messaging **8084**
 - **Shared infra:** MongoDB (per-service DB, replica set `rs0`), Redis, RabbitMQ (vhost `telegramlike`), Jaeger (OTLP 4317, UI 16686).
 
+## Per-area guides (auto-loaded when you work in that directory)
+- Web BFF → [src/TelegramLike.Web/CLAUDE.md](src/TelegramLike.Web/CLAUDE.md)
+- Identity (IdP) → [src/services/identity/CLAUDE.md](src/services/identity/CLAUDE.md)
+- Notifications → [src/services/notifications/CLAUDE.md](src/services/notifications/CLAUDE.md)
+- Presence → [src/services/presence/CLAUDE.md](src/services/presence/CLAUDE.md)
+- Chats → [src/services/chats/CLAUDE.md](src/services/chats/CLAUDE.md)
+- Messaging → [src/services/messaging/CLAUDE.md](src/services/messaging/CLAUDE.md)
+
 ## Auth — Identity is the IdP
 - Identity signs short-lived HMAC-SHA256 JWTs: `iss=telegramlike-identity`, `aud=telegramlike-services`, `sub`=userId. Every service validates with the same shared secret and `MapInboundClaims=false`.
 - Web holds a cookie session and exchanges the cookie's opaque session token for an access JWT at Identity (`ServiceTokenProvider`, scoped), forwarding `Bearer` on downstream calls. **Web signs nothing.**
