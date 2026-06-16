@@ -148,30 +148,24 @@ metadata:
 - 57/57 тестів (зменшилось з 118, тільки за рахунок видалення dead монолітних тестів — нової логіки не сламано).
 - **Monolith ≈ Identity + BFF + Infrastructure shell** (1 IUserRepository + dormant Outbox). Identity можна виносити наступним.
 
-### Поточний стан архітектури (після Step 36)
-- **Monolith (Web BFF):** Identity Domain/Application/Infrastructure + Web (Blazor Server) + HttpClient'и до 4 downstream services.
-- **4 downstream services:** Notifications (8081), Presence (8082), Chats (8083), Messaging (8084).
-- **Shared infra:** Mongo (per-service DB), Redis (presence/sessions), RabbitMQ (vhost `telegramlike`), Jaeger (OTel collector).
-- **Що ще НЕ виносили:** Identity (потрібен IdP-сервіс OAuth2/OIDC для повної екстракції; зараз ОК як частина BFF).
+### Поточний стан архітектури (після [TL-45] — МІГРАЦІЯ ЗАВЕРШЕНА ✅)
+- **Web = pure BFF** (Blazor Server): тільки `TelegramLike.Contracts` + 5 HttpClient-ів + власна MassTransit-шина для real-time pubsub consumers. Без Mongo/Redis/Domain/Application — моноліт розчинено.
+- **5 downstream services:** Notifications (8081), Presence (8082), Chats (8083), Messaging (8084), **Identity (8085)**.
+- **Identity = IdP:** підписує access-JWT (`iss=telegramlike-identity`), які валідують усі сервіси. Web exchange'ить session token (cookie) на access-token через `ServiceTokenProvider` (scoped, circuit-scope) і форвардить Bearer; Web більше нічого не підписує.
+- **Shared infra:** Mongo (per-service DB, +`telegramlike_identity`), Redis (Identity sessions + Presence cache), RabbitMQ (vhost `telegramlike`), Jaeger (OTel).
 
-### Identity extraction (Steps 39–42 done; [TL-43]+ remaining) (2026-06-07) 🚧 — останній контекст → standalone IdP. PAUSED після Phase 4. (Нейминг комітів з [TL-43] — див. [[nomenclature-step-not-day]].)
-**Архітектурні рішення (узгоджено з юзером):**
-- **Identity стає IdP** (не просто user-сервіс): випуск JWT переїжджає з Web → Identity. Усі 4 наявні сервіси треба переконфігурувати `ValidIssuer` з `telegramlike-web` → `telegramlike-identity` (Phase 5). Web більше не issuer — він exchange'ить session token на access-token у Identity і форвардить.
-- **Browser login лишає Redis session-token handoff** (як зараз): `/login` → session token → `/auth/signin` обмінює на cookie. `RedisSessionService` переїхав у Identity.
-- Identity — **останній контекст**, тож Phase 6 **розчиняє моноліт**: видаляємо `TelegramLike.Domain/Application/Infrastructure`, Web стає pure BFF (тільки Contracts + 5 HttpClient'ів). MassTransit-шину Web (pubsub consumers) переносимо з `Infrastructure.AddIntegrationMessaging` у Web-локальний extension.
+### Identity extraction — ЗАВЕРШЕНО (2026-06-07, [TL-43]…[TL-45]) ✅ — останній контекст → standalone IdP; моноліт розчинено.
+**Рішення:** Identity = IdP (випуск JWT з Web → Identity, усі сервіси `ValidIssuer=telegramlike-identity`); browser login лишив Redis session-token handoff (`RedisSessionService` переїхав у Identity); Phase 6 розчинив моноліт.
 
-**Зроблено й запушено (origin/master):** новий сервіс `src/services/identity/` (port 8085, БД `telegramlike_identity`):
-- Phase 1 (Step 39): scaffold 4 csproj + Domain (User/VOs/events/IUserRepository, namespace `TelegramLike.Identity.Domain`).
-- Phase 2 (Step 40): Application — RegisterUser/LoginUser + validators, GetUserById/GetUsernamesByIds/GetUserIdByUsername; `IPasswordHasher`/`ISessionService` переїхали; **новий `IAccessTokenIssuer`** + `ExchangeSessionQuery` (session→access JWT+claims, тонкі Api endpoints).
-- Phase 3 (Step 41): Infrastructure — UserRepository/UserDocument, BcryptPasswordHasher, RedisSessionService, **`AccessTokenIssuer`** (HMAC, `iss=telegramlike-identity`). `AddIdentityInfrastructure`. БЕЗ RabbitMQ/outbox (Identity не має integration events).
-- Phase 4 (Step 42): Api shell 8085 — public `/auth/register`, `/auth/login`, `/auth/token`; authed `/users/{id}`, `/users/by-ids`, `/users/by-username` (валідує власні токени). MediatR+ValidationBehavior+FluentValidation, Mongo+Redis health, OTel. **Smoke-перевірено локально** (register→login→token→authed, 401 без токена, 400 дубль). Той самий shared JWT secret що в усіх сервісах.
+**Фази (всі запушені на origin/master), сервіс `src/services/identity/` (8085, БД `telegramlike_identity`):**
+- Phase 1–4 (Step 39–42): scaffold+Domain; Application (RegisterUser/LoginUser+validators, GetUserById/GetUsernamesByIds/GetUserIdByUsername, `IPasswordHasher`/`ISessionService`, **новий `IAccessTokenIssuer`** + `ExchangeSessionQuery`); Infrastructure (UserRepository, BcryptPasswordHasher, RedisSessionService, **`AccessTokenIssuer`** HMAC `iss=telegramlike-identity`, БЕЗ RabbitMQ/outbox); Api 8085 (public `/auth/register|login|token`; authed `/users/{id}|by-ids|by-username`, валідує власні токени).
+- **Phase 5 [TL-43]** — Web → IdP. ⚠️ **Scope-урок:** `DelegatingHandler` пулиться IHttpClientFactory ОКРЕМО від Blazor circuit-scope → інжектити scoped auth-state у handler НЕ МОЖНА (токен одного юзера прилетить іншому). Рішення: scoped **`ServiceTokenProvider`** (інжектиться в КЛІЄНТИ, не в handler) резолвить access-token у circuit-scope (`CurrentUserAccessor.GetSessionTokenAsync` → `IIdentityAuthApi.ExchangeAsync` → `IMemoryCache`); клієнти самі чіпляють `Bearer`. Видалено `ServiceTokenIssuer`/`ServiceAuthHandler`/`ServiceAuthOptions`. `Web/Services/IdentityApi/`: `IIdentityAuthApi` (public, plain client) + `IIdentityUsersApi` (authed). 4 сервіси `ValidIssuer→telegramlike-identity` (атомарно).
+- **Phase 6 [TL-44]** — розчинення моноліту: видалено `TelegramLike.Domain/Application/Infrastructure`; Web hosts власну MassTransit-шину (pubsub); Identity domain tests → `tests/TelegramLike.Identity.Domain.Tests`. 57 тестів зелені.
+- **Phase 7 [TL-45]** — docker-compose `identity` (8085, без bus) + `ServiceAuth__Issuer=telegramlike-identity` env на 4 сервісах + web `depends_on identity`/`IdentityApi__BaseUrl`; web env очищено (pure BFF).
 
-**Phase 5 ([TL-43]) — НЕ зроблено, готовий дизайн (наступна сесія):**
-- ⚠️ **Scope-пастка:** `ServiceAuthHandler` (DelegatingHandler) пулиться IHttpClientFactory ОКРЕМО від Blazor circuit-scope. Інжектити scoped auth-state (CurrentUserAccessor) у handler НЕ МОЖНА — токен одного юзера прилетить іншому. Тому план «handler сам читає session_token» **хибний**.
-- **Коректно:** scoped `ServiceTokenProvider` (інжектиться в КЛІЄНТИ, не в handler) резолвить access-token у circuit-scope: `CurrentUserAccessor.GetSessionTokenAsync()` → `IIdentityAuthApi.ExchangeAsync` → cache (IMemoryCache, TTL < token lifetime). Кладе токен у `request.Options`; handler лише чіпляє `Bearer` (як зараз робиться з `UserIdKey`/userId).
-- **Файли Phase 5:** `CurrentUserAccessor` (+GetSessionTokenAsync читає `session_token` claim — він вже сетиться у [Web/Program.cs](src/TelegramLike.Web/Program.cs) /auth/signin); новий `Web/Services/IdentityApi/` — `IIdentityAuthApi` (register/login/exchange, **plain client без handler**) + `IIdentityUsersApi` (user-queries, **з handler**); `ServiceTokenProvider`; переробити `ServiceAuthHandler` (читати `AccessTokenKey` замість мінтити, прибрати `ServiceTokenIssuer`); 4 клієнти (Presence/Chats/Messaging — 1 chokepoint-helper кожен, Notifications — 5 inline) сетять access-token замість `UserIdKey`; `Program.cs` DI (AddMemoryCache, 2 identity clients, прибрати ServiceTokenIssuer); `/auth/signin` → `ExchangeAsync`; razor Login/Register → `IIdentityAuthApi`, ChatView(premium)/Home(direct-chat) → `IIdentityUsersApi`; **4 сервіси appsettings `ServiceAuth:Issuer`→`telegramlike-identity`** (атомарно з Web, інакше downstream 401).
-- userId-параметри в 4 клієнтах лишаються (vestigial для auth, але йдуть у URL/body де треба) — не чіпати сигнатури/razor-call-sites.
-- План-файл: `C:\Users\Ros\.claude\plans\optimized-squishing-quail.md`.
+**Verify:** стек all-healthy; two-browser Playwright PASS — register → login (IdP exchange → cookie) → home(chats) → start direct(identity+chats) → send(messaging) → Bob отримав real-time + ім'я peer (identity GetUsernamesByIds) + online/typing. Усі downstream-виклики авторизуються Identity-issued JWT.
+
+**Наслідок:** інкрементальна міграція modular monolith → 5 мікросервісів + pure BFF **повністю завершена**. Патерн (6-phase recipe) відпрацьовано на 5 контекстах.
 
 ## Що **не** робимо у міграції (поки)
 - Service discovery (Consul/eureka) — DNS у docker-compose досить

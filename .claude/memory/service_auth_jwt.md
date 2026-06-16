@@ -7,6 +7,8 @@ metadata:
   originSessionId: c86df29a-c998-45fb-8ef5-72540737621d
 ---
 
+> **ОНОВЛЕНО ([TL-43]…[TL-45], 2026-06-07):** Web більше **НЕ** issuer. Identity-сервіс став **IdP** і підписує access-токени (`iss=telegramlike-identity`), які валідують усі 5 сервісів. Web exchange'ить session token (cookie) на access-token через Identity (`ServiceTokenProvider`, scoped) і форвардить `Bearer`. `ServiceTokenIssuer`/`ServiceAuthHandler` у Web видалені. Деталі — [[microservices-migration]]. Нижче — історичний опис первісної схеми (Web як issuer, до екстракції Identity).
+
 День 14 (2026-05-30): закрита auth-діра між Web BFF і Notifications-сервісом.
 
 **Why:** до Дня 14 Web передавав `X-User-Id` header а downstream сервіси трактували як істину. У docker network будь-який контейнер міг підставити header і читати чужі нотифікації.
