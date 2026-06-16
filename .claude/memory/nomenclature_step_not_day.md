@@ -1,21 +1,26 @@
 ---
 name: nomenclature-step-not-day
-description: "Маркувати ітерації як \"Step N\" а не \"Day N\" — \"Day\" плутає бо за один фізичний день буває кілька кроків"
+description: "Префікс комітів/ітерацій — поточне правило [TL-N] (Jira-style). Еволюція: Day N → Step N → [TL-N], один running counter"
 metadata: 
   node_type: memory
   type: feedback
   originSessionId: c86df29a-c998-45fb-8ef5-72540737621d
 ---
 
-Використовувати **"Step N"** замість "Day N" для нових ітерацій (нумерація продовжує існуючу — наступний буде Step 22 після Day 1-21 у plan.md та git history).
+Поточне правило (з 2026-06-07): маркувати нові ітерації/коміти префіксом **`[TL-N]`** — напр. `[TL-43] <тема>`. Номер — той самий running counter, що й раніше.
 
-**Why:** один фізичний день містить кілька логічних кроків (Days 17-21 усі датовані 2026-05-30). "Day N" створює враження що це реальний день, а це фактично завдання/ітерація. "Step" нейтрально і чесно.
+**Еволюція конвенції (один лічильник, різні префікси через історію):**
+- **Day 1–21** — найперша назва.
+- **Step 22–42** — "Day" плутав (за один фізичний день буває кілька кроків), перейшли на "Step".
+- **[TL-43]+ — поточне.** Юзер попросив (2026-06-07) Jira-style ключ `[TL-N]` замість слова "Step"/"Day".
+
+**Why:** `[TL-N]` компактний, схожий на трекер-key (TL = TelegramLike), легко грепати/лінкувати. "Day"/"Step" прозовіші й плутаються.
 
 **How to apply:**
-- Нові секції у `docs/plan.md` — "## Step N (YYYY-MM-DD): <тема> ✅"
-- Git commit subject — "Step N: <тема>" замість "Day N: <тема>"
-- Conversational відповіді у чаті — "Step 22 — distributed tracing" тощо
-- НЕ перейменовувати існуючі Day 1-21 — git history їх вже містить як "Day", переписувати = breakage
-- Memory entries про вже зроблену роботу (наприклад "День 12 (2026-05-24)" у `project_status.md`) також лишити як є — це history snapshot
+- Git commit subject — `[TL-N] <тема>` (напр. `[TL-43] Identity extraction — Phase 5 (Web BFF rewiring)`).
+- Нові секції у `docs/plan.md` і відповіді в чаті — теж `[TL-N]` для консистентності.
+- **НЕ перейменовувати** існуючі Day 1–21 / Step 22–42 — git history їх містить, переписувати = breakage. History snapshot лишається як є.
+- Housekeeping-коміти (memory/docs sync) — без номера, звичайний `docs: …` (як раніше).
+- Наступний номер після Step 42 → **`[TL-43]`** (Identity extraction Phase 5).
 
-**Continuity:** Numbering продовжується. Day 21 → Step 22 → Step 23. Один лічильник, дві назви через історичну причину.
+**Continuity:** Day 21 → Step 22 → … → Step 42 → [TL-43]. Один лічильник, три префікси через історичну причину.
