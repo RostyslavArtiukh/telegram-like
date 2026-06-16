@@ -1,8 +1,8 @@
 using FluentAssertions;
-using TelegramLike.Domain.Identity.Aggregates;
-using TelegramLike.Domain.Identity.Events;
+using TelegramLike.Identity.Domain.Aggregates;
+using TelegramLike.Identity.Domain.Events;
 
-namespace TelegramLike.Domain.Tests.Identity;
+namespace TelegramLike.Identity.Domain.Tests;
 
 public class UserTests
 {

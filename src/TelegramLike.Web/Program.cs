@@ -1,15 +1,9 @@
 using System.Security.Claims;
-using FluentValidation;
-using MediatR;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using TelegramLike.Application.Common.Behaviors;
-using TelegramLike.Application.Common.Interfaces;
-using TelegramLike.Application.Identity.Commands.RegisterUser;
-using TelegramLike.Application.Identity.Queries.GetUserById;
-using TelegramLike.Infrastructure;
 using TelegramLike.Web.Components;
 using TelegramLike.Web.Services;
 using TelegramLike.Web.Services.ChatChanged;
@@ -73,21 +67,21 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUserAccessor>();
 
-builder.Services.AddMediatR(cfg =>
-{
-    cfg.RegisterServicesFromAssembly(typeof(RegisterUserCommand).Assembly);
-    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
-});
-
-builder.Services.AddValidatorsFromAssembly(typeof(RegisterUserCommand).Assembly);
-
 builder.Services.AddSingleton<ITypingPubSub, TypingPubSub>();
 builder.Services.AddSingleton<INewMessagePubSub, NewMessagePubSub>();
 builder.Services.AddSingleton<IUnreadCountPubSub, UnreadCountPubSub>();
 builder.Services.AddSingleton<IChatChangedPubSub, ChatChangedPubSub>();
 builder.Services.AddSingleton<IPresencePubSub, PresencePubSub>();
 
-builder.Services.AddInfrastructure(builder.Configuration, bus =>
+// The monolith is gone — the Web BFF now hosts its own MassTransit bus purely so the
+// real-time pubsub consumers (typing, new-message, chat-changed, presence,
+// unread-count) keep delivering integration events into the Blazor circuit.
+var rabbitHost = builder.Configuration["RabbitMQ:Host"] ?? "localhost";
+var rabbitUser = builder.Configuration["RabbitMQ:Username"] ?? "guest";
+var rabbitPass = builder.Configuration["RabbitMQ:Password"] ?? "guest";
+var rabbitVhost = builder.Configuration["RabbitMQ:VirtualHost"] ?? "/";
+
+builder.Services.AddMassTransit(bus =>
 {
     bus.AddConsumer<UserTypingConsumer>();
     bus.AddConsumer<NewMessageConsumer>();
@@ -97,6 +91,16 @@ builder.Services.AddInfrastructure(builder.Configuration, bus =>
     bus.AddConsumer<ReactionRemovedConsumer>();
     bus.AddConsumer<UserCameOnlineConsumer>();
     bus.AddConsumer<UserWentOfflineConsumer>();
+
+    bus.UsingRabbitMq((ctx, cfg) =>
+    {
+        cfg.Host(rabbitHost, rabbitVhost, h =>
+        {
+            h.Username(rabbitUser);
+            h.Password(rabbitPass);
+        });
+        cfg.ConfigureEndpoints(ctx);
+    });
 });
 
 // Identity is the IdP. The Web no longer signs tokens; ServiceTokenProvider

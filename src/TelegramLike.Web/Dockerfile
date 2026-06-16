@@ -7,10 +7,7 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 COPY ["src/TelegramLike.Web/TelegramLike.Web.csproj", "src/TelegramLike.Web/"]
-COPY ["src/TelegramLike.Application/TelegramLike.Application.csproj", "src/TelegramLike.Application/"]
 COPY ["src/TelegramLike.Contracts/TelegramLike.Contracts.csproj", "src/TelegramLike.Contracts/"]
-COPY ["src/TelegramLike.Domain/TelegramLike.Domain.csproj", "src/TelegramLike.Domain/"]
-COPY ["src/TelegramLike.Infrastructure/TelegramLike.Infrastructure.csproj", "src/TelegramLike.Infrastructure/"]
 RUN dotnet restore "src/TelegramLike.Web/TelegramLike.Web.csproj"
 
 COPY . .
