@@ -1,11 +1,10 @@
 @page "/"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
-@using MediatR
-@using TelegramLike.Application.Identity.Queries.GetUserIdByUsername
 @using TelegramLike.Web.Services
 @using TelegramLike.Web.Services.ChatsApi
+@using TelegramLike.Web.Services.IdentityApi
 @inject IChatsApi ChatsApi
-@inject IMediator Mediator
+@inject IIdentityUsersApi IdentityUsers
 @inject CurrentUserAccessor CurrentUser
 @inject NavigationManager Nav
 @rendermode InteractiveServer
@@ -186,7 +185,7 @@
         _busy = true;
         try
         {
-            var peerId = await Mediator.Send(new GetUserIdByUsernameQuery(_directUsername.Trim()));
+            var peerId = await IdentityUsers.GetUserIdByUsernameAsync(_directUsername.Trim());
             if (peerId is null) { _directError = "User not found."; return; }
             if (peerId == _userId) { _directError = "You can't start a direct chat with yourself."; return; }
 

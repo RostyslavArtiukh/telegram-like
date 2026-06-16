@@ -1,9 +1,7 @@
 @page "/chat/{ChatId:guid}"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
-@using MediatR
-@using TelegramLike.Application.Identity.Queries.GetUserById
-@using TelegramLike.Application.Identity.Queries.GetUsernamesByIds
 @using TelegramLike.Web.Services
+@using TelegramLike.Web.Services.IdentityApi
 @using TelegramLike.Web.Services.ChatChanged
 @using TelegramLike.Web.Services.ChatsApi
 @using TelegramLike.Web.Services.MessagingApi
@@ -12,7 +10,7 @@
 @using TelegramLike.Web.Services.Presence
 @using TelegramLike.Web.Services.PresenceApi
 @using TelegramLike.Web.Services.Typing
-@inject IMediator Mediator
+@inject IIdentityUsersApi IdentityUsers
 @inject IChatsApi ChatsApi
 @inject IMessagingApi MessagingApi
 @inject IPresenceApi PresenceApi
@@ -504,7 +502,7 @@ else
 
         try
         {
-            var me = await Mediator.Send(new GetUserByIdQuery(_userId));
+            var me = await IdentityUsers.GetUserByIdAsync(_userId);
             _isPremium = me?.IsPremium ?? false;
         }
         catch { _isPremium = false; }
@@ -556,7 +554,7 @@ else
         try
         {
             var ids = _chat.Members.Select(m => m.UserId).ToList();
-            var map = await Mediator.Send(new GetUsernamesByIdsQuery(ids));
+            var map = await IdentityUsers.GetUsernamesByIdsAsync(ids);
             _usernames = map.ToDictionary(kv => kv.Key, kv => kv.Value);
         }
         catch { /* fall back to GUID display */ }

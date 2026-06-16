@@ -1,14 +1,15 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using TelegramLike.Web.Services.ServiceAuth;
 
 namespace TelegramLike.Web.Services.ChatsApi;
 
-internal sealed class ChatsApiClient(HttpClient http) : IChatsApi
+internal sealed class ChatsApiClient(HttpClient http, ServiceTokenProvider tokenProvider) : IChatsApi
 {
     public async Task<IReadOnlyList<ChatSummaryContract>> GetMyChatsAsync(Guid userId, CancellationToken ct = default)
     {
-        using var request = NewRequest(HttpMethod.Get, "/chats/my", userId);
+        using var request = await NewRequestAsync(HttpMethod.Get, "/chats/my", ct);
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<List<ChatSummaryContract>>(ct) ?? [];
@@ -16,7 +17,7 @@ internal sealed class ChatsApiClient(HttpClient http) : IChatsApi
 
     public async Task<ChatDetailsContract?> GetChatByIdAsync(Guid actingUserId, Guid chatId, CancellationToken ct = default)
     {
-        using var request = NewRequest(HttpMethod.Get, $"/chats/{chatId}", actingUserId);
+        using var request = await NewRequestAsync(HttpMethod.Get, $"/chats/{chatId}", ct);
         using var response = await http.SendAsync(request, ct);
         if (response.StatusCode == HttpStatusCode.NotFound) return null;
         response.EnsureSuccessStatusCode();
@@ -25,7 +26,7 @@ internal sealed class ChatsApiClient(HttpClient http) : IChatsApi
 
     public async Task<IReadOnlyList<ChatMemberContract>> GetChatMembersAsync(Guid actingUserId, Guid chatId, CancellationToken ct = default)
     {
-        using var request = NewRequest(HttpMethod.Get, $"/chats/{chatId}/members", actingUserId);
+        using var request = await NewRequestAsync(HttpMethod.Get, $"/chats/{chatId}/members", ct);
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<List<ChatMemberContract>>(ct) ?? [];
@@ -33,44 +34,44 @@ internal sealed class ChatsApiClient(HttpClient http) : IChatsApi
 
     public async Task<Guid> CreateDirectChatAsync(Guid userId, Guid peerUserId, CancellationToken ct = default)
     {
-        using var request = NewRequest(HttpMethod.Post, "/chats/direct", userId);
+        using var request = await NewRequestAsync(HttpMethod.Post, "/chats/direct", ct);
         request.Content = JsonContent.Create(new { peerUserId });
         return await SendCreate(request, ct);
     }
 
     public async Task<Guid> CreateGroupChatAsync(Guid userId, string name, CancellationToken ct = default)
     {
-        using var request = NewRequest(HttpMethod.Post, "/chats/group", userId);
+        using var request = await NewRequestAsync(HttpMethod.Post, "/chats/group", ct);
         request.Content = JsonContent.Create(new { name });
         return await SendCreate(request, ct);
     }
 
     public async Task<Guid> CreateBroadcastChannelAsync(Guid userId, string name, CancellationToken ct = default)
     {
-        using var request = NewRequest(HttpMethod.Post, "/chats/broadcast", userId);
+        using var request = await NewRequestAsync(HttpMethod.Post, "/chats/broadcast", ct);
         request.Content = JsonContent.Create(new { name });
         return await SendCreate(request, ct);
     }
 
     public Task JoinChatAsync(Guid userId, Guid chatId, CancellationToken ct = default)
-        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/join", userId, content: null, ct);
+        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/join", content: null, ct);
 
     public Task LeaveChatAsync(Guid userId, Guid chatId, CancellationToken ct = default)
-        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/leave", userId, content: null, ct);
+        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/leave", content: null, ct);
 
     public Task KickMemberAsync(Guid actorUserId, Guid chatId, Guid targetUserId, CancellationToken ct = default)
-        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{targetUserId}/kick", actorUserId, content: null, ct);
+        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{targetUserId}/kick", content: null, ct);
 
     public Task ChangeMemberRoleAsync(Guid actorUserId, Guid chatId, Guid targetUserId, MemberRoleContract newRole, CancellationToken ct = default)
-        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{targetUserId}/role", actorUserId,
+        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{targetUserId}/role",
             JsonContent.Create(new { newRole = newRole.ToString() }), ct);
 
     public Task TransferOwnershipAsync(Guid currentOwnerUserId, Guid chatId, Guid newOwnerUserId, CancellationToken ct = default)
-        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/transfer-ownership", currentOwnerUserId,
+        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/transfer-ownership",
             JsonContent.Create(new { newOwnerUserId }), ct);
 
     public Task RenameChatAsync(Guid actorUserId, Guid chatId, string newName, CancellationToken ct = default)
-        => SendVoid(HttpMethod.Patch, $"/chats/{chatId}", actorUserId,
+        => SendVoid(HttpMethod.Patch, $"/chats/{chatId}",
             JsonContent.Create(new { newName }), ct);
 
     public async Task<IReadOnlyList<Guid>> GetActiveRecipientsAsync(
@@ -104,18 +105,20 @@ internal sealed class ChatsApiClient(HttpClient http) : IChatsApi
         return payload?.ChatId ?? throw new InvalidOperationException("Chats.Api returned no chat id.");
     }
 
-    private async Task SendVoid(HttpMethod method, string url, Guid userId, HttpContent? content, CancellationToken ct)
+    private async Task SendVoid(HttpMethod method, string url, HttpContent? content, CancellationToken ct)
     {
-        using var request = NewRequest(method, url, userId);
+        using var request = await NewRequestAsync(method, url, ct);
         if (content is not null) request.Content = content;
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
     }
 
-    private static HttpRequestMessage NewRequest(HttpMethod method, string url, Guid userId)
+    private async Task<HttpRequestMessage> NewRequestAsync(HttpMethod method, string url, CancellationToken ct)
     {
         var request = new HttpRequestMessage(method, url);
-        request.Options.Set(ServiceAuthHandler.UserIdKey, userId);
+        var token = await tokenProvider.GetAccessTokenAsync(ct);
+        if (token is not null)
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return request;
     }
 

@@ -1,43 +1,44 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using TelegramLike.Web.Services.ServiceAuth;
 
 namespace TelegramLike.Web.Services.PresenceApi;
 
-internal sealed class PresenceApiClient(HttpClient http) : IPresenceApi
+internal sealed class PresenceApiClient(HttpClient http, ServiceTokenProvider tokenProvider) : IPresenceApi
 {
     public async Task HeartbeatAsync(Guid userId, CancellationToken ct = default)
     {
-        using var request = NewRequest(HttpMethod.Post, "/presence/heartbeat", userId);
+        using var request = await NewRequestAsync(HttpMethod.Post, "/presence/heartbeat", ct);
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
     }
 
     public async Task GoOfflineAsync(Guid userId, CancellationToken ct = default)
     {
-        using var request = NewRequest(HttpMethod.Post, "/presence/offline", userId);
+        using var request = await NewRequestAsync(HttpMethod.Post, "/presence/offline", ct);
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
     }
 
     public async Task StartTypingAsync(Guid userId, Guid chatId, CancellationToken ct = default)
     {
-        using var request = NewRequest(HttpMethod.Post, $"/presence/typing/{chatId}/start", userId);
+        using var request = await NewRequestAsync(HttpMethod.Post, $"/presence/typing/{chatId}/start", ct);
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
     }
 
     public async Task StopTypingAsync(Guid userId, Guid chatId, CancellationToken ct = default)
     {
-        using var request = NewRequest(HttpMethod.Post, $"/presence/typing/{chatId}/stop", userId);
+        using var request = await NewRequestAsync(HttpMethod.Post, $"/presence/typing/{chatId}/stop", ct);
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
     }
 
     public async Task<IReadOnlyList<Guid>> GetTypingUsersAsync(Guid userId, Guid chatId, CancellationToken ct = default)
     {
-        using var request = NewRequest(HttpMethod.Get, $"/presence/typing/{chatId}", userId);
+        using var request = await NewRequestAsync(HttpMethod.Get, $"/presence/typing/{chatId}", ct);
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 
@@ -48,7 +49,7 @@ internal sealed class PresenceApiClient(HttpClient http) : IPresenceApi
     public async Task<UserPresenceSummary?> GetUserPresenceAsync(
         Guid actorUserId, Guid targetUserId, CancellationToken ct = default)
     {
-        using var request = NewRequest(HttpMethod.Get, $"/presence/{targetUserId}", actorUserId);
+        using var request = await NewRequestAsync(HttpMethod.Get, $"/presence/{targetUserId}", ct);
         using var response = await http.SendAsync(request, ct);
         if (response.StatusCode == HttpStatusCode.NotFound) return null;
         response.EnsureSuccessStatusCode();
@@ -64,7 +65,7 @@ internal sealed class PresenceApiClient(HttpClient http) : IPresenceApi
     {
         if (userIds.Count == 0) return new Dictionary<Guid, bool>();
 
-        using var request = NewRequest(HttpMethod.Post, "/presence/batch", actorUserId);
+        using var request = await NewRequestAsync(HttpMethod.Post, "/presence/batch", ct);
         request.Content = JsonContent.Create(userIds);
 
         using var response = await http.SendAsync(request, ct);
@@ -74,10 +75,12 @@ internal sealed class PresenceApiClient(HttpClient http) : IPresenceApi
         return result ?? new Dictionary<Guid, bool>();
     }
 
-    private static HttpRequestMessage NewRequest(HttpMethod method, string url, Guid userId)
+    private async Task<HttpRequestMessage> NewRequestAsync(HttpMethod method, string url, CancellationToken ct)
     {
         var request = new HttpRequestMessage(method, url);
-        request.Options.Set(ServiceAuthHandler.UserIdKey, userId);
+        var token = await tokenProvider.GetAccessTokenAsync(ct);
+        if (token is not null)
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return request;
     }
 

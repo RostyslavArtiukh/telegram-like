@@ -15,6 +15,7 @@ using TelegramLike.Web.Services;
 using TelegramLike.Web.Services.ChatChanged;
 using TelegramLike.Web.Services.NewMessage;
 using TelegramLike.Web.Services.ChatsApi;
+using TelegramLike.Web.Services.IdentityApi;
 using TelegramLike.Web.Services.MessagingApi;
 using TelegramLike.Web.Services.NotificationsApi;
 using TelegramLike.Web.Services.Presence;
@@ -98,43 +99,49 @@ builder.Services.AddInfrastructure(builder.Configuration, bus =>
     bus.AddConsumer<UserWentOfflineConsumer>();
 });
 
-builder.Services.Configure<ServiceAuthOptions>(opts =>
-{
-    var section = builder.Configuration.GetSection("ServiceAuth");
-    opts.JwtSecret = section["JwtSecret"] ?? throw new InvalidOperationException("ServiceAuth:JwtSecret is not configured.");
-    opts.Issuer = section["Issuer"] ?? throw new InvalidOperationException("ServiceAuth:Issuer is not configured.");
-    opts.Audience = section["Audience"] ?? throw new InvalidOperationException("ServiceAuth:Audience is not configured.");
-    if (int.TryParse(section["TokenLifetimeSeconds"], out var ttl)) opts.TokenLifetimeSeconds = ttl;
-});
-builder.Services.AddSingleton<ServiceTokenIssuer>();
-builder.Services.AddTransient<ServiceAuthHandler>();
+// Identity is the IdP. The Web no longer signs tokens; ServiceTokenProvider
+// exchanges the current user's session token for a short-lived access JWT (cached)
+// which each downstream client attaches itself. The exchange runs in the circuit
+// scope (where the auth cookie is readable), so no DelegatingHandler is involved.
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ServiceTokenProvider>();
+
+var identityBaseUrl = builder.Configuration["IdentityApi:BaseUrl"]
+                      ?? throw new InvalidOperationException("IdentityApi:BaseUrl is not configured.");
+
+// Public auth client (no token) — also used by ServiceTokenProvider for the exchange.
+builder.Services.AddHttpClient<IIdentityAuthApi, IdentityAuthApiClient>(client =>
+    client.BaseAddress = new Uri(identityBaseUrl));
+builder.Services.AddHttpClient<IIdentityUsersApi, IdentityUsersApiClient>(client =>
+    client.BaseAddress = new Uri(identityBaseUrl));
+
 builder.Services.AddHttpClient<INotificationsApi, NotificationsApiClient>(client =>
 {
     var baseUrl = builder.Configuration["NotificationsApi:BaseUrl"]
                   ?? throw new InvalidOperationException("NotificationsApi:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl);
-}).AddHttpMessageHandler<ServiceAuthHandler>();
+});
 
 builder.Services.AddHttpClient<IPresenceApi, PresenceApiClient>(client =>
 {
     var baseUrl = builder.Configuration["PresenceApi:BaseUrl"]
                   ?? throw new InvalidOperationException("PresenceApi:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl);
-}).AddHttpMessageHandler<ServiceAuthHandler>();
+});
 
 builder.Services.AddHttpClient<IChatsApi, ChatsApiClient>(client =>
 {
     var baseUrl = builder.Configuration["ChatsApi:BaseUrl"]
                   ?? throw new InvalidOperationException("ChatsApi:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl);
-}).AddHttpMessageHandler<ServiceAuthHandler>();
+});
 
 builder.Services.AddHttpClient<IMessagingApi, MessagingApiClient>(client =>
 {
     var baseUrl = builder.Configuration["MessagingApi:BaseUrl"]
                   ?? throw new InvalidOperationException("MessagingApi:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl);
-}).AddHttpMessageHandler<ServiceAuthHandler>();
+});
 
 var app = builder.Build();
 
@@ -150,21 +157,18 @@ app.UseAntiforgery();
 // Auth callback: Blazor Login page navigates here after obtaining a session token
 app.MapGet("/auth/signin", async (
     string token,
-    ISessionService sessionService,
-    IMediator mediator,
+    IIdentityAuthApi identity,
     HttpContext httpContext) =>
 {
-    var userId = await sessionService.GetUserIdAsync(token);
-    if (userId is null) return Results.Redirect("/login?error=invalid");
-
-    var user = await mediator.Send(new GetUserByIdQuery(userId.Value));
-    if (user is null) return Results.Redirect("/login?error=invalid");
+    // Exchange the session token at the IdP for the user's identity claims.
+    var session = await identity.ExchangeAsync(token);
+    if (session is null) return Results.Redirect("/login?error=invalid");
 
     var claims = new List<Claim>
     {
-        new(ClaimTypes.NameIdentifier, userId.Value.ToString()),
-        new(ClaimTypes.Name, user.Username),
-        new(ClaimTypes.Email, user.Email),
+        new(ClaimTypes.NameIdentifier, session.UserId.ToString()),
+        new(ClaimTypes.Name, session.Username),
+        new(ClaimTypes.Email, session.Email),
         new("session_token", token)
     };
     var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "Cookies"));

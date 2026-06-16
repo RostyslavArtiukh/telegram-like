@@ -20,4 +20,12 @@ public sealed class CurrentUserAccessor(AuthenticationStateProvider authStatePro
         if (id is null || name is null || !Guid.TryParse(id, out var guid)) return null;
         return (guid, name);
     }
+
+    // The opaque Identity session token, stashed as a cookie claim at /auth/signin.
+    // It's the durable credential we exchange for short-lived access JWTs.
+    public async Task<string?> GetSessionTokenAsync()
+    {
+        var state = await authStateProvider.GetAuthenticationStateAsync();
+        return state.User.FindFirst("session_token")?.Value;
+    }
 }

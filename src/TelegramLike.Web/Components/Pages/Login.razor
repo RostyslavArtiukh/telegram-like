@@ -1,8 +1,6 @@
 @page "/login"
-@using FluentValidation
-@using MediatR
-@using TelegramLike.Application.Identity.Commands.LoginUser
-@inject IMediator Mediator
+@using TelegramLike.Web.Services.IdentityApi
+@inject IIdentityAuthApi IdentityAuth
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
@@ -73,14 +71,9 @@
 
         try
         {
-            var token = await Mediator.Send(new LoginUserCommand(Model.Email, Model.Password));
+            var token = await IdentityAuth.LoginAsync(Model.Email, Model.Password);
             // Navigate to auth callback which sets the cookie and redirects to home
             Nav.NavigateTo($"/auth/signin?token={Uri.EscapeDataString(token)}", forceLoad: true);
-        }
-        catch (ValidationException ex)
-        {
-            _error = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
-            _loading = false;
         }
         catch (InvalidOperationException ex)
         {
