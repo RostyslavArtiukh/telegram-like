@@ -85,7 +85,7 @@ services:
       RabbitMQ__VirtualHost: telegramlike
       Tracing__OtlpEndpoint: "http://jaeger:4317"
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
-      ServiceAuth__Issuer: telegramlike-web
+      ServiceAuth__Issuer: telegramlike-identity
       ServiceAuth__Audience: telegramlike-services
 
   presence:
@@ -120,7 +120,7 @@ services:
       RabbitMQ__VirtualHost: telegramlike
       Tracing__OtlpEndpoint: "http://jaeger:4317"
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
-      ServiceAuth__Issuer: telegramlike-web
+      ServiceAuth__Issuer: telegramlike-identity
       ServiceAuth__Audience: telegramlike-services
 
   chats:
@@ -152,7 +152,7 @@ services:
       RabbitMQ__VirtualHost: telegramlike
       Tracing__OtlpEndpoint: "http://jaeger:4317"
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
-      ServiceAuth__Issuer: telegramlike-web
+      ServiceAuth__Issuer: telegramlike-identity
       ServiceAuth__Audience: telegramlike-services
 
   messaging:
@@ -184,8 +184,41 @@ services:
       RabbitMQ__VirtualHost: telegramlike
       Tracing__OtlpEndpoint: "http://jaeger:4317"
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
-      ServiceAuth__Issuer: telegramlike-web
+      ServiceAuth__Issuer: telegramlike-identity
       ServiceAuth__Audience: telegramlike-services
+
+  identity:
+    build:
+      context: .
+      dockerfile: src/services/identity/TelegramLike.Identity.Api/Dockerfile
+    image: telegramlike-identity:latest
+    container_name: telegramlike-identity
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
+      interval: 10s
+      start_period: 20s
+      retries: 5
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"
+      MongoDB__DatabaseName: telegramlike_identity
+      Redis__ConnectionString: "redis:6379"
+      Auth__SessionTokenTtlDays: "7"
+      Tracing__OtlpEndpoint: "http://jaeger:4317"
+      # Identity is the IdP: it signs the access tokens (issuer=telegramlike-identity)
+      # that every other service validates.
+      ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
+      ServiceAuth__Issuer: telegramlike-identity
+      ServiceAuth__Audience: telegramlike-services
+      ServiceAuth__TokenLifetimeSeconds: "300"
 
   web:
     build:
@@ -197,10 +230,6 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      mongodb:
-        condition: service_healthy
-      redis:
-        condition: service_started
       rabbitmq:
         condition: service_healthy
       notifications:
@@ -211,11 +240,10 @@ services:
         condition: service_healthy
       messaging:
         condition: service_healthy
+      identity:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      MongoDB__ConnectionString: "mongodb://mongodb:27017/?replicaSet=rs0&directConnection=true"
-      MongoDB__DatabaseName: telegramlike
-      Redis__ConnectionString: "redis:6379"
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Username: guest
       RabbitMQ__Password: guest
@@ -225,10 +253,7 @@ services:
       PresenceApi__BaseUrl: "http://presence:8080"
       ChatsApi__BaseUrl: "http://chats:8080"
       MessagingApi__BaseUrl: "http://messaging:8080"
-      ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
-      ServiceAuth__Issuer: telegramlike-web
-      ServiceAuth__Audience: telegramlike-services
-      ServiceAuth__TokenLifetimeSeconds: "300"
+      IdentityApi__BaseUrl: "http://identity:8080"
       DataProtection__KeysPath: /var/dp-keys
     volumes:
       - web_dp_keys:/var/dp-keys
