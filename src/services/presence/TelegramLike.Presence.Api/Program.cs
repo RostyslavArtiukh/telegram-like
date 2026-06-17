@@ -1,5 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Text;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,12 +7,8 @@ using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using TelegramLike.Presence.Application.Commands.GoOffline;
+using TelegramLike.Presence.Api.Filters;
 using TelegramLike.Presence.Application.Commands.Heartbeat;
-using TelegramLike.Presence.Application.Commands.StartTyping;
-using TelegramLike.Presence.Application.Commands.StopTyping;
-using TelegramLike.Presence.Application.Queries.GetTypingUsers;
-using TelegramLike.Presence.Application.Queries.GetUserPresence;
 using TelegramLike.Presence.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +17,13 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(HeartbeatCommand).Assembly));
 
 builder.Services.AddPresenceInfrastructure(builder.Configuration);
+
+// Classic MVC controllers with a global exception filter that mirrors the Chats/Identity/
+// Notifications structure. No JSON enum converter is registered here: presence serializes its
+// OnlineStatus enum as a number (0=Offline, 1=Online) and the Web BFF Presence client reads
+// `status` as an int — adding a string converter would change that wire contract.
+builder.Services
+    .AddControllers(options => options.Filters.Add<DomainExceptionFilter>());
 
 var jwtSecret = builder.Configuration["ServiceAuth:JwtSecret"]
                 ?? throw new InvalidOperationException("ServiceAuth:JwtSecret is not configured.");
@@ -102,84 +103,6 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-var presence = app.MapGroup("/presence").RequireAuthorization();
-
-presence.MapPost("/heartbeat", async (
-    HttpContext httpContext,
-    IMediator mediator,
-    CancellationToken ct) =>
-{
-    if (!TryGetUserId(httpContext, out var userId)) return Results.Unauthorized();
-    await mediator.Send(new HeartbeatCommand(userId), ct);
-    return Results.NoContent();
-});
-
-presence.MapPost("/offline", async (
-    HttpContext httpContext,
-    IMediator mediator,
-    CancellationToken ct) =>
-{
-    if (!TryGetUserId(httpContext, out var userId)) return Results.Unauthorized();
-    await mediator.Send(new GoOfflineCommand(userId), ct);
-    return Results.NoContent();
-});
-
-presence.MapGet("/{userId:guid}", async (
-    Guid userId,
-    IMediator mediator,
-    CancellationToken ct) =>
-{
-    var dto = await mediator.Send(new GetUserPresenceQuery(userId), ct);
-    return dto is null ? Results.NotFound() : Results.Ok(dto);
-});
-
-presence.MapPost("/typing/{chatId:guid}/start", async (
-    Guid chatId,
-    HttpContext httpContext,
-    IMediator mediator,
-    CancellationToken ct) =>
-{
-    if (!TryGetUserId(httpContext, out var userId)) return Results.Unauthorized();
-    await mediator.Send(new StartTypingCommand(chatId, userId), ct);
-    return Results.NoContent();
-});
-
-presence.MapPost("/typing/{chatId:guid}/stop", async (
-    Guid chatId,
-    HttpContext httpContext,
-    IMediator mediator,
-    CancellationToken ct) =>
-{
-    if (!TryGetUserId(httpContext, out var userId)) return Results.Unauthorized();
-    await mediator.Send(new StopTypingCommand(chatId, userId), ct);
-    return Results.NoContent();
-});
-
-presence.MapGet("/typing/{chatId:guid}", async (
-    Guid chatId,
-    IMediator mediator,
-    CancellationToken ct) =>
-{
-    var dto = await mediator.Send(new GetTypingUsersQuery(chatId), ct);
-    return Results.Ok(dto);
-});
-
-presence.MapPost("/batch", async (
-    Guid[] userIds,
-    IMediator mediator,
-    CancellationToken ct) =>
-{
-    var result = await mediator.Send(
-        new TelegramLike.Presence.Application.Queries.GetBatchPresence.GetBatchPresenceQuery(userIds), ct);
-    return Results.Ok(result);
-});
+app.MapControllers();
 
 app.Run();
-
-static bool TryGetUserId(HttpContext httpContext, out Guid userId)
-{
-    userId = Guid.Empty;
-    var sub = httpContext.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
-              ?? httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    return !string.IsNullOrWhiteSpace(sub) && Guid.TryParse(sub, out userId);
-}
