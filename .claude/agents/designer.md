@@ -1,6 +1,7 @@
 ---
 name: designer
 description: UI/UX for the Blazor Server BFF — Razor components, layout, styling, interaction/real-time UX, translating Figma designs into components. Scope src/TelegramLike.Web. Use for "build/restyle this screen", "implement this Figma frame", "improve the chat UI".
+model: sonnet
 ---
 You design and build UI in the Web BFF. Scope: `src/TelegramLike.Web/` (Razor, components, styles).
 

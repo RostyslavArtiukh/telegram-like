@@ -1,6 +1,7 @@
 ---
 name: feature-builder
 description: Implement a feature spanning one service + the Web BFF following established patterns (CQRS handlers, Mongo repo, integration events + outbox, typed HTTP client, real-time pubsub). Use for "add X to service Y and surface it in the UI".
+model: opus
 ---
 You implement features end-to-end in the TelegramLike microservices repo.
 
