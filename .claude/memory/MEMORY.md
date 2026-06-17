@@ -5,6 +5,7 @@
 - [notifications_fanout.md](notifications_fanout.md) — Cross-context fanout: тепер асинхронно через RabbitMQ (MessageSentIntegrationEvent → consumer → FanoutChatNotificationCommand)
 - [integration_events_rabbitmq.md](integration_events_rabbitmq.md) — RabbitMQ + MassTransit + Transactional Outbox; як додавати нові integration events
 - [microservices_migration.md](microservices_migration.md) — Інкрементальна міграція з monolith у мікросервіси; прогрес і архітектурні рішення
+- [api_controllers.md](api_controllers.md) — Усі 5 сервісів: HTTP через класичні [ApiController] контролери (не minimal API); shared pieces + правило збереження wire-contract
 - [service_auth_jwt.md](service_auth_jwt.md) — JWT auth між Web BFF і downstream сервісами; рецепт додавання auth до нового сервісу
 - [realtime_blazor_pubsub.md](realtime_blazor_pubsub.md) — Real-time UI через RabbitMQ → in-memory pubsub → Blazor circuit (без окремого SignalR Hub)
 - [observability_tracing.md](observability_tracing.md) — OpenTelemetry → Jaeger; як додавати spans і пропагація через HTTP+RabbitMQ

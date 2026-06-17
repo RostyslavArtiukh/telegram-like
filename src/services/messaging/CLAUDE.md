@@ -13,3 +13,5 @@ Commands take what Messaging can't know itself — the Web BFF supplies it:
 
 ## Endpoints
 `POST /messages/`, `GET /messages/{id}`, reactions add/remove, `{id}/retract`, `{id}/read`, `{id}/hide`, `GET /chats/{id}/messages`.
+
+Controllers (`Controllers/`): `MessagesController` (lifecycle + queries) + `MessageReactionsController` + `MessageReadReceiptsController`, on `ApiControllerBase`; `DomainExceptionFilter` (`InvalidOperationException`/`ArgumentException`→400, `UnauthorizedAccessException`→403, `ProblemDetails`). `JsonStringEnumConverter` kept — **load-bearing** for `Emoji`/`AttachmentType` on the wire (the BFF sends/reads names). BFF-enriched params live in the `Contracts/` request records. See the `api_controllers` memory.

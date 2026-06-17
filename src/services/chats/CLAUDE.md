@@ -12,3 +12,5 @@ Own **autonomous outbox bundle** (full copy, not shared). Publishes `MemberJoine
 
 ## Endpoints (`/chats`, authed)
 `my`, `{id}`, `{id}/members`, create `direct|group|broadcast`, `{id}/join`, `{id}/leave`, members `{u}/kick` · `{u}/role`, `transfer-ownership`, `PATCH {id}` (rename).
+
+Controllers (`Controllers/`): `ChatsController` (lifecycle + queries) + `ChatMembersController` (membership), both on `ApiControllerBase`; errors via global `DomainExceptionFilter` (`InvalidOperationException`/`ArgumentException`→400, `UnauthorizedAccessException`→403, `ProblemDetails`); request records in `Contracts/`. See the `api_controllers` memory.

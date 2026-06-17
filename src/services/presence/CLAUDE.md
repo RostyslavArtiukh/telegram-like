@@ -9,3 +9,5 @@ Online status + typing indicators. 4 projects, namespace `TelegramLike.Presence.
 
 ## Endpoints (`/presence`, authed)
 `heartbeat`, `offline`, `{userId}`, `typing/{chatId}/start|stop`, `typing/{chatId}`, `batch` (POST `[ids]` → `{id:isOnline}`).
+
+Controllers (`Controllers/`): `PresenceController` (status) + `TypingController`, on `ApiControllerBase`; `DomainExceptionFilter` is a **no-op** — the prior API caught nothing, so every handler exception is a 500 (preserved). `OnlineStatus` stays numeric (no `JsonStringEnumConverter`). See the `api_controllers` memory.

@@ -9,3 +9,5 @@ Fan-out notifications + unread counts. Consumes integration events; exposes feed
 
 ## Endpoints (`/notifications`, authed)
 feed (`?before&pageSize&unreadOnly`), `unread-count`, `{id}/read`, `read-all`, `chats/{chatId}/read`.
+
+Controllers (`Controllers/`): `NotificationFeedController` (feed + unread-count) + `NotificationReadController` (read / read-all / chats-read), on `ApiControllerBase`; `DomainExceptionFilter` maps `InvalidOperationException`→400 only (matches prior behaviour); enums stay numeric (no `JsonStringEnumConverter`). See the `api_controllers` memory.
