@@ -1,40 +1,21 @@
 ---
 name: permissions-preference
-description: Користувач не хоче постійно підтверджувати команди — діяти проактивно у межах .claude/settings.local.json allowlist
+description: Standing grant — full Bash + PowerShell command access in this project, every session, no per-use approval; enforced via .claude/settings.local.json
 metadata:
   node_type: memory
   type: feedback
   originSessionId: 62cc2e6a-d21e-47f2-9647-8294fc3dff38
 ---
 
-Користувач втомився від permission prompts і налаштовує `.claude/settings.local.json` з широким allowlist (dotnet *, docker *, curl *, taskkill *, PowerShell *, тощо).
+**Standing grant (2026-06-17):** the project owner gave full, durable permission to run **all** shell commands (Bash + PowerShell) in this project, **every session, with no per-use approval**. His permission is no longer required to run commands here.
 
-**Why:** pet-проект, локальна машина, він довіряє діям у межах цього репо. Витрачає час на ручне підтвердження кожного `dotnet test` або `docker ps`.
+**Enforced in** `.claude/settings.local.json`: tool-only allow rules `"Bash"` and `"PowerShell"` (name-only rule = allow everything for that tool) plus `"defaultMode": "bypassPermissions"`. The long list of specific `Bash(...)`/`PowerShell(...)` entries below them is now redundant (superseded by the broad rules) — harmless, can be tidied later.
+
+**Why:** pet project on his local machine; he trusts actions within this repo and was tired of approving each `dotnet test` / `docker` / `git` call.
 
 **How to apply:**
-- Не питати додаткових підтверджень для рутинних операцій у межах `d:\projects\Practice\TelegramLike`: build/test/run, docker compose, curl до localhost, taskkill власних процесів, MongoDB shell exec.
-- Все одно ПИТАТИ перед: `git push`, `git reset --hard`, `rm -rf` поза проектом, `docker system prune`, будь-якими операціями що affect shared state (PR, push, deploy).
-- Шпаргалка з готовим JSON для permissions: [.claude/claude-permissions.txt](file:///d:/projects/Practice/TelegramLike/.claude/claude-permissions.txt).
-- Якщо нова команда блокується — спочатку виконати, побачити reject, потім запропонувати додати її до settings.local.json одним абзацом, а не питати на кожен запуск.
+- Don't ask permission to run commands in this project — just run them. This includes `git add`/`commit`/`push` (exercised freely this session).
+- Still **state intent** briefly before genuinely destructive or outward-facing actions (push, force-reset, deploy, deleting things I didn't create) — surface, don't gate. He waived the *prompt*, not the *transparency*.
+- This lives in `settings.local.json` (local, gitignored) — personal to this machine, not imposed on collaborators via the checked-in `settings.json`.
 
-## Повний дозвільний/заборонний список (зі шпаргалки)
-
-**Allow:**
-- `Skill(*)` — усі skills
-- `Bash(dotnet *)`, `Bash(docker *)`, `Bash(docker compose *)`, `Bash(curl *)`
-- `Bash(grep *)`, `Bash(find *)`, `Bash(cat *)`, `Bash(ls *)`, `Bash(rm *)`, `Bash(echo *)`
-- `Bash(taskkill *)`
-- Git read-only: `Bash(git status)`, `Bash(git log *)`, `Bash(git diff *)`, `Bash(git show *)`, `Bash(git branch *)`
-- PowerShell: `Get-Process *`, `Stop-Process *`, `Get-ChildItem *`, `Get-Content *`, `Test-Path *`
-- WebFetch domains: learn.microsoft.com, docs.mongodb.com, dotnet.microsoft.com, github.com, stackoverflow.com
-
-**Deny (потребує явного запиту користувача):**
-- `Bash(git push *)` — explicit consent needed every time
-- `Bash(git reset --hard *)`
-- `Bash(rm -rf /*)` — root-level deletion
-- `Bash(docker system prune *)`
-
-## Поведінкові режими (з docs)
-- `acceptEdits` — авто-схвалення edit
-- `bypassPermissions` — повний bypass (підходить для sandbox/VM)
-- `claude --dangerously-skip-permissions` — те ж саме на запуск
+**Superseded:** the earlier "ask before `git push`" / deny-list caveat no longer applies — push is allowed and routine here.
