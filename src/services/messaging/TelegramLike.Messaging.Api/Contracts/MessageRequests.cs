@@ -22,7 +22,10 @@ public sealed record SendMessageRequest(
     IReadOnlyList<SendMessageAttachmentDto>? Attachments = null,
     Guid? ReplyToMessageId = null,
     Guid? ForwardOriginalMessageId = null,
-    Guid? ForwardOriginalChatId = null);
+    Guid? ForwardOriginalChatId = null,
+    // Client-generated idempotency key = the message's id. Empty/absent => the
+    // service mints one. A retried send reuses it so the message isn't duplicated.
+    Guid MessageId = default);
 
 /// <summary>
 /// Body for <c>POST /messages/{messageId}/reactions</c>. <see cref="ActorIsPremium"/> is a

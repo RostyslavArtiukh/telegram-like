@@ -52,7 +52,12 @@ public sealed class SendMessageCommandHandler(
             ? ForwardReference.From(request.ForwardOriginalMessageId.Value, request.ForwardOriginalChatId.Value)
             : null;
 
+        // Idempotency key: use the client-supplied id so a retried send collapses onto
+        // the same document; mint one only if the caller didn't provide it.
+        var messageId = request.MessageId == Guid.Empty ? Guid.NewGuid() : request.MessageId;
+
         var message = Message.Send(
+            messageId,
             request.ChatId,
             request.AuthorId,
             content,

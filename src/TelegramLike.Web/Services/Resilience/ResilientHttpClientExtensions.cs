@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Http.Resilience;
+using Polly;
 
 namespace TelegramLike.Web.Services.Resilience;
 
@@ -20,10 +21,20 @@ internal static class ResilientHttpClientExtensions
             // Overall ceiling across all retries for one logical request.
             options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(20);
 
-            // Retry transient failures — but only for idempotent methods. POST/PATCH
-            // are excluded so a lost response never double-sends a message,
-            // double-creates a chat, or double-registers a user.
-            options.Retry.DisableForUnsafeHttpMethods();
+            // Retry transient failures for idempotent methods. POST/PATCH are excluded
+            // by default so a lost response never double-sends — UNLESS the request
+            // carries an Idempotency-Key, meaning the server dedupes it (e.g. SendMessage),
+            // in which case retrying is safe and desirable.
+            options.Retry.ShouldHandle = args =>
+            {
+                var request = args.Context.GetRequestMessage();
+                var isUnsafe = request?.Method == HttpMethod.Post || request?.Method == HttpMethod.Patch;
+                var isIdempotent = request?.Headers.Contains("Idempotency-Key") == true;
+                if (isUnsafe && !isIdempotent)
+                    return PredicateResult.False();
+
+                return new ValueTask<bool>(HttpClientResiliencePredicates.IsTransient(args.Outcome));
+            };
             options.Retry.MaxRetryAttempts = 3;
             // Fast backoff (200ms base, exponential + jitter) instead of the 2s default:
             // these are intra-cluster hops feeding an interactive UI, so a down service

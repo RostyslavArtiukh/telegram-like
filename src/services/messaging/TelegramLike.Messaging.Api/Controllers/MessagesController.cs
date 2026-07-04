@@ -33,6 +33,7 @@ public sealed class MessagesController : ApiControllerBase
             .ToList();
 
         var id = await _mediator.Send(new SendMessageCommand(
+            body.MessageId,
             body.ChatId,
             userId,
             body.Text,

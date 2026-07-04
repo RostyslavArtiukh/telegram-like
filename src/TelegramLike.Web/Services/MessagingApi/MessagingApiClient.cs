@@ -19,9 +19,16 @@ internal sealed class MessagingApiClient(HttpClient http, ServiceTokenProvider t
         Guid? forwardOriginalChatId = null,
         CancellationToken ct = default)
     {
+        // Client-generated id doubles as the idempotency key. The Idempotency-Key header
+        // signals the resilience pipeline that this POST is safe to retry; the Messaging
+        // service dedupes on the same id, so a retried send never duplicates the message.
+        var messageId = Guid.NewGuid();
+
         using var request = await NewRequestAsync(HttpMethod.Post, "/messages/", ct);
+        request.Headers.Add("Idempotency-Key", messageId.ToString());
         request.Content = JsonContent.Create(new
         {
+            messageId,
             chatId,
             text,
             recipients,
@@ -34,8 +41,7 @@ internal sealed class MessagingApiClient(HttpClient http, ServiceTokenProvider t
 
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
-        var payload = await response.Content.ReadFromJsonAsync<MessageCreatedPayload>(ct);
-        return payload?.MessageId ?? throw new InvalidOperationException("Messaging.Api returned no message id.");
+        return messageId;
     }
 
     public async Task<MessageContract?> GetMessageByIdAsync(Guid userId, Guid messageId, CancellationToken ct = default)
@@ -100,6 +106,4 @@ internal sealed class MessagingApiClient(HttpClient http, ServiceTokenProvider t
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return request;
     }
-
-    private sealed record MessageCreatedPayload(Guid MessageId);
 }

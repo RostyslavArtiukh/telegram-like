@@ -21,16 +21,36 @@ internal sealed class MessageRepository(
 
     public async Task AddAsync(Message message, CancellationToken ct = default)
     {
-        using var session = await mongoClient.StartSessionAsync(cancellationToken: ct);
-        await session.WithTransactionAsync(async (s, token) =>
+        try
         {
-            await _messages.InsertOneAsync(s, MessageDocument.FromDomain(message), cancellationToken: token);
-            await dispatcher.DispatchAsync(message.DomainEvents, s, token);
-            return true;
-        }, cancellationToken: ct);
+            using var session = await mongoClient.StartSessionAsync(cancellationToken: ct);
+            await session.WithTransactionAsync(async (s, token) =>
+            {
+                await _messages.InsertOneAsync(s, MessageDocument.FromDomain(message), cancellationToken: token);
+                await dispatcher.DispatchAsync(message.DomainEvents, s, token);
+                return true;
+            }, cancellationToken: ct);
+        }
+        catch (Exception ex) when (IsDuplicateKey(ex))
+        {
+            // Idempotent retry: a message already exists with this id (the client
+            // reused it on a retry). The transaction aborted, so nothing was
+            // re-inserted and no MessageSent was re-queued to the outbox. Treat as
+            // success — same id, no duplicate message, no double notification.
+        }
 
         message.ClearDomainEvents();
     }
+
+    // A duplicate _id surfaces differently depending on where Mongo detects it
+    // (write vs. command vs. bulk), so check all three for error code 11000.
+    private static bool IsDuplicateKey(Exception ex) => ex switch
+    {
+        MongoWriteException we => we.WriteError?.Category == ServerErrorCategory.DuplicateKey,
+        MongoCommandException ce => ce.Code == 11000,
+        MongoBulkWriteException be => be.WriteErrors.Any(e => e.Category == ServerErrorCategory.DuplicateKey),
+        _ => false
+    };
 
     public async Task UpdateAsync(Message message, CancellationToken ct = default)
     {

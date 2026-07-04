@@ -49,6 +49,7 @@ public sealed class Message : AggregateRoot
     }
 
     public static Message Send(
+        Guid messageId,
         Guid chatId,
         Guid authorId,
         MessageContent content,
@@ -57,12 +58,15 @@ public sealed class Message : AggregateRoot
         ForwardReference? forwardFrom = null,
         bool isBroadcast = false)
     {
+        // Caller-supplied id doubles as the idempotency key: a retried send reuses the
+        // same id, so the unique _id insert dedupes it (see MessageRepository.AddAsync).
+        if (messageId == Guid.Empty) throw new ArgumentException("MessageId cannot be empty.", nameof(messageId));
         if (chatId == Guid.Empty) throw new ArgumentException("ChatId cannot be empty.", nameof(chatId));
         if (authorId == Guid.Empty) throw new ArgumentException("AuthorId cannot be empty.", nameof(authorId));
         ArgumentNullException.ThrowIfNull(recipients);
 
         var message = new Message(
-            Guid.NewGuid(),
+            messageId,
             chatId,
             authorId,
             content,
