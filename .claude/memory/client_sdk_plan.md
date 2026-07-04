@@ -21,7 +21,7 @@ metadata:
 
 **Апки: .NET MAUI Blazor Hybrid** (обрано 2026-07-04; Blazor Hybrid = режим UI всередині MAUI: BlazorWebView + Razor-компоненти, C# нативно). Порядок: SDK (`dotnet pack`) → SignalR Hub → MAUI Hybrid desktop (швидший цикл) → Android-емулятор.
 
-**Платформна реальність (юзер має iPhone, Mac'а нема):** зібрати/задеплоїти iOS без Mac'а неможливо (обмеження Apple: Xcode-підпис; безкоштовний provisioning = 7 днів і теж через Mac; інакше $99/рік + TestFlight). Тому цілі: **Windows desktop + Android-емулятор**; iOS-таргет можна тримати в csproj і верифікувати CI-збіркою на безкоштовному macos-раннері GitHub Actions («iOS-ready, не задеплоєно»). На iPhone юзера продукт можна показати вебом по LAN (`http://<IP ПК>:8080`) або згодом PWA (iOS підтримує, з 16.4 і push).
+**Платформи (рішення 2026-07-04): iOS викреслено свідомо** — основний телефон юзера iPhone, але Mac'а нема, а без нього деплой на iOS неможливий (Xcode-підпис). **Цілі: Windows desktop + фізичний Android-телефон юзера** (запасний, є в наявності) — деплой напряму з Visual Studio по USB (одноразово ввімкнути Developer options + USB debugging на телефоні; апка і бекенд на ПК мають бути в одній Wi-Fi, SDK BaseUrl = `http://<IP ПК>:8090` gateway — врахувати Android cleartext-HTTP policy: або `android:usesCleartextTraffic`, або network security config для dev). Емулятор — лише fallback.
 
 **Каверза реюзу Razor-компонентів:** не copy-paste — поточні компоненти зав'язані на Blazor Server-патерни (typed clients з DI Web-процесу, in-proc pubsub). У Hybrid дані мають іти через SDK (HTTP + SignalR) → компоненти треба відв'язати на спільні інтерфейси (shared UI library).
 
