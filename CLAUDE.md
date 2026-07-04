@@ -37,7 +37,8 @@ Never read another service's database. Embed needed data in integration events, 
 - Build: `dotnet build TelegramLike.sln`
 - Test: `dotnet test` — Infrastructure tests use Testcontainers, so Docker must be running.
 - Run the whole stack: `docker compose up -d --build` → http://localhost:8080
-- Traces: http://localhost:16686 · RabbitMQ UI: http://localhost:15672
+- Traces: http://localhost:16686 · RabbitMQ UI: http://localhost:15672 · Grafana: http://localhost:3000 (anon view; admin/admin) · Prometheus: http://localhost:9090
+- **Docker gotcha:** `docker compose --build` may reuse a cached .NET *publish* layer and silently ship stale service code (fresh image timestamp, old bits). After changing service source, verify or use `docker compose build --no-cache <svc>`.
 
 ## Memory
 Project knowledge and decision history live in `.claude/memory/` (index: `MEMORY.md`, auto-loaded each session). Keep it current after notable changes — it complements these directory-scoped `CLAUDE.md` files.

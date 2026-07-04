@@ -38,6 +38,37 @@ services:
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
 
+  prometheus:
+    # Scrapes /metrics on every app (config lists each as a job). Pull-based,
+    # so it just retries until an app is up — no depends_on needed.
+    image: prom/prometheus:v2.55.1
+    container_name: telegramlike-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+
+  grafana:
+    # Auto-provisioned: Prometheus datasource + the "Services Overview" dashboard.
+    # Anonymous viewing on so the dashboard opens without a login (admin/admin to edit).
+    image: grafana/grafana:11.3.0
+    container_name: telegramlike-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: telegramlike-rabbitmq
