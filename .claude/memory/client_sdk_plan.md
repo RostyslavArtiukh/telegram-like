@@ -19,6 +19,10 @@ metadata:
 1. **Real-time для зовнішніх клієнтів** — поточний шлях (RabbitMQ → in-proc pubsub → Blazor circuit) живе тільки у Web-процесі. Потрібен **SignalR Hub** (консюмить ті самі integration events; [[realtime-blazor-pubsub]] це передбачала: «Hub буде потрібен якщо додамо mobile app»). Питання: хостити Hub у Web чи окремим realtime-сервісом.
 2. **BFF-enrichment** (recipients, isBroadcast, isPremium) — зараз у Web BFF; мобільна апка напряму в gateway мусила б дублювати. Винести у SDK або (краще) у спільний server-side шар — заодно закриє відомий fail-open у messaging (membership не валідується).
 
-**Апки: .NET MAUI** — mobile (Android/iOS) і desktop (Windows/macOS) з однієї кодової бази. Розглянути **MAUI Blazor Hybrid** — реюз наявних Razor-компонентів з Web UI (один SDK, спільні компоненти, три платформи). Порядок: SDK (`dotnet pack`) → SignalR Hub → MAUI Hybrid desktop (швидший цикл) → Android.
+**Апки: .NET MAUI Blazor Hybrid** (обрано 2026-07-04; Blazor Hybrid = режим UI всередині MAUI: BlazorWebView + Razor-компоненти, C# нативно). Порядок: SDK (`dotnet pack`) → SignalR Hub → MAUI Hybrid desktop (швидший цикл) → Android-емулятор.
+
+**Платформна реальність (юзер має iPhone, Mac'а нема):** зібрати/задеплоїти iOS без Mac'а неможливо (обмеження Apple: Xcode-підпис; безкоштовний provisioning = 7 днів і теж через Mac; інакше $99/рік + TestFlight). Тому цілі: **Windows desktop + Android-емулятор**; iOS-таргет можна тримати в csproj і верифікувати CI-збіркою на безкоштовному macos-раннері GitHub Actions («iOS-ready, не задеплоєно»). На iPhone юзера продукт можна показати вебом по LAN (`http://<IP ПК>:8080`) або згодом PWA (iOS підтримує, з 16.4 і push).
+
+**Каверза реюзу Razor-компонентів:** не copy-paste — поточні компоненти зав'язані на Blazor Server-патерни (typed clients з DI Web-процесу, in-proc pubsub). У Hybrid дані мають іти через SDK (HTTP + SignalR) → компоненти треба відв'язати на спільні інтерфейси (shared UI library).
 
 Див. [[realtime-blazor-pubsub]], [[api-gateway]], [[service-auth-jwt]], [[kubernetes-plan]], [[microservices-migration]].
