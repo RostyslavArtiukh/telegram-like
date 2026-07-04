@@ -7,7 +7,9 @@ metadata:
   originSessionId: 62cc2e6a-d21e-47f2-9647-8294fc3dff38
 ---
 
-**Standing grant (2026-06-17):** the project owner gave full, durable permission to run **all** shell commands (Bash + PowerShell) in this project, **every session, with no per-use approval**. His permission is no longer required to run commands here.
+**Standing grant (2026-06-17; re-confirmed & actually applied on this machine 2026-07-04):** the project owner gave full, durable permission to run **all** shell commands (Bash + PowerShell — Python, Docker, dotnet, git, gh, everything) in this project, **every session, with no per-use approval**. His permission is no longer required to run commands here.
+
+**2026-07-04 note:** this machine's `settings.local.json` previously held only the long specific allowlist (no broad rules), so prompts were still firing. Fixed: added tool-only `"Bash"` + `"PowerShell"` allow rules and `"defaultMode": "bypassPermissions"`. If a fresh clone/machine still prompts, re-apply those two things.
 
 **Enforced in** `.claude/settings.local.json`: tool-only allow rules `"Bash"` and `"PowerShell"` (name-only rule = allow everything for that tool) plus `"defaultMode": "bypassPermissions"`. The long list of specific `Bash(...)`/`PowerShell(...)` entries below them is now redundant (superseded by the broad rules) — harmless, can be tidied later.
 
