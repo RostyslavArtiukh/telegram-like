@@ -220,6 +220,40 @@ services:
       ServiceAuth__Audience: telegramlike-services
       ServiceAuth__TokenLifetimeSeconds: "300"
 
+  gateway:
+    build:
+      context: .
+      dockerfile: src/gateway/TelegramLike.Gateway/Dockerfile
+    image: telegramlike-gateway:latest
+    container_name: telegramlike-gateway
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    depends_on:
+      notifications:
+        condition: service_healthy
+      presence:
+        condition: service_healthy
+      chats:
+        condition: service_healthy
+      messaging:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
+      interval: 10s
+      start_period: 10s
+      retries: 5
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Tracing__OtlpEndpoint: "http://jaeger:4317"
+      ReverseProxy__Clusters__identity__Destinations__d1__Address: "http://identity:8080"
+      ReverseProxy__Clusters__notifications__Destinations__d1__Address: "http://notifications:8080"
+      ReverseProxy__Clusters__presence__Destinations__d1__Address: "http://presence:8080"
+      ReverseProxy__Clusters__chats__Destinations__d1__Address: "http://chats:8080"
+      ReverseProxy__Clusters__messaging__Destinations__d1__Address: "http://messaging:8080"
+
   web:
     build:
       context: .
@@ -232,15 +266,7 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      notifications:
-        condition: service_healthy
-      presence:
-        condition: service_healthy
-      chats:
-        condition: service_healthy
-      messaging:
-        condition: service_healthy
-      identity:
+      gateway:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
@@ -249,11 +275,7 @@ services:
       RabbitMQ__Password: guest
       RabbitMQ__VirtualHost: telegramlike
       Tracing__OtlpEndpoint: "http://jaeger:4317"
-      NotificationsApi__BaseUrl: "http://notifications:8080"
-      PresenceApi__BaseUrl: "http://presence:8080"
-      ChatsApi__BaseUrl: "http://chats:8080"
-      MessagingApi__BaseUrl: "http://messaging:8080"
-      IdentityApi__BaseUrl: "http://identity:8080"
+      Gateway__BaseUrl: "http://gateway:8080"
       DataProtection__KeysPath: /var/dp-keys
     volumes:
       - web_dp_keys:/var/dp-keys

@@ -111,44 +111,45 @@ builder.Services.AddMassTransit(bus =>
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ServiceTokenProvider>();
 
-var identityBaseUrl = builder.Configuration["IdentityApi:BaseUrl"]
-                      ?? throw new InvalidOperationException("IdentityApi:BaseUrl is not configured.");
+// All downstream calls go through the single YARP gateway address; each client
+// adds its service prefix (via ServicePrefixHandler) which the gateway strips and
+// routes on. The BFF no longer holds five separate service URLs.
+var gatewayBaseUrl = builder.Configuration["Gateway:BaseUrl"]
+                     ?? throw new InvalidOperationException("Gateway:BaseUrl is not configured.");
+
+// ServicePrefixHandler is added AFTER AddServiceResilience so it sits inner to the
+// resilience handler — retries clone the original request, so the prefix is applied
+// once per attempt and never doubled.
 
 // Public auth client (no token) — also used by ServiceTokenProvider for the exchange.
 builder.Services.AddHttpClient<IIdentityAuthApi, IdentityAuthApiClient>(client =>
-    client.BaseAddress = new Uri(identityBaseUrl))
-    .AddServiceResilience();
+        client.BaseAddress = new Uri(gatewayBaseUrl))
+    .AddServiceResilience()
+    .AddHttpMessageHandler(() => new ServicePrefixHandler("/identity"));
 builder.Services.AddHttpClient<IIdentityUsersApi, IdentityUsersApiClient>(client =>
-    client.BaseAddress = new Uri(identityBaseUrl))
-    .AddServiceResilience();
+        client.BaseAddress = new Uri(gatewayBaseUrl))
+    .AddServiceResilience()
+    .AddHttpMessageHandler(() => new ServicePrefixHandler("/identity"));
 
 builder.Services.AddHttpClient<INotificationsApi, NotificationsApiClient>(client =>
-{
-    var baseUrl = builder.Configuration["NotificationsApi:BaseUrl"]
-                  ?? throw new InvalidOperationException("NotificationsApi:BaseUrl is not configured.");
-    client.BaseAddress = new Uri(baseUrl);
-}).AddServiceResilience();
+        client.BaseAddress = new Uri(gatewayBaseUrl))
+    .AddServiceResilience()
+    .AddHttpMessageHandler(() => new ServicePrefixHandler("/notifications"));
 
 builder.Services.AddHttpClient<IPresenceApi, PresenceApiClient>(client =>
-{
-    var baseUrl = builder.Configuration["PresenceApi:BaseUrl"]
-                  ?? throw new InvalidOperationException("PresenceApi:BaseUrl is not configured.");
-    client.BaseAddress = new Uri(baseUrl);
-}).AddServiceResilience();
+        client.BaseAddress = new Uri(gatewayBaseUrl))
+    .AddServiceResilience()
+    .AddHttpMessageHandler(() => new ServicePrefixHandler("/presence"));
 
 builder.Services.AddHttpClient<IChatsApi, ChatsApiClient>(client =>
-{
-    var baseUrl = builder.Configuration["ChatsApi:BaseUrl"]
-                  ?? throw new InvalidOperationException("ChatsApi:BaseUrl is not configured.");
-    client.BaseAddress = new Uri(baseUrl);
-}).AddServiceResilience();
+        client.BaseAddress = new Uri(gatewayBaseUrl))
+    .AddServiceResilience()
+    .AddHttpMessageHandler(() => new ServicePrefixHandler("/chats"));
 
 builder.Services.AddHttpClient<IMessagingApi, MessagingApiClient>(client =>
-{
-    var baseUrl = builder.Configuration["MessagingApi:BaseUrl"]
-                  ?? throw new InvalidOperationException("MessagingApi:BaseUrl is not configured.");
-    client.BaseAddress = new Uri(baseUrl);
-}).AddServiceResilience();
+        client.BaseAddress = new Uri(gatewayBaseUrl))
+    .AddServiceResilience()
+    .AddHttpMessageHandler(() => new ServicePrefixHandler("/messaging"));
 
 var app = builder.Build();
 

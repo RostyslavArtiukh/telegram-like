@@ -3,13 +3,18 @@
 Telegram-like messenger. Migrated from a modular monolith to **microservices + a Blazor Server BFF**. DDD, CQRS (MediatR inside services), event-driven (RabbitMQ/MassTransit + transactional outbox).
 
 ## Architecture
-- **Web BFF** — `src/TelegramLike.Web`, port 8080. Blazor Server, pure BFF: no domain, no DB. Talks to services over HTTP; hosts a MassTransit bus only for real-time pubsub consumers. See its own `CLAUDE.md`.
+- **Web BFF** — `src/TelegramLike.Web`, port 8080. Blazor Server, pure BFF: no domain, no DB. Talks to services **through the gateway** over HTTP (one `Gateway:BaseUrl`, not five service URLs); hosts a MassTransit bus only for real-time pubsub consumers. See its own `CLAUDE.md`.
+- **Gateway** — `src/gateway/TelegramLike.Gateway`, port **8090**. YARP reverse proxy: routes `/<service>/**` to each service and strips the prefix (config-only, in `appsettings`/env). Does no auth — forwards `Authorization` untouched; each service validates the JWT. Needed because chats and messaging both serve `/chats/*`. See `bff_resilience` + the routing note below.
 - **5 services** — `src/services/<name>/`, each = Domain/Application/Infrastructure/Api, own Mongo DB, own port:
   - identity **8085** · notifications **8081** · presence **8082** · chats **8083** · messaging **8084**
 - **Shared infra:** MongoDB (per-service DB, replica set `rs0`), Redis, RabbitMQ (vhost `telegramlike`), Jaeger (OTLP 4317, UI 16686).
 
+## Gateway routing
+BFF clients keep their service-relative paths (e.g. `/messages/{id}`); a `ServicePrefixHandler` (inner to the resilience handler) prepends the service prefix (`/messaging`), and the gateway strips it. So the wire path for a service whose route prefix matches its own (chats→`/chats`) is doubled then stripped once: client `/chats/my` → `/chats/chats/my` at the gateway → `/chats/my` at the service.
+
 ## Per-area guides (auto-loaded when you work in that directory)
 - Web BFF → [src/TelegramLike.Web/CLAUDE.md](src/TelegramLike.Web/CLAUDE.md)
+- Gateway (YARP) → [src/gateway/CLAUDE.md](src/gateway/CLAUDE.md)
 - Identity (IdP) → [src/services/identity/CLAUDE.md](src/services/identity/CLAUDE.md)
 - Notifications → [src/services/notifications/CLAUDE.md](src/services/notifications/CLAUDE.md)
 - Presence → [src/services/presence/CLAUDE.md](src/services/presence/CLAUDE.md)
