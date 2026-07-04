@@ -19,4 +19,6 @@ metadata:
 
 **Verified live:** compose up → `docker compose stop notifications` → web still served (302 in 5ms), other services healthy (failure isolation). Reproduced the exact pipeline against the down port: breaker opens after ~1.5 calls then fast-fails in 0ms; POST fast-fails when open. Caveat: first hit on a *hung* host (Docker drops SYN on a stopped container) costs up to TotalRequestTimeout before the breaker learns — inherent to detecting a hang.
 
-**Not done / possible next:** YARP edge gateway; making sends idempotent (client message-id / Idempotency-Key) to allow retrying POST safely; observability of breaker state. See [[microservices-migration]], [[ci-pipeline]].
+**Not done / possible next:** making sends idempotent (client message-id / Idempotency-Key) to allow retrying POST safely; observability of breaker state. See [[microservices-migration]], [[ci-pipeline]], [[api-gateway]].
+
+**[TL-56] gateway added:** the five per-service `*Api:BaseUrl` settings are gone — all clients now use one `Gateway:BaseUrl` + a `ServicePrefixHandler` (inner to the resilience handler). See [[api-gateway]].
