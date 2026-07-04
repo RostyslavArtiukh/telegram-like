@@ -28,4 +28,8 @@ metadata:
 
 **Каверзи на майбутнє:** сервіси не мають `depends_on`-семантики k8s — вони крешлуплять поки Mongo не стане replica set і RabbitMQ не підніметься, тоді відновлюються (readiness failureThreshold 6). Можна додати initContainer-wait, але для pet-кластера не варто. Kustomize у корені — не плутати з `docker-compose.yml`, обидва валідні деплої.
 
+**⚠️ НАЙВАЖЛИВІША каверза (втратили ~годину дебагу, 2026-07-04):** якщо **compose-стек лишився запущеним** поруч із k8s — він тримає ті самі host-порти (8090 gateway, 9090 prometheus, 15672 rabbit…). `kubectl port-forward` на такий порт **біндиться без помилки** (127.0.0.1 vs docker 0.0.0.0), але Windows може віддавати з'єднання **compose-контейнеру**. Симптом у нас: логін через `localhost:8090` створював сесію у compose-Redis, а k8s-pod'и шукали її у k8s-Redis → «загадкові» 401 у `/auth/signin`, host-запити 200 / in-cluster 401 на той самий токен, Redis MONITOR без SET при успішному логіні. Хибна перша гіпотеза — «stale identity image» (rebuild був не потрібен). **Правило: перед роботою з k8s — `docker compose down`; при «неможливих» розбіжностях host vs in-cluster — першим ділом `docker compose ps`.**
+
+**Cross-pod real-time — доведено браузерами (Playwright, headless chromium):** два юзери на **різних web-pod'ах** (port-forward до конкретних pod'ів), A шле повідомлення → B отримує push за ~1.3с без reload; typing-індикатор теж долетів крос-pod. Каверзи тесту: Blazor login-форма — `fill()`+submit race через circuit (краще `/auth/signin?token=` напряму); кнопка Send disabled поки `@bind` не доїде на сервер → `pressSequentially` + чекати enabled + явний click.
+
 Див. [[observability-metrics]], [[api-gateway]], [[microservices-migration]], [[telegramlike-project-status]], [[bff-resilience]].
