@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity
+  namespace: telegramlike
+  labels:
+    app: identity
+spec:
+  selector:
+    app: identity
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity
+  namespace: telegramlike
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: identity
+  template:
+    metadata:
+      labels:
+        app: identity
+    spec:
+      containers:
+        - name: identity
+          image: telegramlike-identity:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          env:
+            - name: MongoDB__DatabaseName
+              value: telegramlike_identity
+            - name: Redis__ConnectionString
+              value: "redis:6379"
+            # Identity is the IdP: it signs the access tokens every service validates.
+            - name: Auth__SessionTokenTtlDays
+              value: "7"
+            - name: ServiceAuth__TokenLifetimeSeconds
+              value: "300"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 15

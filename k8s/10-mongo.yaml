@@ -1,0 +1,89 @@
+# MongoDB as a single-node replica set (rs0) — required for the multi-document
+# transactions the chats/messaging services use. StatefulSet for a stable pod
+# identity + a PVC for /data/db. A headless Service gives stable DNS; clients
+# connect with directConnection=true so they bypass replica-set topology and
+# just talk to this pod directly.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: telegramlike
+spec:
+  clusterIP: None
+  selector:
+    app: mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: telegramlike
+spec:
+  serviceName: mongodb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:7
+          args: ["--replSet", "rs0", "--bind_ip_all"]
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+          readinessProbe:
+            exec:
+              command: ["mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+# One-shot init: waits for mongod, then rs.initiate if not already a replica set.
+# Idempotent (checks rs.status first) so re-applying is safe. Member host is
+# localhost:27017 — matches the proven compose config; single-node + client
+# directConnection means the advertised host is never used by clients.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mongo-rs-init
+  namespace: telegramlike
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: mongo:7
+          command: ["bash", "-c"]
+          args:
+            - |
+              echo "waiting for mongod..."
+              until mongosh --host mongodb:27017 --quiet --eval 'db.adminCommand("ping").ok' >/dev/null 2>&1; do
+                sleep 2
+              done
+              mongosh --host mongodb:27017 --quiet --eval '
+                try {
+                  rs.status().ok;
+                  print("replica set already initiated");
+                } catch (e) {
+                  rs.initiate({_id: "rs0", members: [{_id: 0, host: "localhost:27017"}]});
+                  print("replica set initiated");
+                }'

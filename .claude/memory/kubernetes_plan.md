@@ -1,35 +1,31 @@
 ---
 name: kubernetes-plan
-description: Наступна велика задача — розгортання в Kubernetes; план і стан машини (робота почнеться у свіжій сесії)
+description: Kubernetes-розгортання всього стека — ЗРОБЛЕНО й live-verified ([TL-62]); маніфести в k8s/ + kustomization.yaml у корені
 metadata:
   node_type: memory
   type: project
 ---
 
-**Рішення (2026-07-04):** наступна велика задача — перекласти весь стек із `docker-compose` у **Kubernetes**. Домовились почати її у **новій сесії** (ця вже дуже довга). Поточний деплой — лише docker-compose; жодних k8s-маніфестів у репо ще немає.
+**СТАН: ЗРОБЛЕНО (2026-07-04, [TL-62]).** Весь стек із `docker-compose.yml` перекладено в Kubernetes і **перевірено на живому кластері** (Docker Desktop k8s, node Ready v1.32.2). Раніше кластера не було — цю сесію юзер увімкнув Docker Desktop → Kubernetes.
 
-**Стан машини (перевірено):**
-- `kubectl` v1.32.2 встановлено, але **робочого кластера НЕМАЄ** (немає активного context; `kubectl get nodes` не відповідає). Перший крок нової сесії: попросити юзера увімкнути **Docker Desktop → Settings → Kubernetes → Enable** (або kind/minikube).
-- **Helm НЕ встановлено** → використовувати **звичайні маніфести** або **Kustomize** (вбудований у kubectl, `kubectl apply -k`). Не тягнути Helm без потреби.
-- Live-перевірка (pod'и піднялись, застосунок відкривається) потрібна перед тим, як казати «готово» — тому кластер обовʼязковий.
+**Де що лежить:**
+- `kustomization.yaml` — **у корені репо** (не в k8s/), бо `configMapGenerator` тягне `monitoring/*` у ConfigMap-и, а kustomize load-restrictor не дозволяє посилатись на файли вище каталогу kustomization.
+- `k8s/*.yaml` — 17 маніфестів (namespace, secret, config, mongo, redis, rabbitmq, jaeger, 5 сервісів, gateway, web, prometheus, alertmanager, grafana) + `k8s/README.md`.
+- Команда: `docker compose build` → `kubectl apply -k .`. Тір-даун: `kubectl delete -k .`.
 
-**Що перекладати (14 компонентів з `docker-compose.yml`):** 5 сервісів (identity 8085 / notifications 8081 / presence 8082 / chats 8083 / messaging 8084) + gateway 8090 + web 8080 + mongo + redis + rabbitmq + jaeger + prometheus 9090 + grafana 3000 + alertmanager 9093. Усі app-контейнери слухають :8080 всередині.
+**Ключові рішення (усі спрацювали):**
+- **Імена k8s Service = імена compose-сервісів** (`identity`, `gateway`, `prometheus`, `mongodb` тощо) → `monitoring/prometheus.yml`, YARP-destinations гейтвею й web `Gateway__BaseUrl` переносяться БЕЗ ЗМІН.
+- **Образи локальні** `telegramlike-*:latest`, `imagePullPolicy: IfNotPresent` (Docker Desktop k8s ділить docker-демон — образи видно, нічого не тягнеться з registry).
+- **Mongo rs0**: `StatefulSet` (1 репліка) + PVC + окремий **Job `mongo-rs-init`**, що чекає mongod і робить ідемпотентний `rs.initiate` (member host `localhost:27017`, як у compose). Клієнти — `directConnection=true`. Job відпрацював: "replica set initiated".
+- **Спільний `JwtSecret`** → k8s `Secret` `app-secrets`; спільний env → ConfigMap `app-config` (envFrom на всіх 5 сервісах); per-service `MongoDB__DatabaseName` (+ Redis для identity/presence) — inline env.
+- **Web**: NodePort **30080** (http://localhost:30080) + PVC для DataProtection keys (`/var/dp-keys`). Web не має /health → readiness = TCP-probe :8080. Решта — httpGet `/health/ready`.
+- **Моніторинг configs** (prometheus.yml, rules.yml, alertmanager.yml, grafana provisioning + dashboard JSON) → ConfigMap-и через `configMapGenerator` з `disableNameSuffixHash: true`.
 
-**Ключові каверзи:**
-- **Образи збираються локально** (`telegramlike-*:latest`). Docker Desktop k8s ділить docker-демон, тож образи доступні — став `imagePullPolicy: IfNotPresent` (або Never), інакше спробує тягнути з registry й впаде.
-- **Mongo — single-node replica set `rs0`** (потрібен для транзакцій). У compose ініціюється healthcheck-ом (`rs.initiate`). У k8s: StatefulSet + окремий init (Job/postStart/initContainer, що робить `rs.initiate`). Це найскладніша частина.
-- **Спільний `ServiceAuth:JwtSecret`** у всіх сервісах → один k8s `Secret`, монтований у всі. (Значення в compose: `2VfJYDFD...`.)
-- **Per-service Mongo DB** — один інстанс Mongo, різні імена БД (`telegramlike_identity` тощо) через env `MongoDB__DatabaseName`.
-- **Конфіги монітирингу** (`monitoring/prometheus.yml`, `rules.yml`, `grafana/provisioning/**`, `alertmanager/alertmanager.yml`) → `ConfigMap`-и, монтовані у відповідні pod'и.
-- **Вхід ззовні**: web (і, можливо, gateway/grafana) через `Ingress` (Docker Desktop має ingress-nginx? — перевірити) або `NodePort`/`port-forward`.
-- Env-конфіг сервісів (`__` роздільник) → ConfigMap/Secret; RabbitMQ vhost `telegramlike`; Jaeger OTLP `http://jaeger:4317`; DataProtection keys для web → PVC.
+**Live-verify (усе green):**
+- Усі 14 компонентів `1/1 Running`; Job `Completed`. notifications рестартнувся 2 рази поки Mongo/RabbitMQ піднімались, тоді сів — очікувана churn (сервіси не чекають Job'а).
+- Smoke через gateway (port-forward :8090): register 200 → login → token-exchange (identity підписав JWT) → **create group chat 201** (chats валідував JWT + Mongo-транзакція) → list my chats 200 повертає чат. Шлях до chats через gateway подвоєний: `/chats/chats/group`.
+- Prometheus: **8/8 targets up**. Web NodePort → 302 (Blazor редіректить на login = працює).
 
-**Пропонований фазовий план:**
-1. `k8s/` + namespace + Secret (JWT) + ConfigMap-и (env, monitoring configs).
-2. Інфра: Mongo (StatefulSet + replica-set init) + Redis + RabbitMQ (+ PVC) + Services.
-3. App Deployments+Services для 5 сервісів (readiness `/health/ready`, `imagePullPolicy`).
-4. Gateway + Web Deployments+Services + Ingress/port-forward.
-5. Монітеринг: Prometheus/Grafana/Alertmanager Deployments + ConfigMap-mounts + Jaeger.
-6. Verify: `kubectl get pods` усі Ready; прогнати той самий smoke (register→login→send через gateway); дашборд Grafana.
+**Каверзи на майбутнє:** сервіси не мають `depends_on`-семантики k8s — вони крешлуплять поки Mongo не стане replica set і RabbitMQ не підніметься, тоді відновлюються (readiness failureThreshold 6). Можна додати initContainer-wait, але для pet-кластера не варто. Kustomize у корені — не плутати з `docker-compose.yml`, обидва валідні деплої.
 
-**Як почати нову сесію:** відкрити цей репо, сказати «продовжуємо — робимо Kubernetes-розгортання». Ця памʼятка підвантажиться автоматично. Перед стартом можна `docker compose down`, щоб звільнити ресурси (k8s підніме своє). Стан на зараз: усе по інфрі зроблено й CI-green (останнє — [TL-61] alerting). Див. [[observability-metrics]], [[api-gateway]], [[microservices-migration]], [[telegramlike-project-status]].
+Див. [[observability-metrics]], [[api-gateway]], [[microservices-migration]], [[telegramlike-project-status]], [[bff-resilience]].

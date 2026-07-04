@@ -1,0 +1,51 @@
+# Kubernetes deployment for the whole TelegramLike stack (mirror of docker-compose.yml).
+# Apply with:  kubectl apply -k .
+# Lives at the repo root (not k8s/) so the monitoring/* config files can be pulled
+# into ConfigMaps via configMapGenerator — kustomize's load restrictor only allows
+# referencing files at or below the kustomization directory.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: telegramlike
+
+resources:
+  - k8s/00-namespace.yaml
+  - k8s/01-secret.yaml
+  - k8s/02-config.yaml
+  - k8s/10-mongo.yaml
+  - k8s/11-redis.yaml
+  - k8s/12-rabbitmq.yaml
+  - k8s/13-jaeger.yaml
+  - k8s/20-identity.yaml
+  - k8s/21-notifications.yaml
+  - k8s/22-presence.yaml
+  - k8s/23-chats.yaml
+  - k8s/24-messaging.yaml
+  - k8s/30-gateway.yaml
+  - k8s/31-web.yaml
+  - k8s/40-prometheus.yaml
+  - k8s/41-alertmanager.yaml
+  - k8s/42-grafana.yaml
+
+# Monitoring configs are the same files docker-compose bind-mounts, turned into
+# ConfigMaps. Stable names (no hash suffix) so the Deployments can reference them.
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: prometheus-config
+    files:
+      - monitoring/prometheus.yml
+      - monitoring/rules.yml
+  - name: alertmanager-config
+    files:
+      - monitoring/alertmanager/alertmanager.yml
+  - name: grafana-datasources
+    files:
+      - monitoring/grafana/provisioning/datasources/prometheus.yml
+  - name: grafana-dashboard-provider
+    files:
+      - monitoring/grafana/provisioning/dashboards/dashboards.yml
+  - name: grafana-dashboards
+    files:
+      - monitoring/grafana/dashboards/telegramlike-overview.json
