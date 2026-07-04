@@ -9,6 +9,7 @@
 - [service_auth_jwt.md](service_auth_jwt.md) — JWT auth між Web BFF і downstream сервісами; рецепт додавання auth до нового сервісу
 - [realtime_blazor_pubsub.md](realtime_blazor_pubsub.md) — Real-time UI через RabbitMQ → in-memory pubsub → Blazor circuit (без окремого SignalR Hub)
 - [observability_tracing.md](observability_tracing.md) — OpenTelemetry → Jaeger; як додавати spans і пропагація через HTTP+RabbitMQ
+- [observability_metrics.md](observability_metrics.md) — Prometheus /metrics на всіх 7 apps + Grafana dashboard; Docker publish-layer cache gotcha
 - [testing_setup.md](testing_setup.md) — xUnit + FluentAssertions + NSubstitute + Testcontainers; directConnection fix для Mongo
 - [ci_pipeline.md](ci_pipeline.md) — GitHub Actions CI: build+test усього solution на push/PR до master (ubuntu має Docker для Testcontainers)
 - [bff_resilience.md](bff_resilience.md) — BFF HTTP resilience: timeout/retry/circuit-breaker на всіх 5 downstream клієнтах + graceful read-path degradation
