@@ -25,6 +25,11 @@ internal static class ResilientHttpClientExtensions
             // double-creates a chat, or double-registers a user.
             options.Retry.DisableForUnsafeHttpMethods();
             options.Retry.MaxRetryAttempts = 3;
+            // Fast backoff (200ms base, exponential + jitter) instead of the 2s default:
+            // these are intra-cluster hops feeding an interactive UI, so a down service
+            // must be detected in ~1s — not ~14s — and its failures must land inside the
+            // breaker's sampling window so it actually trips.
+            options.Retry.Delay = TimeSpan.FromMilliseconds(200);
 
             // Fail fast when a service is down instead of hammering it every call.
             // Min-throughput dropped from the default 100 to suit this app's low

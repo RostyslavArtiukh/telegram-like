@@ -25,7 +25,13 @@
     </div>
 </div>
 
-@if (_feed is null)
+@if (_feed is null && _loadFailed)
+{
+    <div class="alert alert-warning">
+        Notifications are temporarily unavailable. Retrying…
+    </div>
+}
+else if (_feed is null)
 {
     <p>Loading…</p>
 }
@@ -35,6 +41,12 @@ else if (_feed.Items.Count == 0)
 }
 else
 {
+    @if (_loadFailed)
+    {
+        <div class="alert alert-warning py-1 small mb-2">
+            Showing the last update — the notifications service is temporarily unavailable.
+        </div>
+    }
     <ul class="list-group">
         @foreach (var n in _feed.Items)
         {
@@ -65,6 +77,9 @@ else
     // disappear from the list automatically. User can toggle to see the full audit log.
     private bool _unreadOnly = true;
     private bool _busy;
+    // Set when a load fails (e.g. Notifications service down / circuit open). Drives a
+    // quiet "temporarily unavailable" state instead of an eternal "Loading…" spinner.
+    private bool _loadFailed;
     private Timer? _poller;
 
     protected override async Task OnInitializedAsync()
@@ -83,9 +98,15 @@ else
         try
         {
             _feed = await NotificationsApi.GetFeedAsync(_userId, unreadOnly: _unreadOnly);
+            _loadFailed = false;
             StateHasChanged();
         }
-        catch { /* keep last good state */ }
+        catch
+        {
+            // Keep the last good feed (if any); surface a quiet unavailable state.
+            _loadFailed = true;
+            StateHasChanged();
+        }
     }
 
     private async Task ToggleUnreadAsync(ChangeEventArgs e)
