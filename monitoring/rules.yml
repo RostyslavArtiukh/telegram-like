@@ -1,0 +1,42 @@
+groups:
+  - name: telegramlike-availability
+    rules:
+      # Any scraped app (service / gateway / web) has been unreachable for >1m.
+      - alert: TargetDown
+        expr: up{job!="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Target {{ $labels.job }} is down"
+          description: "Prometheus could not scrape {{ $labels.job }} ({{ $labels.instance }}) for over 1 minute."
+
+  - name: telegramlike-http
+    rules:
+      # >5% of a service's responses are 5xx over the last 5m. Zero-traffic services
+      # have a 0 numerator, so this only fires on real, sustained server errors.
+      - alert: HighHttp5xxRate
+        expr: |
+          sum by (job) (rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+            /
+          sum by (job) (rate(http_server_request_duration_seconds_count[5m]))
+            > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High 5xx rate on {{ $labels.job }}"
+          description: "{{ $labels.job }} is returning {{ $value | humanizePercentage }} 5xx responses (>5%)."
+
+      # p95 request latency above 1.5s for 5m — the service is alive but slow.
+      - alert: HighRequestLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (job, le) (rate(http_server_request_duration_seconds_bucket[5m]))
+          ) > 1.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency on {{ $labels.job }}"
+          description: "p95 request latency on {{ $labels.job }} is {{ $value | humanizeDuration }} (>1.5s)."

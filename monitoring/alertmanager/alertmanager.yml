@@ -1,0 +1,13 @@
+route:
+  # Group alerts by name + service so a burst of the same alert is one notification.
+  group_by: ['alertname', 'job']
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 1h
+  receiver: default
+
+receivers:
+  # No external notifier wired up (this is a local stack) — alerts are received,
+  # grouped and visible in the Alertmanager UI (:9093). A real deployment would add
+  # an email/slack/webhook config block here.
+  - name: default

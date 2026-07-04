@@ -48,8 +48,22 @@ services:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules.yml:/etc/prometheus/rules.yml:ro
     command:
       - --config.file=/etc/prometheus/prometheus.yml
+
+  alertmanager:
+    # Receives firing alerts from Prometheus; groups/routes them. No external
+    # notifier configured locally — alerts are visible in its UI (:9093).
+    image: prom/alertmanager:v0.27.0
+    container_name: telegramlike-alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
 
   grafana:
     # Auto-provisioned: Prometheus datasource + the "Services Overview" dashboard.
