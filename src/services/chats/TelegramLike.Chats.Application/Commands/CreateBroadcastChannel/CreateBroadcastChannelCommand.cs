@@ -2,4 +2,5 @@ using MediatR;
 
 namespace TelegramLike.Chats.Application.Commands.CreateBroadcastChannel;
 
-public sealed record CreateBroadcastChannelCommand(Guid OwnerUserId, string Name) : IRequest<Guid>;
+// ChatId is the client-supplied idempotency key; empty => the handler mints one.
+public sealed record CreateBroadcastChannelCommand(Guid ChatId, Guid OwnerUserId, string Name) : IRequest<Guid>;

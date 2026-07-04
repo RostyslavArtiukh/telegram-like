@@ -11,9 +11,11 @@ public sealed class BroadcastChannel : Chat
     private BroadcastChannel(Guid id, ChatName name, Guid createdBy, DateTime createdAt)
         : base(id, ChatType.Broadcast, name, createdBy, createdAt) { }
 
-    public static BroadcastChannel Create(ChatName name, Guid ownerUserId)
+    public static BroadcastChannel Create(Guid id, ChatName name, Guid ownerUserId)
     {
-        var chat = new BroadcastChannel(Guid.NewGuid(), name, ownerUserId, DateTime.UtcNow);
+        // Caller-supplied id doubles as the idempotency key (see ChatRepository.AddAsync).
+        if (id == Guid.Empty) throw new ArgumentException("Chat id cannot be empty.", nameof(id));
+        var chat = new BroadcastChannel(id, name, ownerUserId, DateTime.UtcNow);
         var owner = Member.Join(ownerUserId, MemberRole.Owner);
         chat._members.Add(owner);
 

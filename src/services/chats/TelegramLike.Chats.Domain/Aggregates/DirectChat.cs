@@ -11,12 +11,14 @@ public sealed class DirectChat : Chat
     private DirectChat(Guid id, Guid createdBy, DateTime createdAt)
         : base(id, ChatType.Direct, name: null, createdBy, createdAt) { }
 
-    public static DirectChat Create(Guid initiatorUserId, Guid peerUserId)
+    public static DirectChat Create(Guid id, Guid initiatorUserId, Guid peerUserId)
     {
+        // Caller-supplied id doubles as the idempotency key (see ChatRepository.AddAsync).
+        if (id == Guid.Empty) throw new ArgumentException("Chat id cannot be empty.", nameof(id));
         if (initiatorUserId == peerUserId)
             throw new InvalidOperationException("Direct chat requires two distinct users.");
 
-        var chat = new DirectChat(Guid.NewGuid(), initiatorUserId, DateTime.UtcNow);
+        var chat = new DirectChat(id, initiatorUserId, DateTime.UtcNow);
         var initiator = Member.Join(initiatorUserId, MemberRole.Member);
         var peer = Member.Join(peerUserId, MemberRole.Member);
         chat._members.Add(initiator);

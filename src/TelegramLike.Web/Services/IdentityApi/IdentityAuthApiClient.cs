@@ -11,11 +11,19 @@ internal sealed class IdentityAuthApiClient(HttpClient http) : IIdentityAuthApi
     public async Task<Guid> RegisterAsync(
         string email, string username, string displayName, string password, CancellationToken ct = default)
     {
-        using var resp = await http.PostAsJsonAsync("/auth/register",
-            new { email, username, displayName, password }, ct);
+        // Client-generated id doubles as the idempotency key: the Idempotency-Key header
+        // lets the resilience pipeline retry this POST, and Identity returns the same id
+        // for a retry instead of a spurious "email already taken".
+        var userId = Guid.NewGuid();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/auth/register")
+        {
+            Content = JsonContent.Create(new { userId, email, username, displayName, password })
+        };
+        request.Headers.Add("Idempotency-Key", userId.ToString());
+
+        using var resp = await http.SendAsync(request, ct);
         await EnsureOkAsync(resp, ct);
-        var payload = await resp.Content.ReadFromJsonAsync<RegisterResponse>(ct);
-        return payload?.UserId ?? throw new InvalidOperationException("Identity returned no user id.");
+        return userId;
     }
 
     public async Task<string> LoginAsync(string email, string password, CancellationToken ct = default)
@@ -48,7 +56,6 @@ internal sealed class IdentityAuthApiClient(HttpClient http) : IIdentityAuthApi
         resp.EnsureSuccessStatusCode();
     }
 
-    private sealed record RegisterResponse(Guid UserId);
     private sealed record LoginResponse(string SessionToken);
     private sealed record ErrorResponse(string Error);
 }

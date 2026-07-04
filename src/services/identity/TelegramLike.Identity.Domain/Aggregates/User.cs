@@ -43,11 +43,13 @@ public sealed class User : AggregateRoot
         UpdatedAt = updatedAt;
     }
 
-    public static User Register(string email, string username, string displayName, string passwordHash)
+    public static User Register(Guid id, string email, string username, string displayName, string passwordHash)
     {
+        // Caller-supplied id doubles as the idempotency key (see RegisterUserCommandHandler).
+        if (id == Guid.Empty) throw new ArgumentException("User id cannot be empty.", nameof(id));
         var now = DateTime.UtcNow;
         var user = new User(
-            Guid.NewGuid(),
+            id,
             Email.Create(email),
             Username.Create(username),
             DisplayName.Create(displayName),

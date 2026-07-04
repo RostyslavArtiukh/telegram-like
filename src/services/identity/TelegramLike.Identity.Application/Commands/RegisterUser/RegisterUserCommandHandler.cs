@@ -13,6 +13,15 @@ public sealed class RegisterUserCommandHandler(
 {
     public async Task<Guid> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
+        var userId = request.UserId == Guid.Empty ? Guid.NewGuid() : request.UserId;
+
+        // Idempotent retry: if this user id already exists, return it without re-running
+        // the email/username checks — those would wrongly report "already taken" for the
+        // user's own retried registration.
+        var existing = await userRepository.GetByIdAsync(userId, cancellationToken);
+        if (existing is not null)
+            return existing.Id;
+
         var email = Email.Create(request.Email);
         var username = Username.Create(request.Username);
 
@@ -23,7 +32,7 @@ public sealed class RegisterUserCommandHandler(
             throw new InvalidOperationException($"Username '{request.Username}' is already taken.");
 
         var passwordHash = passwordHasher.Hash(request.Password);
-        var user = User.Register(request.Email, request.Username, request.DisplayName, passwordHash);
+        var user = User.Register(userId, request.Email, request.Username, request.DisplayName, passwordHash);
 
         await userRepository.AddAsync(user, cancellationToken);
         return user.Id;

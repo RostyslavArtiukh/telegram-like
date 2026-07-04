@@ -21,7 +21,8 @@ public sealed class CreateDirectChatCommandHandler(IChatRepository chatRepositor
         if (existing is not null)
             return existing.Id;
 
-        var chat = DirectChat.Create(request.InitiatorUserId, request.PeerUserId);
+        var chatId = request.ChatId == Guid.Empty ? Guid.NewGuid() : request.ChatId;
+        var chat = DirectChat.Create(chatId, request.InitiatorUserId, request.PeerUserId);
         await chatRepository.AddAsync(chat, cancellationToken);
         return chat.Id;
     }

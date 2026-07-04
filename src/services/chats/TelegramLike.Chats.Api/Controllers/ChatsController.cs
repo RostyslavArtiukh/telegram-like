@@ -38,7 +38,7 @@ public sealed class ChatsController : ApiControllerBase
     public async Task<IActionResult> CreateDirect([FromBody] CreateDirectChatRequest body, CancellationToken ct)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
-        var id = await _mediator.Send(new CreateDirectChatCommand(userId, body.PeerUserId), ct);
+        var id = await _mediator.Send(new CreateDirectChatCommand(body.ChatId, userId, body.PeerUserId), ct);
         return Created($"/chats/{id}", new ChatCreatedResponse(id));
     }
 
@@ -46,7 +46,7 @@ public sealed class ChatsController : ApiControllerBase
     public async Task<IActionResult> CreateGroup([FromBody] CreateGroupChatRequest body, CancellationToken ct)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
-        var id = await _mediator.Send(new CreateGroupChatCommand(userId, body.Name), ct);
+        var id = await _mediator.Send(new CreateGroupChatCommand(body.ChatId, userId, body.Name), ct);
         return Created($"/chats/{id}", new ChatCreatedResponse(id));
     }
 
@@ -54,7 +54,7 @@ public sealed class ChatsController : ApiControllerBase
     public async Task<IActionResult> CreateBroadcast([FromBody] CreateBroadcastChannelRequest body, CancellationToken ct)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
-        var id = await _mediator.Send(new CreateBroadcastChannelCommand(userId, body.Name), ct);
+        var id = await _mediator.Send(new CreateBroadcastChannelCommand(body.ChatId, userId, body.Name), ct);
         return Created($"/chats/{id}", new ChatCreatedResponse(id));
     }
 

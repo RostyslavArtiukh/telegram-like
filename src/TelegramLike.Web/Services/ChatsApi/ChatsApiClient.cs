@@ -32,24 +32,34 @@ internal sealed class ChatsApiClient(HttpClient http, ServiceTokenProvider token
         return await response.Content.ReadFromJsonAsync<List<ChatMemberContract>>(ct) ?? [];
     }
 
+    // Each create generates the chat id up front as the idempotency key (body +
+    // Idempotency-Key header, so the resilience pipeline may safely retry). The server
+    // reply is still the authoritative id — a direct-chat create returns the existing
+    // chat's id when a chat between the pair already exists.
     public async Task<Guid> CreateDirectChatAsync(Guid userId, Guid peerUserId, CancellationToken ct = default)
     {
+        var chatId = Guid.NewGuid();
         using var request = await NewRequestAsync(HttpMethod.Post, "/chats/direct", ct);
-        request.Content = JsonContent.Create(new { peerUserId });
+        request.Headers.Add("Idempotency-Key", chatId.ToString());
+        request.Content = JsonContent.Create(new { chatId, peerUserId });
         return await SendCreate(request, ct);
     }
 
     public async Task<Guid> CreateGroupChatAsync(Guid userId, string name, CancellationToken ct = default)
     {
+        var chatId = Guid.NewGuid();
         using var request = await NewRequestAsync(HttpMethod.Post, "/chats/group", ct);
-        request.Content = JsonContent.Create(new { name });
+        request.Headers.Add("Idempotency-Key", chatId.ToString());
+        request.Content = JsonContent.Create(new { chatId, name });
         return await SendCreate(request, ct);
     }
 
     public async Task<Guid> CreateBroadcastChannelAsync(Guid userId, string name, CancellationToken ct = default)
     {
+        var chatId = Guid.NewGuid();
         using var request = await NewRequestAsync(HttpMethod.Post, "/chats/broadcast", ct);
-        request.Content = JsonContent.Create(new { name });
+        request.Headers.Add("Idempotency-Key", chatId.ToString());
+        request.Content = JsonContent.Create(new { chatId, name });
         return await SendCreate(request, ct);
     }
 

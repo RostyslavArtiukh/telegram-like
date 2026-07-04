@@ -7,7 +7,7 @@ namespace TelegramLike.Identity.Domain.Tests;
 public class UserTests
 {
     private static User NewUser() =>
-        User.Register("alice@example.com", "alice", "Alice", "hash");
+        User.Register(Guid.NewGuid(), "alice@example.com", "alice", "Alice", "hash");
 
     [Fact]
     public void Register_sets_default_state_and_raises_event()

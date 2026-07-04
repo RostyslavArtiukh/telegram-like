@@ -6,4 +6,6 @@ public sealed record RegisterUserCommand(
     string Email,
     string Username,
     string DisplayName,
-    string Password) : IRequest<Guid>;
+    string Password,
+    // Client-supplied user id = idempotency key; empty => the handler mints one.
+    Guid UserId = default) : IRequest<Guid>;

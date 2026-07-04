@@ -2,11 +2,13 @@ using TelegramLike.Chats.Domain.ValueObjects;
 
 namespace TelegramLike.Chats.Api.Contracts;
 
-public sealed record CreateDirectChatRequest(Guid PeerUserId);
+// ChatId is the client-generated idempotency key. Empty/absent => the service mints
+// one. A retried create reuses it so the chat isn't duplicated.
+public sealed record CreateDirectChatRequest(Guid PeerUserId, Guid ChatId = default);
 
-public sealed record CreateGroupChatRequest(string Name);
+public sealed record CreateGroupChatRequest(string Name, Guid ChatId = default);
 
-public sealed record CreateBroadcastChannelRequest(string Name);
+public sealed record CreateBroadcastChannelRequest(string Name, Guid ChatId = default);
 
 public sealed record ChangeMemberRoleRequest(MemberRole NewRole);
 

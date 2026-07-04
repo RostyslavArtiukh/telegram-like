@@ -12,7 +12,8 @@ public sealed class CreateBroadcastChannelCommandHandler(IChatRepository chatRep
     {
         // Owner existence is the Identity service's responsibility now — we trust
         // the JWT-authenticated caller.
-        var chat = BroadcastChannel.Create(ChatName.Create(request.Name), request.OwnerUserId);
+        var chatId = request.ChatId == Guid.Empty ? Guid.NewGuid() : request.ChatId;
+        var chat = BroadcastChannel.Create(chatId, ChatName.Create(request.Name), request.OwnerUserId);
         await chatRepository.AddAsync(chat, cancellationToken);
         return chat.Id;
     }

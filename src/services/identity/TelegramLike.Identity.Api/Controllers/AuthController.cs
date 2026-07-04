@@ -27,7 +27,7 @@ public sealed class AuthController : ApiControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest body, CancellationToken ct)
     {
         var id = await _mediator.Send(
-            new RegisterUserCommand(body.Email, body.Username, body.DisplayName, body.Password), ct);
+            new RegisterUserCommand(body.Email, body.Username, body.DisplayName, body.Password, body.UserId), ct);
         return Ok(new { userId = id });
     }
 

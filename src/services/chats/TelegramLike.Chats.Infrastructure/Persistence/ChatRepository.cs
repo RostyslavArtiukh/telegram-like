@@ -49,21 +49,40 @@ internal sealed class ChatRepository(
 
     public async Task AddAsync(Chat chat, CancellationToken ct = default)
     {
-        using var session = await mongoClient.StartSessionAsync(cancellationToken: ct);
-        await session.WithTransactionAsync(async (s, token) =>
+        try
         {
-            await _chats.InsertOneAsync(s, ToChatDocument(chat), cancellationToken: token);
+            using var session = await mongoClient.StartSessionAsync(cancellationToken: ct);
+            await session.WithTransactionAsync(async (s, token) =>
+            {
+                await _chats.InsertOneAsync(s, ToChatDocument(chat), cancellationToken: token);
 
-            var memberDocs = chat.Members.Select(m => ChatMemberDocument.FromDomain(m, chat.Id)).ToList();
-            if (memberDocs.Count > 0)
-                await _members.InsertManyAsync(s, memberDocs, cancellationToken: token);
+                var memberDocs = chat.Members.Select(m => ChatMemberDocument.FromDomain(m, chat.Id)).ToList();
+                if (memberDocs.Count > 0)
+                    await _members.InsertManyAsync(s, memberDocs, cancellationToken: token);
 
-            await dispatcher.DispatchAsync(chat.DomainEvents, s, token);
-            return true;
-        }, cancellationToken: ct);
+                await dispatcher.DispatchAsync(chat.DomainEvents, s, token);
+                return true;
+            }, cancellationToken: ct);
+        }
+        catch (Exception ex) when (IsDuplicateKey(ex))
+        {
+            // Idempotent retry: a chat already exists with this id (the client reused it
+            // on a retry). The transaction aborted, so nothing was re-inserted and no
+            // ChatCreated/MemberJoined events were re-queued to the outbox.
+        }
 
         chat.ClearDomainEvents();
     }
+
+    // A duplicate _id surfaces differently depending on where Mongo detects it
+    // (write vs. command vs. bulk), so check all three for error code 11000.
+    private static bool IsDuplicateKey(Exception ex) => ex switch
+    {
+        MongoWriteException we => we.WriteError?.Category == ServerErrorCategory.DuplicateKey,
+        MongoCommandException ce => ce.Code == 11000,
+        MongoBulkWriteException be => be.WriteErrors.Any(e => e.Category == ServerErrorCategory.DuplicateKey),
+        _ => false
+    };
 
     public async Task UpdateAsync(Chat chat, CancellationToken ct = default)
     {
