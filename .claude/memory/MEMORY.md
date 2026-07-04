@@ -10,6 +10,7 @@
 - [realtime_blazor_pubsub.md](realtime_blazor_pubsub.md) — Real-time UI через RabbitMQ → in-memory pubsub → Blazor circuit (без окремого SignalR Hub)
 - [observability_tracing.md](observability_tracing.md) — OpenTelemetry → Jaeger; як додавати spans і пропагація через HTTP+RabbitMQ
 - [testing_setup.md](testing_setup.md) — xUnit + FluentAssertions + NSubstitute + Testcontainers; directConnection fix для Mongo
+- [ci_pipeline.md](ci_pipeline.md) — GitHub Actions CI: build+test усього solution на push/PR до master (ubuntu має Docker для Testcontainers)
 - [permissions_preference.md](permissions_preference.md) — Юзер не хоче постійних prompts; широкий allowlist у settings.local.json
 - [nomenclature_step_not_day.md](nomenclature_step_not_day.md) — Префікс комітів/ітерацій: поточне [TL-N] (Day N → Step N → [TL-N], один лічильник)
 - [memory_dual_write.md](memory_dual_write.md) — Дзеркалити memory у `.claude/memory/` репо для синхронізації між машинами
