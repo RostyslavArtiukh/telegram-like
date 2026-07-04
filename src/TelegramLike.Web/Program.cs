@@ -2,6 +2,7 @@ using System.Security.Claims;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using TelegramLike.Web.Components;
@@ -50,6 +51,16 @@ builder.Services.AddOpenTelemetry()
         var otlpEndpoint = builder.Configuration["Tracing:OtlpEndpoint"];
         if (!string.IsNullOrWhiteSpace(otlpEndpoint))
             t.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+    })
+    .WithMetrics(m =>
+    {
+        m.AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            // Polly's meter — the resilience pipeline emits retry attempts and
+            // circuit-breaker state transitions here, so a tripped breaker is visible.
+            .AddMeter("Polly")
+            .AddPrometheusExporter();
     });
 
 builder.Services.AddRazorComponents()
@@ -190,6 +201,8 @@ app.MapGet("/auth/signout", async (HttpContext httpContext) =>
     await httpContext.SignOutAsync("Cookies");
     return Results.Redirect("/login");
 });
+
+app.MapPrometheusScrapingEndpoint();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

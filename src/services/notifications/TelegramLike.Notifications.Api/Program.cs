@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using TelegramLike.Notifications.Api.Filters;
@@ -63,6 +64,13 @@ builder.Services.AddOpenTelemetry()
         var otlpEndpoint = builder.Configuration["Tracing:OtlpEndpoint"];
         if (!string.IsNullOrWhiteSpace(otlpEndpoint))
             t.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+    })
+    .WithMetrics(m =>
+    {
+        m.AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddPrometheusExporter();
     });
 
 // MassTransit auto-registers a "masstransit-bus" health check with the "ready"
@@ -96,6 +104,8 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 
 // Legacy alias kept so callers that already use /health keep working.
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+app.MapPrometheusScrapingEndpoint();
 
 app.MapControllers();
 

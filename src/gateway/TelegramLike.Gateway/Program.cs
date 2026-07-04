@@ -1,3 +1,4 @@
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -24,6 +25,15 @@ builder.Services.AddOpenTelemetry()
         var otlpEndpoint = builder.Configuration["Tracing:OtlpEndpoint"];
         if (!string.IsNullOrWhiteSpace(otlpEndpoint))
             t.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+    })
+    .WithMetrics(m =>
+    {
+        m.AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            // YARP's own meter — request counts / latency per route + cluster.
+            .AddMeter("Yarp.ReverseProxy")
+            .AddPrometheusExporter();
     });
 
 var app = builder.Build();
@@ -32,6 +42,8 @@ var app = builder.Build();
 // themselves stays each service's own /health/ready.
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapGet("/health/ready", () => Results.Ok(new { status = "ok" }));
+
+app.MapPrometheusScrapingEndpoint();
 
 app.MapReverseProxy();
 
