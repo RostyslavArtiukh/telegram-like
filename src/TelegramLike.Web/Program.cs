@@ -14,6 +14,7 @@ using TelegramLike.Web.Services.MessagingApi;
 using TelegramLike.Web.Services.NotificationsApi;
 using TelegramLike.Web.Services.Presence;
 using TelegramLike.Web.Services.PresenceApi;
+using TelegramLike.Web.Services.Resilience;
 using TelegramLike.Web.Services.ServiceAuth;
 using TelegramLike.Web.Services.Typing;
 using TelegramLike.Web.Services.UnreadCount;
@@ -115,37 +116,39 @@ var identityBaseUrl = builder.Configuration["IdentityApi:BaseUrl"]
 
 // Public auth client (no token) — also used by ServiceTokenProvider for the exchange.
 builder.Services.AddHttpClient<IIdentityAuthApi, IdentityAuthApiClient>(client =>
-    client.BaseAddress = new Uri(identityBaseUrl));
+    client.BaseAddress = new Uri(identityBaseUrl))
+    .AddServiceResilience();
 builder.Services.AddHttpClient<IIdentityUsersApi, IdentityUsersApiClient>(client =>
-    client.BaseAddress = new Uri(identityBaseUrl));
+    client.BaseAddress = new Uri(identityBaseUrl))
+    .AddServiceResilience();
 
 builder.Services.AddHttpClient<INotificationsApi, NotificationsApiClient>(client =>
 {
     var baseUrl = builder.Configuration["NotificationsApi:BaseUrl"]
                   ?? throw new InvalidOperationException("NotificationsApi:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl);
-});
+}).AddServiceResilience();
 
 builder.Services.AddHttpClient<IPresenceApi, PresenceApiClient>(client =>
 {
     var baseUrl = builder.Configuration["PresenceApi:BaseUrl"]
                   ?? throw new InvalidOperationException("PresenceApi:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl);
-});
+}).AddServiceResilience();
 
 builder.Services.AddHttpClient<IChatsApi, ChatsApiClient>(client =>
 {
     var baseUrl = builder.Configuration["ChatsApi:BaseUrl"]
                   ?? throw new InvalidOperationException("ChatsApi:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl);
-});
+}).AddServiceResilience();
 
 builder.Services.AddHttpClient<IMessagingApi, MessagingApiClient>(client =>
 {
     var baseUrl = builder.Configuration["MessagingApi:BaseUrl"]
                   ?? throw new InvalidOperationException("MessagingApi:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl);
-});
+}).AddServiceResilience();
 
 var app = builder.Build();
 
