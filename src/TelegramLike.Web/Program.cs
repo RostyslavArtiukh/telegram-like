@@ -93,16 +93,35 @@ var rabbitUser = builder.Configuration["RabbitMQ:Username"] ?? "guest";
 var rabbitPass = builder.Configuration["RabbitMQ:Password"] ?? "guest";
 var rabbitVhost = builder.Configuration["RabbitMQ:VirtualHost"] ?? "/";
 
+// Real-time fan-out to EVERY Web instance. These consumers only push into the
+// local Blazor circuits, so with >1 Web replica each instance must receive its
+// own copy of every event. A shared (durable) queue per consumer would make
+// RabbitMQ round-robin the events — only one replica would get each one, and
+// users whose circuit lives on another replica would miss the update.
+//
+// Fix: give every replica its own queue. `InstanceId` (unique per process)
+// makes the queue name unique; `Temporary = true` marks it non-durable +
+// auto-delete so it disappears when the pod stops. Both queues bind to the same
+// message-type exchange, so RabbitMQ fans each event out to all replicas.
+// (The 5 backend services keep shared durable queues — a read-model must
+// process each event once, not once-per-replica.)
+var busInstanceId = Guid.NewGuid().ToString("N");
+void PerInstanceQueue(IEndpointRegistrationConfigurator e)
+{
+    e.Temporary = true;
+    e.InstanceId = busInstanceId;
+}
+
 builder.Services.AddMassTransit(bus =>
 {
-    bus.AddConsumer<UserTypingConsumer>();
-    bus.AddConsumer<NewMessageConsumer>();
-    bus.AddConsumer<UnreadCountChangedConsumer>();
-    bus.AddConsumer<MessageRetractedConsumer>();
-    bus.AddConsumer<ReactionAddedConsumer>();
-    bus.AddConsumer<ReactionRemovedConsumer>();
-    bus.AddConsumer<UserCameOnlineConsumer>();
-    bus.AddConsumer<UserWentOfflineConsumer>();
+    bus.AddConsumer<UserTypingConsumer>().Endpoint(PerInstanceQueue);
+    bus.AddConsumer<NewMessageConsumer>().Endpoint(PerInstanceQueue);
+    bus.AddConsumer<UnreadCountChangedConsumer>().Endpoint(PerInstanceQueue);
+    bus.AddConsumer<MessageRetractedConsumer>().Endpoint(PerInstanceQueue);
+    bus.AddConsumer<ReactionAddedConsumer>().Endpoint(PerInstanceQueue);
+    bus.AddConsumer<ReactionRemovedConsumer>().Endpoint(PerInstanceQueue);
+    bus.AddConsumer<UserCameOnlineConsumer>().Endpoint(PerInstanceQueue);
+    bus.AddConsumer<UserWentOfflineConsumer>().Endpoint(PerInstanceQueue);
 
     bus.UsingRabbitMq((ctx, cfg) =>
     {

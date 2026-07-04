@@ -31,9 +31,15 @@ metadata:
 - **TTL у клієнта:** browser отримує `{userId, typing}` push, додає у dictionary `_typingExpiry[userId] = now + 5s`. Тимер 3 сек sweep'ить expired. Серверний Redis TTL = 5 сек узгоджений.
 - **Throttle на стороні publisher** — `ChatView.OnInput` шле StartTyping не частіше 1 раз / 2 сек (бо Redis TTL = 5s, тримаємо ключ alive перевипуском).
 
-**Обмеження поточної реалізації:**
-- **Web horizontal scale:** in-memory pubsub живе в одному процесі. Якщо буде кілька Web instance'ів — кожен буде бачити свій consumer payload (RabbitMQ round-robin per queue), але не сусідні. Для multi-instance потрібен Redis pub/sub або STAN.
-- **Тільки typing зараз** — для online presence push, повідомлень real-time тощо треба окремі events + consumers за тим же патерном.
+**Web horizontal scale — ВИРІШЕНО ([TL-63], 2026-07-04):**
+- Проблема: `ConfigureEndpoints` дає **одну спільну durable-чергу на консюмер** → з кількома Web-репліками RabbitMQ round-robin'ить події → лише одна репліка отримує кожну, юзери на інших репліках не бачать real-time.
+- Фікс (БЕЗ Redis — RabbitMQ exchange вже вміє fanout): кожна Web-репліка = **власна auto-delete черга**. У `Web/Program.cs` кожен `AddConsumer<>().Endpoint(e => { e.Temporary = true; e.InstanceId = busInstanceId; })`, де `busInstanceId = Guid.NewGuid("N")` на процес. Обидві черги біндяться до того ж message-type exchange → кожна подія копіюється в усі репліки; `Temporary` = non-durable+auto-delete (черга зникає коли pod вмирає).
+- **Друга половина — sticky sessions.** Blazor Server circuit тримається в пам'яті одного pod'а → LB мусить пінити браузер до того ж pod'а. Це НЕ Redis backplane (той для SignalR Hub-броадкасту, у Blazor Server його немає). Зроблено через ingress-nginx cookie-affinity (`k8s/32-web-ingress.yaml`, cookie `tl-affinity`).
+- 5 backend-сервісів лишають **спільні durable черги** — read-model має обробити подію раз, а не раз-на-репліку. Presence/identity/chats/messaging уже горизонтально масштабовані без змін.
+- Каверза при in-place upgrade: старі durable базові черги лишаються orphan (0 консюмерів) і накопичують меседжі; на свіжому деплої їх нема (RabbitMQ storage ефемерний). Одноразово чистяться `rabbitmqctl delete_queue <name> --if-unused`.
+
+**Обмеження, що лишились:**
+- **Тільки typing/new-message/reactions/presence зараз** — для нових real-time типів той самий рецепт (нижче).
 
 **Чому НЕ окремий SignalR Hub:**
 - Дублює інфру (Blazor circuit вже SignalR)

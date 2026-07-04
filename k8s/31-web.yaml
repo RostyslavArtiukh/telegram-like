@@ -34,7 +34,10 @@ metadata:
   name: web
   namespace: telegramlike
 spec:
-  replicas: 1
+  # >1 replica works because (a) the sticky-session Ingress pins each browser's
+  # Blazor circuit to one pod, and (b) each pod gets its own auto-delete RabbitMQ
+  # queues so every replica receives every real-time event (see Web/Program.cs).
+  replicas: 2
   selector:
     matchLabels:
       app: web

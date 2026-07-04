@@ -23,6 +23,7 @@ resources:
   - k8s/24-messaging.yaml
   - k8s/30-gateway.yaml
   - k8s/31-web.yaml
+  - k8s/32-web-ingress.yaml
   - k8s/40-prometheus.yaml
   - k8s/41-alertmanager.yaml
   - k8s/42-grafana.yaml

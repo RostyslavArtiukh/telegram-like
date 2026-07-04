@@ -10,6 +10,11 @@ can pull `monitoring/*` into ConfigMaps.
   `telegramlike-*:latest` images are visible to the cluster (manifests use
   `imagePullPolicy: IfNotPresent` — nothing is pulled from a registry).
 - Build the images first if you haven't: `docker compose build`
+- **ingress-nginx** (for the sticky-session Web ingress):
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/cloud/deploy.yaml
+  kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx
+  ```
 
 ## Deploy
 ```bash
@@ -20,8 +25,18 @@ The `mongo-rs-init` Job initiates the single-node replica set `rs0` (needed for
 transactions). Services may restart a couple of times until Mongo is a replica set
 and RabbitMQ is up — that's expected; they settle once dependencies are Ready.
 
+## Scaling
+`web` runs **2 replicas**. This works because (a) the sticky-session Ingress
+(`32-web-ingress.yaml`, cookie `tl-affinity`) pins each browser's Blazor circuit
+to one pod, and (b) each Web pod gets its own auto-delete RabbitMQ queues
+(`Web/Program.cs`, MassTransit `InstanceId` + `Temporary`) so every replica
+receives every real-time event. The 5 backend services are stateless and can be
+scaled freely (`kubectl scale deployment/messaging --replicas=3 -n telegramlike`);
+their consumers keep shared durable queues (a read-model must process each event
+once, not once-per-replica).
+
 ## Access
-- Web UI: **http://localhost:30080** (NodePort)
+- Web UI: **http://localhost/** (Ingress, sticky sessions) or **http://localhost:30080** (NodePort, no affinity)
 - Everything else via port-forward, e.g.:
   ```bash
   kubectl port-forward -n telegramlike svc/gateway 8090:8080
