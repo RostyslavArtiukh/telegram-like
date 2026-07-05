@@ -65,12 +65,23 @@ else
                             </div>
                         }
                         <div class="small mt-1">
-                            <a role="button" class="@(mine ? "text-white-50" : "")" @onclick="() => ToggleHeartAsync(m)">❤</a>
+                            <a role="button" class="@(mine ? "text-white-50" : "")" @onclick="() => ToggleReactPicker(m.MessageId)">react</a>
                             @if (mine)
                             {
                                 <a role="button" class="text-white-50 ms-2" @onclick="() => RetractAsync(m)">retract</a>
                             }
                         </div>
+                        @if (_reactPickerFor == m.MessageId)
+                        {
+                            <div class="small mt-1">
+                                @foreach (var emoji in Enum.GetValues<EmojiContract>())
+                                {
+                                    var picked = m.Reactions.Any(r => r.UserId == _me && r.Emoji == emoji);
+                                    <button class="btn btn-sm py-0 px-1 me-1 @(picked ? "btn-light border" : "btn-outline-light border")"
+                                            @onclick="() => ToggleReactionAsync(m, emoji)">@Glyph(emoji)</button>
+                                }
+                            </div>
+                        }
                     }
                 </div>
             </div>
@@ -102,6 +113,7 @@ else
     private readonly HashSet<Guid> _online = [];
     private readonly Dictionary<Guid, DateTime> _typingUntil = [];
     private Timer? _typingSweep;
+    private Guid? _reactPickerFor;
 
     protected override async Task OnInitializedAsync()
     {
@@ -273,15 +285,19 @@ else
         }
     }
 
-    private async Task ToggleHeartAsync(MessageContract m)
+    private void ToggleReactPicker(Guid messageId)
+        => _reactPickerFor = _reactPickerFor == messageId ? null : messageId;
+
+    private async Task ToggleReactionAsync(MessageContract m, EmojiContract emoji)
     {
         try
         {
-            var mine = m.Reactions.Any(r => r.UserId == _me && r.Emoji == EmojiContract.Heart);
+            var mine = m.Reactions.Any(r => r.UserId == _me && r.Emoji == emoji);
             if (mine)
-                await MessagingApi.RemoveReactionAsync(_me, m.MessageId, EmojiContract.Heart);
+                await MessagingApi.RemoveReactionAsync(_me, m.MessageId, emoji);
             else
-                await MessagingApi.AddReactionAsync(_me, m.MessageId, EmojiContract.Heart, actorIsPremium: false);
+                await MessagingApi.AddReactionAsync(_me, m.MessageId, emoji, actorIsPremium: false);
+            _reactPickerFor = null;
             await ReplaceMessageAsync(m.MessageId);
         }
         catch (Exception ex) { _error = ex.Message; }
