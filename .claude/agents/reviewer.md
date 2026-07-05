@@ -14,6 +14,6 @@ Flag violations of the project's rules:
 - **Auth** — Identity is the sole JWT issuer (`iss=telegramlike-identity`); Web signs nothing and must never inject scoped auth-state into a `DelegatingHandler` (pool scope ≠ circuit scope → token leak).
 - **Contracts** (`TelegramLike.Contracts`) stay POCO-only; event/DTO shape changes are breaking — expect additive evolution.
 - **DDD** — aggregate boundaries respected, value objects validate, actor comes from JWT `sub`; cross-context inputs (recipients/isBroadcast/isModerator/isPremium) are passed by the BFF, not cross-queried.
-- **Known fail-open gaps** (Messaging membership, Presence typing) — flag if a change newly relies on them.
+- **Known fail-open gaps** (Messaging membership, Presence typing, Realtime hub `JoinChat`) — flag if a change newly relies on them.
 
 Report findings grouped by severity with `file:line` references. Recommend fixes; do not apply them.

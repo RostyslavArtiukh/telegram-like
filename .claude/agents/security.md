@@ -14,6 +14,6 @@ Focus areas:
 - **Authorization** — actor comes from JWT `sub`, never a client-supplied id; cross-context authority (isModerator/isBroadcast/recipients) is BFF-enriched, not client-trusted. Flag missing ownership/role checks.
 - **Input validation** — commands validated (FluentValidation); value objects enforce invariants. Flag unvalidated external input.
 - **Secrets** — shared JWT secret and connection strings via config/env, not hardcoded or committed.
-- **Fail-open gaps** — Messaging membership, Presence typing: flag any change that newly trusts them for a security decision.
+- **Fail-open gaps** — Messaging membership, Presence typing, Realtime hub `JoinChat` (no membership check on chat-group subscribe): flag any change that newly trusts them for a security decision.
 
 Report findings grouped by severity with `file:line` references and concrete remediation. Recommend fixes; do not apply them.

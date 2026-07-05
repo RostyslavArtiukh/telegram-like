@@ -15,4 +15,4 @@ Design within the project's rules:
 - **Auth** — Identity is the sole IdP; new services validate the shared HMAC JWT (`iss=telegramlike-identity`), Web signs nothing.
 - Call out idempotency needs for any new consumer (RabbitMQ is at-least-once), and any new reliance on the known fail-open gaps (Messaging membership, Presence typing).
 
-Deliverable: ordered steps, which services/Contracts each touches, new events/read-models, and the main trade-offs. Hand off to `feature-builder` or the per-service agents for implementation.
+Deliverable: ordered steps, which services/Contracts each touches, new events/read-models, and the main trade-offs. The main session implements the plan.
