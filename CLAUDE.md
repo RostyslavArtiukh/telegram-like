@@ -5,7 +5,8 @@ Telegram-like messenger. Migrated from a modular monolith to **microservices + a
 ## Architecture
 - **Web BFF** — `src/TelegramLike.Web`, port 8080. Blazor Server, pure BFF: no domain, no DB. Talks to services **through the gateway** over HTTP (one `Gateway:BaseUrl`, not five service URLs); hosts a MassTransit bus only for real-time pubsub consumers. See its own `CLAUDE.md`.
 - **Gateway** — `src/gateway/TelegramLike.Gateway`, port **8090**. YARP reverse proxy: routes `/<service>/**` to each service and strips the prefix (config-only, in `appsettings`/env). Does no auth — forwards `Authorization` untouched; each service validates the JWT. Needed because chats and messaging both serve `/chats/*`. See `bff_resilience` + the routing note below.
-- **Client SDK** — `src/client/TelegramLike.Client`. NuGet-packable typed clients for all 5 services (via the gateway) + auth flow; the Web BFF consumes it, future MAUI/console apps too. See `src/client/CLAUDE.md`.
+- **Client SDK** — `src/client/TelegramLike.Client`. NuGet-packable typed clients for all 5 services (via the gateway) + auth flow + SignalR realtime client; consumed by the Web BFF and the MAUI app. See `src/client/CLAUDE.md`.
+- **MAUI app** — `src/app/TelegramLike.App`. Blazor Hybrid desktop (Windows now, Android next) built purely on the SDK. **Not in `TelegramLike.sln`** (CI is ubuntu) — use `TelegramLike.App.slnx`. See `src/app/CLAUDE.md`.
 - **5 services** — `src/services/<name>/`, each = Domain/Application/Infrastructure/Api, own Mongo DB, own port:
   - identity **8085** · notifications **8081** · presence **8082** · chats **8083** · messaging **8084**
 - **Realtime** — `src/services/realtime`, port **8086**. Single-project SignalR hub for external clients (SDK/MAUI): relays integration events into per-user/per-chat hub groups. No DB, no domain. The Web BFF does not use it. See `src/services/realtime/CLAUDE.md`.
@@ -17,6 +18,7 @@ BFF clients keep their service-relative paths (e.g. `/messages/{id}`); a `Servic
 ## Per-area guides (auto-loaded when you work in that directory)
 - Web BFF → [src/TelegramLike.Web/CLAUDE.md](src/TelegramLike.Web/CLAUDE.md)
 - Client SDK → [src/client/CLAUDE.md](src/client/CLAUDE.md)
+- MAUI app → [src/app/CLAUDE.md](src/app/CLAUDE.md)
 - Gateway (YARP) → [src/gateway/CLAUDE.md](src/gateway/CLAUDE.md)
 - Identity (IdP) → [src/services/identity/CLAUDE.md](src/services/identity/CLAUDE.md)
 - Notifications → [src/services/notifications/CLAUDE.md](src/services/notifications/CLAUDE.md)

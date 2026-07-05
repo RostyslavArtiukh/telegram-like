@@ -1,0 +1,98 @@
+@page "/"
+@inject TelegramLikeSession Session
+@inject ITelegramLikeRealtimeClient Realtime
+@inject PresenceHeartbeat Heartbeat
+@inject NavigationManager Nav
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6" style="max-width: 420px">
+        <h2 class="mb-4">Sign in</h2>
+
+        @if (_justRegistered)
+        {
+            <div class="alert alert-success">Account created! Please sign in.</div>
+        }
+
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input class="form-control" @bind="_email" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-control" @bind="_password" @onkeydown="OnKeyDown" />
+        </div>
+
+        @if (_error is not null)
+        {
+            <div class="alert alert-danger">@_error</div>
+        }
+
+        <button class="btn btn-primary w-100" @onclick="SignInAsync" disabled="@_busy">
+            @(_busy ? "Signing in…" : "Sign in")
+        </button>
+
+        <p class="mt-3 text-center">
+            No account? <a href="register">Register</a>
+        </p>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] private string? Registered { get; set; }
+
+    private string _email = "";
+    private string _password = "";
+    private string? _error;
+    private bool _busy;
+    private bool _justRegistered;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _justRegistered = Registered == "true";
+
+        // Session token survives in the store (in-memory today, SecureStorage on
+        // Android later) — skip the login form when it still exchanges for a JWT.
+        if (await Session.GetAccessTokenAsync() is not null)
+            await EnterAsync();
+    }
+
+    private Task OnKeyDown(KeyboardEventArgs e)
+        => e.Key == "Enter" ? SignInAsync() : Task.CompletedTask;
+
+    private async Task SignInAsync()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            await Session.LoginAsync(_email.Trim(), _password);
+            await EnterAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (HttpRequestException)
+        {
+            _error = $"Cannot reach the backend at {AppConfig.GatewayBaseUrl} — is the stack running?";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task EnterAsync()
+    {
+        // Realtime is best-effort: the app still works over HTTP without pushes.
+        try
+        {
+            if (!Realtime.IsConnected)
+                await Realtime.ConnectAsync();
+        }
+        catch { /* reconnect logic retries when the hub comes back */ }
+
+        Heartbeat.Start();
+        Nav.NavigateTo("/chats");
+    }
+}

@@ -1,0 +1,325 @@
+@page "/chat/{ChatId:guid}"
+@implements IAsyncDisposable
+@inject TelegramLikeSession Session
+@inject IChatsApi ChatsApi
+@inject IMessagingApi MessagingApi
+@inject IPresenceApi PresenceApi
+@inject INotificationsApi NotificationsApi
+@inject UsernameCache Usernames
+@inject ITelegramLikeRealtimeClient Realtime
+@inject NavigationManager Nav
+
+@if (_chat is null)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-baseline">
+        <h3>@(_chat.Name ?? $"Direct with {PeerName()}")</h3>
+        <a href="chats">All chats</a>
+    </div>
+    <div class="text-muted small mb-1">
+        @_chat.Type · @_chat.Members.Count(m => m.Status == MemberStatusContract.Active) active
+        @if (_online.Count > 0)
+        {
+            <text> · <span class="text-success">@_online.Count online</span></text>
+        }
+    </div>
+    <div class="small fst-italic mb-2" style="min-height: 1.2em">
+        @if (TypingNames() is { Length: > 0 } typing)
+        {
+            <span class="text-primary">@typing typing…</span>
+        }
+    </div>
+
+    <div class="border rounded p-3 mb-3" style="height: 55vh; overflow-y: auto; background: #f8f9fa">
+        @if (_older is not null)
+        {
+            <div class="text-center mb-2">
+                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadOlderAsync">Load older</button>
+            </div>
+        }
+        @foreach (var m in _messages)
+        {
+            var mine = m.AuthorId == _me;
+            <div class="d-flex @(mine ? "justify-content-end" : "justify-content-start") mb-2">
+                <div class="rounded p-2 @(mine ? "bg-primary text-white" : "bg-white border")" style="max-width: 70%">
+                    <div class="small @(mine ? "text-white-50" : "text-muted")">
+                        @(mine ? "you" : Usernames.Get(m.AuthorId)) · @m.SentAt.ToLocalTime().ToString("HH:mm")
+                    </div>
+                    @if (m.IsRetracted)
+                    {
+                        <em class="@(mine ? "text-white-50" : "text-muted")">[retracted]</em>
+                    }
+                    else
+                    {
+                        <div>@m.Text</div>
+                        @if (m.Reactions.Count > 0)
+                        {
+                            <div class="small mt-1">
+                                @foreach (var g in m.Reactions.GroupBy(r => r.Emoji))
+                                {
+                                    <span class="me-2">@Glyph(g.Key) @g.Count()</span>
+                                }
+                            </div>
+                        }
+                        <div class="small mt-1">
+                            <a role="button" class="@(mine ? "text-white-50" : "")" @onclick="() => ToggleHeartAsync(m)">❤</a>
+                            @if (mine)
+                            {
+                                <a role="button" class="text-white-50 ms-2" @onclick="() => RetractAsync(m)">retract</a>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="input-group">
+        <input class="form-control" placeholder="Type a message…" @bind="_draft" @bind:event="oninput"
+               @bind:after="OnTypedAsync" @onkeydown="OnKeyDown" />
+        <button class="btn btn-primary" @onclick="SendAsync" disabled="@_sending">Send</button>
+    </div>
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger mt-2">@_error</div>
+    }
+}
+
+@code {
+    [Parameter] public Guid ChatId { get; set; }
+
+    private Guid _me;
+    private ChatDetailsContract? _chat;
+    private readonly List<MessageContract> _messages = [];
+    private DateTime? _older;
+    private string _draft = "";
+    private string? _error;
+    private bool _sending;
+    private DateTime _lastTypingSent = DateTime.MinValue;
+    private readonly HashSet<Guid> _online = [];
+    private readonly Dictionary<Guid, DateTime> _typingUntil = [];
+    private Timer? _typingSweep;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.UserId is not { } me)
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+        _me = me;
+
+        Realtime.MessageSent += OnMessageSent;
+        Realtime.MessageRetracted += OnMessageRetracted;
+        Realtime.ReactionAdded += OnReactionChanged;
+        Realtime.ReactionRemoved += OnReactionChanged;
+        Realtime.UserTyping += OnUserTyping;
+        Realtime.PresenceChanged += OnPresenceChanged;
+
+        _chat = await ChatsApi.GetChatByIdAsync(_me, ChatId);
+        if (_chat is null)
+        {
+            Nav.NavigateTo("/chats");
+            return;
+        }
+
+        var page = await MessagingApi.GetChatMessagesAsync(_me, ChatId, pageSize: 50);
+        _messages.AddRange(page.Items.Reverse());
+        _older = page.NextCursor;
+
+        var memberIds = _chat.Members.Select(m => m.UserId).ToList();
+        await Usernames.EnsureAsync(memberIds.Append(_me));
+        var presence = await PresenceApi.GetBatchPresenceAsync(_me, memberIds);
+        foreach (var (id, isOnline) in presence)
+            if (isOnline) _online.Add(id);
+
+        if (Realtime.IsConnected)
+            await Realtime.JoinChatAsync(ChatId);
+
+        await NotificationsApi.MarkChatAsReadAsync(_me, ChatId);
+
+        // Typing indicators expire client-side (5s TTL, matching the server's Redis TTL).
+        _typingSweep = new Timer(_ => _ = InvokeAsync(() =>
+        {
+            var now = DateTime.UtcNow;
+            var expired = _typingUntil.Where(kv => kv.Value < now).Select(kv => kv.Key).ToList();
+            if (expired.Count == 0) return;
+            foreach (var id in expired) _typingUntil.Remove(id);
+            StateHasChanged();
+        }), null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    private string PeerName()
+    {
+        var peer = _chat!.Members.FirstOrDefault(m => m.UserId != _me);
+        return peer is null ? "?" : Usernames.Get(peer.UserId);
+    }
+
+    private string TypingNames()
+        => string.Join(", ", _typingUntil.Keys.Where(id => id != _me).Select(Usernames.Get));
+
+    private static string Glyph(EmojiContract e) => e switch
+    {
+        EmojiContract.Like => "👍",
+        EmojiContract.Heart => "❤️",
+        EmojiContract.Laugh => "😂",
+        EmojiContract.Wow => "😮",
+        EmojiContract.Sad => "😢",
+        EmojiContract.Angry => "😠",
+        EmojiContract.Fire => "🔥",
+        EmojiContract.Dislike => "👎",
+        _ => e.ToString()
+    };
+
+    // ---- realtime handlers (background threads → InvokeAsync) ----
+
+    private void OnMessageSent(MessageSentPush push)
+    {
+        if (push.ChatId != ChatId || push.AuthorId == _me) return;
+        _ = InvokeAsync(async () =>
+        {
+            var msg = await MessagingApi.GetMessageByIdAsync(_me, push.MessageId);
+            if (msg is null || _messages.Any(m => m.MessageId == msg.MessageId)) return;
+            await Usernames.EnsureAsync([msg.AuthorId]);
+            _messages.Add(msg);
+            _typingUntil.Remove(msg.AuthorId);
+            await NotificationsApi.MarkChatAsReadAsync(_me, ChatId);
+            StateHasChanged();
+        });
+    }
+
+    private void OnMessageRetracted(MessageRetractedPush push)
+    {
+        if (push.ChatId != ChatId) return;
+        _ = InvokeAsync(() => ReplaceMessageAsync(push.MessageId));
+    }
+
+    private void OnReactionChanged(ReactionPush push)
+    {
+        if (push.ChatId != ChatId) return;
+        _ = InvokeAsync(() => ReplaceMessageAsync(push.MessageId));
+    }
+
+    private async Task ReplaceMessageAsync(Guid messageId)
+    {
+        var fresh = await MessagingApi.GetMessageByIdAsync(_me, messageId);
+        var idx = _messages.FindIndex(m => m.MessageId == messageId);
+        if (fresh is not null && idx >= 0)
+        {
+            _messages[idx] = fresh;
+            StateHasChanged();
+        }
+    }
+
+    private void OnUserTyping(UserTypingPush push)
+    {
+        if (push.ChatId != ChatId || push.UserId == _me) return;
+        _ = InvokeAsync(() =>
+        {
+            _typingUntil[push.UserId] = DateTime.UtcNow.AddSeconds(5);
+            StateHasChanged();
+        });
+    }
+
+    private void OnPresenceChanged(PresencePush push)
+    {
+        _ = InvokeAsync(() =>
+        {
+            if (push.IsOnline) _online.Add(push.UserId); else _online.Remove(push.UserId);
+            StateHasChanged();
+        });
+    }
+
+    // ---- actions ----
+
+    private async Task OnTypedAsync()
+    {
+        // Throttle like the Web BFF: at most one StartTyping per 2s (server TTL is 5s).
+        if (DateTime.UtcNow - _lastTypingSent < TimeSpan.FromSeconds(2)) return;
+        _lastTypingSent = DateTime.UtcNow;
+        try { await PresenceApi.StartTypingAsync(_me, ChatId); } catch { /* cosmetic */ }
+    }
+
+    private Task OnKeyDown(KeyboardEventArgs e)
+        => e.Key == "Enter" ? SendAsync() : Task.CompletedTask;
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_draft) || _chat is null) return;
+        _error = null;
+        _sending = true;
+        try
+        {
+            // BFF-style enrichment, done client-side by the SDK helpers.
+            var recipients = await ChatsApi.GetActiveRecipientsAsync(_me, ChatId, _me);
+            var isBroadcast = _chat.Type == ChatTypeContract.Broadcast;
+            var messageId = await MessagingApi.SendMessageAsync(_me, ChatId, _draft.Trim(), recipients, isBroadcast);
+            _draft = "";
+
+            var sent = await MessagingApi.GetMessageByIdAsync(_me, messageId);
+            if (sent is not null && !_messages.Any(m => m.MessageId == sent.MessageId))
+                _messages.Add(sent);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _sending = false;
+        }
+    }
+
+    private async Task ToggleHeartAsync(MessageContract m)
+    {
+        try
+        {
+            var mine = m.Reactions.Any(r => r.UserId == _me && r.Emoji == EmojiContract.Heart);
+            if (mine)
+                await MessagingApi.RemoveReactionAsync(_me, m.MessageId, EmojiContract.Heart);
+            else
+                await MessagingApi.AddReactionAsync(_me, m.MessageId, EmojiContract.Heart, actorIsPremium: false);
+            await ReplaceMessageAsync(m.MessageId);
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task RetractAsync(MessageContract m)
+    {
+        try
+        {
+            await MessagingApi.RetractMessageAsync(_me, m.MessageId, actorIsModerator: false);
+            await ReplaceMessageAsync(m.MessageId);
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task LoadOlderAsync()
+    {
+        var page = await MessagingApi.GetChatMessagesAsync(_me, ChatId, before: _older, pageSize: 50);
+        _messages.InsertRange(0, page.Items.Reverse());
+        _older = page.NextCursor;
+        await Usernames.EnsureAsync(page.Items.Select(m => m.AuthorId));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Realtime.MessageSent -= OnMessageSent;
+        Realtime.MessageRetracted -= OnMessageRetracted;
+        Realtime.ReactionAdded -= OnReactionChanged;
+        Realtime.ReactionRemoved -= OnReactionChanged;
+        Realtime.UserTyping -= OnUserTyping;
+        Realtime.PresenceChanged -= OnPresenceChanged;
+        _typingSweep?.Dispose();
+
+        try
+        {
+            if (Realtime.IsConnected)
+                await Realtime.LeaveChatAsync(ChatId);
+        }
+        catch { /* connection already gone */ }
+    }
+}

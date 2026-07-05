@@ -39,4 +39,10 @@ metadata:
 - Verified консольним SDK-клієнтом через gateway: anon connect → 401, typing/message/chat-activity/reaction пуші приходять, LeaveChat зупиняє. Рецепт у verify skill.
 - **Наступний крок: MAUI Blazor Hybrid desktop апка** (потім Android по USB).
 
+**Прогрес [TL-66] (2026-07-05): Фаза 3 — MAUI desktop апка — ЗРОБЛЕНО й live-verified.**
+- `src/app/TelegramLike.App` — maui-blazor template, **тільки Windows TFM** (`net10.0-windows10.0.19041.0`; workload `maui-windows` встановлено; глобальний SDK на машині вже .NET 10, апка net10 референсить net9 SDK-ліби без проблем). **НЕ в TelegramLike.sln** (CI = ubuntu, зламалось би) — окремий `TelegramLike.App.slnx`.
+- Сторінки: Login/Register/Chats/Chat — усе через SDK (`AddTelegramLikeClient`), enrichment app-side через `IChatsApi`-хелпери. Патерн: hub-пуш (id-only) → InvokeAsync → refetch по HTTP. `PresenceHeartbeat` (20s) + `UsernameCache` синглтони.
+- **Верифікація — CDP-трюк:** WebView2 поважає `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333` → Playwright `connectOverCDP` водить НАТИВНУ апку. Cross-client тест: web-юзер у браузері відповідає → повідомлення/typing/presence з'являються у нативній апці live. ALL PASS.
+- **Далі (наступна сесія): Android** — встановити android workload + Android SDK, повернути android TFM, `AppConfig` → LAN IP ПК + cleartext-HTTP, SecureStorage-based `ISessionStore`, деплой по USB з фізичним телефоном.
+
 Див. [[realtime-blazor-pubsub]], [[api-gateway]], [[service-auth-jwt]], [[kubernetes-plan]], [[microservices-migration]].

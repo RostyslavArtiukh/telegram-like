@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TelegramLike.Contracts/TelegramLike.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/app/">
+    <Project Path="src/app/TelegramLike.App/TelegramLike.App.csproj" />
+  </Folder>
+  <Folder Name="/src/client/">
+    <Project Path="src/client/TelegramLike.Client/TelegramLike.Client.csproj" />
+  </Folder>
+</Solution>

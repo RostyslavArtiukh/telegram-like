@@ -35,6 +35,19 @@ assert it appears on user1's still-open page (RabbitMQ → pubsub → circuit).
 - Composer: `getByPlaceholder('Type a message…')` + button `Send`.
 - Login error surface: `.alert-danger` (probe: wrong password → "Invalid email or password.").
 
+## MAUI desktop app surface
+Build `src/app/TelegramLike.App` (`-f net10.0-windows10.0.19041.0`), then drive the
+NATIVE app with Playwright over CDP:
+```powershell
+$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS='--remote-debugging-port=9333'
+Start-Process <bin>\win-x64\TelegramLike.App.exe
+```
+then `chromium.connectOverCDP('http://localhost:9333')` → `contexts()[0].pages()[0]`
+is the Blazor UI (url `https://0.0.0.1/`). Selectors: `input.form-control`,
+placeholders `Group name` / `Type a message…`. Best cross-client check: web browser
+user joins the app's chat and replies — the reply/typing/presence must appear in the
+app live. Kill with `Stop-Process -Name TelegramLike.App`.
+
 ## SDK / realtime surface (external clients)
 For SDK or Realtime-service changes, drive the **package boundary** instead: a scratch
 console app referencing `src/client/TelegramLike.Client.csproj`, using

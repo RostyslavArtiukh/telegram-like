@@ -1,0 +1,71 @@
+@page "/register"
+@inject TelegramLikeSession Session
+@inject NavigationManager Nav
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6" style="max-width: 420px">
+        <h2 class="mb-4">Create account</h2>
+
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input class="form-control" @bind="_email" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input class="form-control" @bind="_username" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Display name</label>
+            <input class="form-control" @bind="_displayName" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-control" @bind="_password" />
+        </div>
+
+        @if (_error is not null)
+        {
+            <div class="alert alert-danger">@_error</div>
+        }
+
+        <button class="btn btn-primary w-100" @onclick="RegisterAsync" disabled="@_busy">
+            @(_busy ? "Creating account…" : "Register")
+        </button>
+
+        <p class="mt-3 text-center">
+            Already have an account? <a href="/">Sign in</a>
+        </p>
+    </div>
+</div>
+
+@code {
+    private string _email = "";
+    private string _username = "";
+    private string _displayName = "";
+    private string _password = "";
+    private string? _error;
+    private bool _busy;
+
+    private async Task RegisterAsync()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            await Session.RegisterAsync(_email.Trim(), _username.Trim(), _displayName.Trim(), _password);
+            Nav.NavigateTo("/?registered=true");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (HttpRequestException)
+        {
+            _error = $"Cannot reach the backend at {AppConfig.GatewayBaseUrl} — is the stack running?";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

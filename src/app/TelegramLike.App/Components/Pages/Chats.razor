@@ -1,0 +1,159 @@
+@page "/chats"
+@implements IDisposable
+@inject TelegramLikeSession Session
+@inject IChatsApi ChatsApi
+@inject IIdentityUsersApi IdentityUsers
+@inject INotificationsApi NotificationsApi
+@inject ITelegramLikeRealtimeClient Realtime
+@inject NavigationManager Nav
+
+<h3 class="mb-3">
+    Chats
+    @if (_unread > 0)
+    {
+        <span class="badge bg-danger ms-2">@_unread unread</span>
+    }
+</h3>
+
+<div class="row">
+    <div class="col-md-7">
+        @if (_chats is null)
+        {
+            <p>Loading…</p>
+        }
+        else if (_chats.Count == 0)
+        {
+            <div class="alert alert-info">No chats yet — create one on the right.</div>
+        }
+        else
+        {
+            <ul class="list-group">
+                @foreach (var chat in _chats)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center"
+                        role="button" @onclick='() => Nav.NavigateTo($"/chat/{chat.ChatId}")'>
+                        <div>
+                            <span class="fw-semibold">@(chat.Name ?? "(direct)")</span>
+                            <span class="badge bg-secondary ms-2">@chat.Type</span>
+                            <small class="text-muted ms-2">@chat.ActiveMemberCount member(s) · you are @chat.MyRole</small>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+
+    <div class="col-md-5">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Create a group chat</h6>
+                <div class="input-group">
+                    <input class="form-control" placeholder="Group name" @bind="_groupName" />
+                    <button class="btn btn-primary" @onclick="CreateGroupAsync" disabled="@_busy">Create</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Start a direct chat</h6>
+                <div class="input-group">
+                    <input class="form-control" placeholder="username" @bind="_directUsername" />
+                    <button class="btn btn-outline-secondary" @onclick="StartDirectAsync" disabled="@_busy">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="card-title">Join by chat id</h6>
+                <div class="input-group">
+                    <input class="form-control" placeholder="00000000-…" @bind="_joinId" />
+                    <button class="btn btn-outline-secondary" @onclick="JoinAsync" disabled="@_busy">Join</button>
+                </div>
+            </div>
+        </div>
+
+        @if (_error is not null)
+        {
+            <div class="alert alert-danger">@_error</div>
+        }
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<ChatSummaryContract>? _chats;
+    private long _unread;
+    private string _groupName = "";
+    private string _directUsername = "";
+    private string _joinId = "";
+    private string? _error;
+    private bool _busy;
+    private Guid _me;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.UserId is not { } me)
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+        _me = me;
+
+        Realtime.ChatActivity += OnChatActivity;
+        Realtime.UnreadCountChanged += OnUnreadChanged;
+
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _chats = await ChatsApi.GetMyChatsAsync(_me);
+        _unread = await NotificationsApi.GetUnreadCountAsync(_me);
+    }
+
+    // Hub events arrive on background threads — hop onto the UI thread to touch state.
+    private void OnChatActivity(MessageSentPush push) =>
+        _ = InvokeAsync(async () => { await RefreshAsync(); StateHasChanged(); });
+
+    private void OnUnreadChanged() =>
+        _ = InvokeAsync(async ()  => { _unread = await NotificationsApi.GetUnreadCountAsync(_me); StateHasChanged(); });
+
+    private Task CreateGroupAsync() => GuardedAsync(async () =>
+    {
+        if (string.IsNullOrWhiteSpace(_groupName)) return;
+        var chatId = await ChatsApi.CreateGroupChatAsync(_me, _groupName.Trim());
+        Nav.NavigateTo($"/chat/{chatId}");
+    });
+
+    private Task StartDirectAsync() => GuardedAsync(async () =>
+    {
+        if (string.IsNullOrWhiteSpace(_directUsername)) return;
+        var peerId = await IdentityUsers.GetUserIdByUsernameAsync(_directUsername.Trim());
+        if (peerId is null) { _error = $"User '{_directUsername}' not found."; return; }
+        var chatId = await ChatsApi.CreateDirectChatAsync(_me, peerId.Value);
+        Nav.NavigateTo($"/chat/{chatId}");
+    });
+
+    private Task JoinAsync() => GuardedAsync(async () =>
+    {
+        if (!Guid.TryParse(_joinId.Trim(), out var chatId)) { _error = "Not a valid chat id."; return; }
+        await ChatsApi.JoinChatAsync(_me, chatId);
+        Nav.NavigateTo($"/chat/{chatId}");
+    });
+
+    private async Task GuardedAsync(Func<Task> action)
+    {
+        _error = null;
+        _busy = true;
+        try { await action(); }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _busy = false; }
+    }
+
+    public void Dispose()
+    {
+        Realtime.ChatActivity -= OnChatActivity;
+        Realtime.UnreadCountChanged -= OnUnreadChanged;
+    }
+}
