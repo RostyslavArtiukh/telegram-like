@@ -1,10 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
-        <!-- Windows-only for now: the android TFM comes back when the android
-             workload + SDK are installed for the physical-device step (iOS is
-             excluded deliberately — no Mac to sign with). -->
-        <TargetFrameworks>net10.0-windows10.0.19041.0</TargetFrameworks>
+        <!-- Windows desktop + physical Android device (iOS is excluded
+             deliberately — no Mac to sign with). -->
+        <TargetFrameworks>net10.0-android;net10.0-windows10.0.19041.0</TargetFrameworks>
 
         <OutputType>Exe</OutputType>
         <RootNamespace>TelegramLike.App</RootNamespace>

@@ -21,6 +21,10 @@ public static class MauiProgram
 		// Everything the app needs to talk to the backend comes from the SDK:
 		// typed HTTP clients through the gateway, TelegramLikeSession (login →
 		// cached JWT), and the SignalR realtime client.
+#if ANDROID
+		// Must precede AddTelegramLikeClient — the SDK TryAdds an in-memory store.
+		builder.Services.AddSingleton<TelegramLike.Client.Auth.ISessionStore, SecureSessionStore>();
+#endif
 		builder.Services.AddTelegramLikeClient(new Uri(AppConfig.GatewayBaseUrl));
 		builder.Services.AddSingleton<UsernameCache>();
 		builder.Services.AddSingleton<PresenceHeartbeat>();
@@ -36,8 +40,14 @@ public static class MauiProgram
 
 public static class AppConfig
 {
-	// Windows desktop talks to the compose stack on the same machine. On Android
-	// this must become http://<PC-LAN-IP>:8090 (plus cleartext-HTTP config) —
-	// handled when the android target is added.
+#if ANDROID
+	// The phone reaches the compose stack over Wi-Fi via the PC's LAN address
+	// (both must be on the same network; Windows Firewall must allow 8090 in).
+	// Plain HTTP → android:usesCleartextTraffic in the manifest. Update the IP
+	// if the PC's DHCP lease changes.
+	public const string GatewayBaseUrl = "http://192.168.0.101:8090";
+#else
+	// Windows desktop talks to the compose stack on the same machine.
 	public const string GatewayBaseUrl = "http://localhost:8090";
+#endif
 }

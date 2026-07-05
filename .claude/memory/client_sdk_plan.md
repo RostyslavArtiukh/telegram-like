@@ -45,4 +45,11 @@ metadata:
 - **Верифікація — CDP-трюк:** WebView2 поважає `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333` → Playwright `connectOverCDP` водить НАТИВНУ апку. Cross-client тест: web-юзер у браузері відповідає → повідомлення/typing/presence з'являються у нативній апці live. ALL PASS.
 - **Далі (наступна сесія): Android** — встановити android workload + Android SDK, повернути android TFM, `AppConfig` → LAN IP ПК + cleartext-HTTP, SecureStorage-based `ISessionStore`, деплой по USB з фізичним телефоном.
 
+**Android-крок ([TL-67]) ПОЧАТО й ЗУПИНЕНО на півдорозі (2026-07-05, вечір) — стан для резюму:**
+- `maui-android` workload — **ВСТАНОВЛЕНО** (успішно, exit 0). **Android SDK/JDK/adb на машині НЕМАЄ** — план: `dotnet build -f net10.0-android -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=true` (авто-скачує SDK+JDK).
+- **Незакомічені зміни у working tree** (код готовий, не збирався без SDK): android TFM у csproj, `usesCleartextTraffic` у AndroidManifest, `AppConfig` → `#if ANDROID` → `http://192.168.0.101:8090` (LAN IP ПК, Wi-Fi; перевірити при резюмі — DHCP), `SecureSessionStore` (SecureStorage, реєструється `#if ANDROID` ПЕРЕД `AddTelegramLikeClient`).
+- **Firewall inbound 8090 НЕ додано** — нема admin-прав у шелі, sudo вимкнено. Або юзер запустить elevated `New-NetFirewallRule -DisplayName "TelegramLike gateway 8090" -Direction Inbound -Protocol TCP -LocalPort 8090 -Action Allow -Profile Private`, або Docker Desktop правила можуть вже пропускати — протестувати з телефона.
+- **Телефон НЕ підготовлено** (Developer options + USB debugging + той самий Wi-Fi) — юзер зупинив цей крок.
+- [TL-66] (MAUI desktop) закомічено локально, але **НЕ запушено** на origin.
+
 Див. [[realtime-blazor-pubsub]], [[api-gateway]], [[service-auth-jwt]], [[kubernetes-plan]], [[microservices-migration]].
