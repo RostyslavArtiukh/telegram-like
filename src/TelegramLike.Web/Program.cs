@@ -5,17 +5,14 @@ using Microsoft.AspNetCore.DataProtection;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using TelegramLike.Client;
+using TelegramLike.Client.Auth;
+using TelegramLike.Client.Identity;
 using TelegramLike.Web.Components;
 using TelegramLike.Web.Services;
 using TelegramLike.Web.Services.ChatChanged;
 using TelegramLike.Web.Services.NewMessage;
-using TelegramLike.Web.Services.ChatsApi;
-using TelegramLike.Web.Services.IdentityApi;
-using TelegramLike.Web.Services.MessagingApi;
-using TelegramLike.Web.Services.NotificationsApi;
 using TelegramLike.Web.Services.Presence;
-using TelegramLike.Web.Services.PresenceApi;
-using TelegramLike.Web.Services.Resilience;
 using TelegramLike.Web.Services.ServiceAuth;
 using TelegramLike.Web.Services.Typing;
 using TelegramLike.Web.Services.UnreadCount;
@@ -134,52 +131,19 @@ builder.Services.AddMassTransit(bus =>
     });
 });
 
-// Identity is the IdP. The Web no longer signs tokens; ServiceTokenProvider
-// exchanges the current user's session token for a short-lived access JWT (cached)
-// which each downstream client attaches itself. The exchange runs in the circuit
-// scope (where the auth cookie is readable), so no DelegatingHandler is involved.
+// Identity is the IdP. The Web signs nothing; ServiceTokenProvider (the BFF's
+// IAccessTokenProvider) exchanges the current user's session token for a short-lived
+// access JWT (cached) which each SDK client attaches itself. The exchange runs in the
+// circuit scope (where the auth cookie is readable), so no DelegatingHandler is involved.
 builder.Services.AddMemoryCache();
-builder.Services.AddScoped<ServiceTokenProvider>();
+builder.Services.AddScoped<IAccessTokenProvider, ServiceTokenProvider>();
 
-// All downstream calls go through the single YARP gateway address; each client
-// adds its service prefix (via ServicePrefixHandler) which the gateway strips and
-// routes on. The BFF no longer holds five separate service URLs.
+// All downstream calls go through the single YARP gateway address via the
+// TelegramLike.Client SDK: one base URL, per-service prefixes (which the gateway
+// strips and routes on) and the shared resilience pipeline live in the SDK.
 var gatewayBaseUrl = builder.Configuration["Gateway:BaseUrl"]
                      ?? throw new InvalidOperationException("Gateway:BaseUrl is not configured.");
-
-// ServicePrefixHandler is added AFTER AddServiceResilience so it sits inner to the
-// resilience handler — retries clone the original request, so the prefix is applied
-// once per attempt and never doubled.
-
-// Public auth client (no token) — also used by ServiceTokenProvider for the exchange.
-builder.Services.AddHttpClient<IIdentityAuthApi, IdentityAuthApiClient>(client =>
-        client.BaseAddress = new Uri(gatewayBaseUrl))
-    .AddServiceResilience()
-    .AddHttpMessageHandler(() => new ServicePrefixHandler("/identity"));
-builder.Services.AddHttpClient<IIdentityUsersApi, IdentityUsersApiClient>(client =>
-        client.BaseAddress = new Uri(gatewayBaseUrl))
-    .AddServiceResilience()
-    .AddHttpMessageHandler(() => new ServicePrefixHandler("/identity"));
-
-builder.Services.AddHttpClient<INotificationsApi, NotificationsApiClient>(client =>
-        client.BaseAddress = new Uri(gatewayBaseUrl))
-    .AddServiceResilience()
-    .AddHttpMessageHandler(() => new ServicePrefixHandler("/notifications"));
-
-builder.Services.AddHttpClient<IPresenceApi, PresenceApiClient>(client =>
-        client.BaseAddress = new Uri(gatewayBaseUrl))
-    .AddServiceResilience()
-    .AddHttpMessageHandler(() => new ServicePrefixHandler("/presence"));
-
-builder.Services.AddHttpClient<IChatsApi, ChatsApiClient>(client =>
-        client.BaseAddress = new Uri(gatewayBaseUrl))
-    .AddServiceResilience()
-    .AddHttpMessageHandler(() => new ServicePrefixHandler("/chats"));
-
-builder.Services.AddHttpClient<IMessagingApi, MessagingApiClient>(client =>
-        client.BaseAddress = new Uri(gatewayBaseUrl))
-    .AddServiceResilience()
-    .AddHttpMessageHandler(() => new ServicePrefixHandler("/messaging"));
+builder.Services.AddTelegramLikeApiClients(new Uri(gatewayBaseUrl));
 
 var app = builder.Build();
 

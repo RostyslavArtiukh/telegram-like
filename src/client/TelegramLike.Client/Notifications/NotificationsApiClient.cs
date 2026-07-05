@@ -1,11 +1,11 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using TelegramLike.Client.Auth;
 using TelegramLike.Contracts.Notifications;
-using TelegramLike.Web.Services.ServiceAuth;
 
-namespace TelegramLike.Web.Services.NotificationsApi;
+namespace TelegramLike.Client.Notifications;
 
-internal sealed class NotificationsApiClient(HttpClient http, ServiceTokenProvider tokenProvider) : INotificationsApi
+internal sealed class NotificationsApiClient(HttpClient http, IAccessTokenProvider tokenProvider) : INotificationsApi
 {
     public async Task<NotificationFeedApiDto> GetFeedAsync(
         Guid userId,

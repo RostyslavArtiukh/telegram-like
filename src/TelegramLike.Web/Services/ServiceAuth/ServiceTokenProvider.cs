@@ -1,12 +1,14 @@
 using Microsoft.Extensions.Caching.Memory;
-using TelegramLike.Web.Services.IdentityApi;
+using TelegramLike.Client.Auth;
+using TelegramLike.Client.Identity;
 
 namespace TelegramLike.Web.Services.ServiceAuth;
 
 /// <summary>
-/// Resolves the short-lived access JWT for the current user by exchanging their
-/// opaque session token (from the auth cookie) at the Identity service — the IdP.
-/// Cached in memory until shortly before expiry.
+/// The Web BFF's <see cref="IAccessTokenProvider"/>: resolves the short-lived access
+/// JWT for the current user by exchanging their opaque session token (from the auth
+/// cookie) at the Identity service — the IdP. Cached in memory until shortly before
+/// expiry. The SDK's typed clients call this per request.
 ///
 /// Scoped on purpose: it must run inside the Blazor circuit scope where the auth
 /// cookie / AuthenticationState is readable. A pooled DelegatingHandler cannot
@@ -16,7 +18,7 @@ namespace TelegramLike.Web.Services.ServiceAuth;
 public sealed class ServiceTokenProvider(
     CurrentUserAccessor currentUser,
     IIdentityAuthApi identityAuth,
-    IMemoryCache cache)
+    IMemoryCache cache) : IAccessTokenProvider
 {
     public async Task<string?> GetAccessTokenAsync(CancellationToken ct = default)
     {

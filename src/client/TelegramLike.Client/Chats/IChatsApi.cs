@@ -1,4 +1,4 @@
-namespace TelegramLike.Web.Services.ChatsApi;
+namespace TelegramLike.Client.Chats;
 
 public interface IChatsApi
 {
@@ -19,7 +19,7 @@ public interface IChatsApi
     Task TransferOwnershipAsync(Guid currentOwnerUserId, Guid chatId, Guid newOwnerUserId, CancellationToken ct = default);
     Task RenameChatAsync(Guid actorUserId, Guid chatId, string newName, CancellationToken ct = default);
 
-    // BFF enrichment helpers used to build Messaging commands without exposing
+    // Enrichment helpers used to build Messaging commands without exposing
     // Chats internals (membership/role) to the Messaging service.
     Task<IReadOnlyList<Guid>> GetActiveRecipientsAsync(Guid actingUserId, Guid chatId, Guid excludeUserId, CancellationToken ct = default);
     Task<ChatTypeContract?> GetChatTypeAsync(Guid actingUserId, Guid chatId, CancellationToken ct = default);

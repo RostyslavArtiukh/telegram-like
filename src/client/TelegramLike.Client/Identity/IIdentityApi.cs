@@ -1,9 +1,9 @@
-namespace TelegramLike.Web.Services.IdentityApi;
+namespace TelegramLike.Client.Identity;
 
 /// <summary>
 /// Public Identity (IdP) endpoints — no bearer token (the caller isn't
-/// authenticated yet). Used by the login/register pages and by the cookie
-/// sign-in callback / access-token exchange.
+/// authenticated yet). Used by login/register flows and by the access-token
+/// exchange that backs <see cref="Auth.IAccessTokenProvider"/> implementations.
 /// </summary>
 public interface IIdentityAuthApi
 {

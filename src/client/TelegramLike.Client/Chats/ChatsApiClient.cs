@@ -1,11 +1,11 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using TelegramLike.Web.Services.ServiceAuth;
+using TelegramLike.Client.Auth;
 
-namespace TelegramLike.Web.Services.ChatsApi;
+namespace TelegramLike.Client.Chats;
 
-internal sealed class ChatsApiClient(HttpClient http, ServiceTokenProvider tokenProvider) : IChatsApi
+internal sealed class ChatsApiClient(HttpClient http, IAccessTokenProvider tokenProvider) : IChatsApi
 {
     public async Task<IReadOnlyList<ChatSummaryContract>> GetMyChatsAsync(Guid userId, CancellationToken ct = default)
     {

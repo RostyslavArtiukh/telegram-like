@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- NuGet metadata: this is the client SDK package apps (MAUI, console, the Web BFF)
+       consume to talk to the TelegramLike backend through the YARP gateway. -->
+  <PropertyGroup>
+    <PackageId>TelegramLike.Client</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>TelegramLike</Authors>
+    <Description>Client SDK for the TelegramLike backend: typed HTTP clients for all five services (through the API gateway), session-token auth flow, and a shared resilience pipeline.</Description>
+    <RepositoryUrl>https://github.com/RostyslavArtiukh/telegram-like</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\TelegramLike.Contracts\TelegramLike.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
+  </ItemGroup>
+
+</Project>

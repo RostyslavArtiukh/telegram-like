@@ -1,4 +1,4 @@
-namespace TelegramLike.Web.Services.Resilience;
+namespace TelegramLike.Client.Http;
 
 /// <summary>
 /// Prepends a service's gateway prefix (e.g. "/messaging") to every outgoing request

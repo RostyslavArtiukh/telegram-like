@@ -1,8 +1,8 @@
 @page "/"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @using TelegramLike.Web.Services
-@using TelegramLike.Web.Services.ChatsApi
-@using TelegramLike.Web.Services.IdentityApi
+@using TelegramLike.Client.Chats
+@using TelegramLike.Client.Identity
 @inject IChatsApi ChatsApi
 @inject IIdentityUsersApi IdentityUsers
 @inject CurrentUserAccessor CurrentUser

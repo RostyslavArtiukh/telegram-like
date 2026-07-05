@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 
-namespace TelegramLike.Web.Services.IdentityApi;
+namespace TelegramLike.Client.Identity;
 
 // Talks to the public Identity endpoints on a plain HttpClient (no access-token
 // handler — these calls bootstrap authentication, so there's no token yet, and
@@ -43,8 +43,7 @@ internal sealed class IdentityAuthApiClient(HttpClient http) : IIdentityAuthApi
     }
 
     // Identity returns { "error": "..." } with 400 for validation/business failures;
-    // surface that message so the Razor pages can show it (mirrors the old in-process
-    // ValidationException / InvalidOperationException handling).
+    // surface that message so UI layers can show it.
     private static async Task EnsureOkAsync(HttpResponseMessage resp, CancellationToken ct)
     {
         if (resp.IsSuccessStatusCode) return;

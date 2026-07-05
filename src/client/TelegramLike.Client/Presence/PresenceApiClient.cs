@@ -2,11 +2,11 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using TelegramLike.Web.Services.ServiceAuth;
+using TelegramLike.Client.Auth;
 
-namespace TelegramLike.Web.Services.PresenceApi;
+namespace TelegramLike.Client.Presence;
 
-internal sealed class PresenceApiClient(HttpClient http, ServiceTokenProvider tokenProvider) : IPresenceApi
+internal sealed class PresenceApiClient(HttpClient http, IAccessTokenProvider tokenProvider) : IPresenceApi
 {
     public async Task HeartbeatAsync(Guid userId, CancellationToken ct = default)
     {

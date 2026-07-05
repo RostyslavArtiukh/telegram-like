@@ -1,14 +1,14 @@
 @page "/chat/{ChatId:guid}"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @using TelegramLike.Web.Services
-@using TelegramLike.Web.Services.IdentityApi
+@using TelegramLike.Client.Identity
 @using TelegramLike.Web.Services.ChatChanged
-@using TelegramLike.Web.Services.ChatsApi
-@using TelegramLike.Web.Services.MessagingApi
+@using TelegramLike.Client.Chats
+@using TelegramLike.Client.Messaging
 @using TelegramLike.Web.Services.NewMessage
-@using TelegramLike.Web.Services.NotificationsApi
+@using TelegramLike.Client.Notifications
 @using TelegramLike.Web.Services.Presence
-@using TelegramLike.Web.Services.PresenceApi
+@using TelegramLike.Client.Presence
 @using TelegramLike.Web.Services.Typing
 @inject IIdentityUsersApi IdentityUsers
 @inject IChatsApi ChatsApi

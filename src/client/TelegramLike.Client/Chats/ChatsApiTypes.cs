@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
 
-namespace TelegramLike.Web.Services.ChatsApi;
+namespace TelegramLike.Client.Chats;
 
-// Web-local enums mirror Chats.Domain (Direct/Group/Broadcast etc.) so the BFF
+// Client-local enums mirror Chats.Domain (Direct/Group/Broadcast etc.) so the SDK
 // does not have to reference Chats.Domain. JSON arrives as strings thanks to
 // JsonStringEnumConverter on Chats.Api.
 [JsonConverter(typeof(JsonStringEnumConverter))]

@@ -1,4 +1,4 @@
-namespace TelegramLike.Web.Services.PresenceApi;
+namespace TelegramLike.Client.Presence;
 
 public interface IPresenceApi
 {

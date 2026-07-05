@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace TelegramLike.Web.Services.MessagingApi;
+namespace TelegramLike.Client.Messaging;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum AttachmentTypeContract { Image, File, Audio, Video }

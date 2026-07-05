@@ -1,11 +1,11 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using TelegramLike.Web.Services.ServiceAuth;
+using TelegramLike.Client.Auth;
 
-namespace TelegramLike.Web.Services.MessagingApi;
+namespace TelegramLike.Client.Messaging;
 
-internal sealed class MessagingApiClient(HttpClient http, ServiceTokenProvider tokenProvider) : IMessagingApi
+internal sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider tokenProvider) : IMessagingApi
 {
     public async Task<Guid> SendMessageAsync(
         Guid authorUserId,

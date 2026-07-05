@@ -1,6 +1,6 @@
 using TelegramLike.Contracts.Notifications;
 
-namespace TelegramLike.Web.Services.NotificationsApi;
+namespace TelegramLike.Client.Notifications;
 
 public interface INotificationsApi
 {

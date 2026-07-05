@@ -1,10 +1,11 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Polly;
 
-namespace TelegramLike.Web.Services.Resilience;
+namespace TelegramLike.Client.Http;
 
 /// <summary>
-/// Shared resilience policy for every downstream service call the BFF makes.
+/// Shared resilience policy for every call the SDK makes to the gateway.
 /// One place so all five services get identical timeout / retry / circuit-breaker
 /// behaviour instead of each client re-inventing it.
 /// </summary>
@@ -14,8 +15,8 @@ internal static class ResilientHttpClientExtensions
     {
         builder.AddStandardResilienceHandler(options =>
         {
-            // Per-attempt ceiling: a single downstream hop must not hang the Blazor
-            // circuit. Kept short because these are intra-cluster HTTP calls.
+            // Per-attempt ceiling: a single downstream hop must not hang the caller's
+            // UI. Kept short because these are one-hop calls through the gateway.
             options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);
 
             // Overall ceiling across all retries for one logical request.
@@ -37,14 +38,14 @@ internal static class ResilientHttpClientExtensions
             };
             options.Retry.MaxRetryAttempts = 3;
             // Fast backoff (200ms base, exponential + jitter) instead of the 2s default:
-            // these are intra-cluster hops feeding an interactive UI, so a down service
-            // must be detected in ~1s — not ~14s — and its failures must land inside the
-            // breaker's sampling window so it actually trips.
+            // these hops feed an interactive UI, so a down service must be detected in
+            // ~1s — not ~14s — and its failures must land inside the breaker's sampling
+            // window so it actually trips.
             options.Retry.Delay = TimeSpan.FromMilliseconds(200);
 
             // Fail fast when a service is down instead of hammering it every call.
             // Min-throughput dropped from the default 100 to suit this app's low
-            // local traffic, so the breaker can actually trip. SamplingDuration must
+            // traffic, so the breaker can actually trip. SamplingDuration must
             // stay >= 2 * AttemptTimeout.
             options.CircuitBreaker.MinimumThroughput = 5;
             options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);

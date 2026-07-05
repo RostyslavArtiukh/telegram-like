@@ -1,11 +1,11 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using TelegramLike.Web.Services.ServiceAuth;
+using TelegramLike.Client.Auth;
 
-namespace TelegramLike.Web.Services.IdentityApi;
+namespace TelegramLike.Client.Identity;
 
-internal sealed class IdentityUsersApiClient(HttpClient http, ServiceTokenProvider tokenProvider) : IIdentityUsersApi
+internal sealed class IdentityUsersApiClient(HttpClient http, IAccessTokenProvider tokenProvider) : IIdentityUsersApi
 {
     public async Task<IdentityUser?> GetUserByIdAsync(Guid userId, CancellationToken ct = default)
     {

@@ -6,8 +6,7 @@
 - [integration_events_rabbitmq.md](integration_events_rabbitmq.md) — RabbitMQ + MassTransit + Transactional Outbox; як додавати нові integration events
 - [microservices_migration.md](microservices_migration.md) — Інкрементальна міграція з monolith у мікросервіси; прогрес і архітектурні рішення
 - [kubernetes_plan.md](kubernetes_plan.md) — Kubernetes-розгортання всього стека ЗРОБЛЕНО й live-verified ([TL-62]); k8s/ + kustomization.yaml у корені
-- [client_sdk_plan.md](client_sdk_plan.md) — НАСТУПНА велика задача: TelegramLike.Client SDK (NuGet) + MAUI апка; деплой знову compose
-- [api_controllers.md](api_controllers.md) — Усі 5 сервісів: HTTP через класичні [ApiController] контролери (не minimal API); shared pieces + правило збереження wire-contract
+- [client_sdk_plan.md](client_sdk_plan.md) — TelegramLike.Client SDK ЗРОБЛЕНО [TL-64]; далі SignalR Hub → MAUI апка; деплой compose
 - [service_auth_jwt.md](service_auth_jwt.md) — JWT auth між Web BFF і downstream сервісами; рецепт додавання auth до нового сервісу
 - [realtime_blazor_pubsub.md](realtime_blazor_pubsub.md) — Real-time UI через RabbitMQ → in-memory pubsub → Blazor circuit (без окремого SignalR Hub)
 - [observability_tracing.md](observability_tracing.md) — OpenTelemetry → Jaeger; як додавати spans і пропагація через HTTP+RabbitMQ
@@ -17,6 +16,6 @@
 - [bff_resilience.md](bff_resilience.md) — BFF HTTP resilience: timeout/retry/circuit-breaker на всіх 5 downstream клієнтах + graceful read-path degradation
 - [api_gateway.md](api_gateway.md) — YARP gateway (8090) перед 5 сервісами; BFF ходить через нього (один Gateway:BaseUrl + ServicePrefixHandler)
 - [permissions_preference.md](permissions_preference.md) — Юзер не хоче постійних prompts; широкий allowlist у settings.local.json
-- [nomenclature_step_not_day.md](nomenclature_step_not_day.md) — Префікс комітів/ітерацій: поточне [TL-N] (Day N → Step N → [TL-N], один лічильник)
+- [nomenclature_step_not_day.md](nomenclature_step_not_day.md) — Маркувати нові ітерації як "Step N" а не "Day N" (продовжувати нумерацію після Day 21)
 - [memory_dual_write.md](memory_dual_write.md) — Дзеркалити memory у `.claude/memory/` репо для синхронізації між машинами
 - [user_profile.md](user_profile.md) — Профіль користувача та стиль роботи

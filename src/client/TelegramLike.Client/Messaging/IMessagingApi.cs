@@ -1,4 +1,4 @@
-namespace TelegramLike.Web.Services.MessagingApi;
+namespace TelegramLike.Client.Messaging;
 
 public interface IMessagingApi
 {

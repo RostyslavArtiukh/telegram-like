@@ -1,11 +1,10 @@
 # Web BFF (Blazor Server, port 8080)
 
-Pure BFF: **no domain, no database, no MediatR handlers.** References only `TelegramLike.Contracts` + typed HTTP clients to the 5 services. Hosts a MassTransit bus solely so real-time pubsub consumers can push into the Blazor circuit.
+Pure BFF: **no domain, no database, no MediatR handlers.** References `TelegramLike.Contracts` + the `TelegramLike.Client` SDK (`src/client/`), which owns all typed HTTP clients. Hosts a MassTransit bus solely so real-time pubsub consumers can push into the Blazor circuit.
 
 ## Calling services
-- One typed client per service in `Services/<Name>Api/` (`I<Name>Api` + `<Name>ApiClient`).
-- **Auth:** each client resolves an access token via the scoped `ServiceTokenProvider` (`Services/ServiceAuth/`) and attaches `Bearer` itself. **Never inject scoped auth-state into a `DelegatingHandler`** — handlers are pooled outside the circuit scope and would leak one user's token to another. That's why the provider lives in the clients, not a handler.
-- `Services/IdentityApi/`: `IIdentityAuthApi` (public — register/login/exchange, plain client, no token) vs `IIdentityUsersApi` (authed user queries).
+- Typed clients (`IChatsApi`, `IMessagingApi`, `IIdentityAuthApi`/`IIdentityUsersApi`, `INotificationsApi`, `IPresenceApi`) live in the **`TelegramLike.Client` SDK** (namespaces `TelegramLike.Client.<Context>`), registered via `AddTelegramLikeApiClients(gatewayUri)` in `Program.cs`.
+- **Auth:** the Web registers the scoped `ServiceTokenProvider` (`Services/ServiceAuth/`) as the SDK's `IAccessTokenProvider`; clients resolve it per request and attach `Bearer` themselves. **Never inject scoped auth-state into a `DelegatingHandler`** — handlers are pooled outside the circuit scope and would leak one user's token to another. That's why the provider lives in the clients, not a handler.
 - BFF enrichment: compute recipients / isBroadcast / isModerator / isPremium here (from Chats data or the cookie) and pass them into Messaging/Chats calls — services don't cross-query.
 
 ## Real-time (no SignalR Hub)
