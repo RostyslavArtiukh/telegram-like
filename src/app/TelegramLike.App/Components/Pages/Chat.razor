@@ -148,8 +148,9 @@ else
         foreach (var (id, isOnline) in presence)
             if (isOnline) _online.Add(id);
 
-        if (Realtime.IsConnected)
-            await Realtime.JoinChatAsync(ChatId);
+        // The SDK records the join intent and (re)connects as needed, so this is
+        // safe to call even if the hub isn't up yet — no IsConnected guard required.
+        await Realtime.JoinChatAsync(ChatId);
 
         await NotificationsApi.MarkChatAsReadAsync(_me, ChatId);
 

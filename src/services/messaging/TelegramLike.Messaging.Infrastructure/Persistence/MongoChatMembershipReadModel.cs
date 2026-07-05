@@ -17,6 +17,12 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
             .AnyAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Guid>> GetActiveMemberIdsAsync(Guid chatId, CancellationToken ct = default)
+        => await _memberships
+            .Find(d => d.ChatId == chatId)
+            .Project(d => d.UserId)
+            .ToListAsync(ct);
+
     public Task UpsertActiveAsync(Guid chatId, Guid userId, CancellationToken ct = default)
     {
         var doc = new ChatMembershipDocument

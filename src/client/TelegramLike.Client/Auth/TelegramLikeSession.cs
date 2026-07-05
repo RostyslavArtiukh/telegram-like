@@ -15,8 +15,12 @@ public sealed class TelegramLikeSession(IIdentityAuthApi identityAuth, ISessionS
     : IAccessTokenProvider
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private string? _accessToken;
-    private DateTimeOffset _accessTokenExpiresAt;
+    // Read on the lock-free fast path from multiple threads (HTTP clients, the SignalR
+    // access-token callback, the presence heartbeat timer). `volatile` on the string ref
+    // and Volatile.Read/Write on the expiry (a 64-bit value can't be `volatile`) prevent
+    // a torn read that could hand out an expired token or trigger a spurious refresh.
+    private volatile string? _accessToken;
+    private long _expiresAtUtcTicks;
 
     /// <summary>Identity of the logged-in user, populated by the first successful token exchange.</summary>
     public Guid? UserId { get; private set; }
@@ -51,13 +55,13 @@ public sealed class TelegramLikeSession(IIdentityAuthApi identityAuth, ISessionS
     public async Task<string?> GetAccessTokenAsync(CancellationToken ct = default)
     {
         // Fast path outside the lock; the margin mirrors the Web BFF's refresh-before-expiry.
-        if (_accessToken is not null && DateTimeOffset.UtcNow < _accessTokenExpiresAt)
+        if (_accessToken is not null && DateTimeOffset.UtcNow.UtcTicks < Volatile.Read(ref _expiresAtUtcTicks))
             return _accessToken;
 
         await _gate.WaitAsync(ct);
         try
         {
-            if (_accessToken is not null && DateTimeOffset.UtcNow < _accessTokenExpiresAt)
+            if (_accessToken is not null && DateTimeOffset.UtcNow.UtcTicks < Volatile.Read(ref _expiresAtUtcTicks))
                 return _accessToken;
 
             var sessionToken = await store.GetSessionTokenAsync(ct);
@@ -73,8 +77,9 @@ public sealed class TelegramLikeSession(IIdentityAuthApi identityAuth, ISessionS
 
             UserId = exchange.UserId;
             Username = exchange.Username;
+            Volatile.Write(ref _expiresAtUtcTicks,
+                DateTimeOffset.UtcNow.AddSeconds(Math.Max(30, exchange.ExpiresInSeconds - 30)).UtcTicks);
             _accessToken = exchange.AccessToken;
-            _accessTokenExpiresAt = DateTimeOffset.UtcNow.AddSeconds(Math.Max(30, exchange.ExpiresInSeconds - 30));
             return _accessToken;
         }
         finally
@@ -86,6 +91,6 @@ public sealed class TelegramLikeSession(IIdentityAuthApi identityAuth, ISessionS
     private void InvalidateAccessToken()
     {
         _accessToken = null;
-        _accessTokenExpiresAt = DateTimeOffset.MinValue;
+        Volatile.Write(ref _expiresAtUtcTicks, 0);
     }
 }

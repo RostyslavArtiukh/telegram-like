@@ -9,6 +9,7 @@ internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
     private readonly HubConnection _connection;
     private readonly HashSet<Guid> _joinedChats = [];
     private readonly object _joinedLock = new();
+    private readonly SemaphoreSlim _connectGate = new(1, 1);
 
     public event Action<MessageSentPush>? MessageSent;
     public event Action<MessageSentPush>? ChatActivity;
@@ -45,32 +46,90 @@ internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
 
         // A reconnect gets a fresh connection id, so server-side group membership
         // is gone — re-join every chat stream the app still has open.
-        _connection.Reconnected += async _ =>
-        {
-            Guid[] chats;
-            lock (_joinedLock) chats = [.. _joinedChats];
-            foreach (var chatId in chats)
-                await _connection.InvokeAsync("JoinChat", chatId);
-        };
+        _connection.Reconnected += async _ => await FlushJoinsAsync();
     }
 
     public bool IsConnected => _connection.State == HubConnectionState.Connected;
 
-    public Task ConnectAsync(CancellationToken ct = default) => _connection.StartAsync(ct);
+    public Task ConnectAsync(CancellationToken ct = default) => EnsureConnectedAsync(ct);
 
     public Task DisconnectAsync(CancellationToken ct = default) => _connection.StopAsync(ct);
 
     public async Task JoinChatAsync(Guid chatId, CancellationToken ct = default)
     {
-        await _connection.InvokeAsync("JoinChat", chatId, ct);
+        // Record intent BEFORE touching the wire: if the hub is down or mid-connect,
+        // the join is flushed once a connection is (re)established. This also means a
+        // chat opened before the hub connected is not silently missed.
         lock (_joinedLock) _joinedChats.Add(chatId);
+
+        await EnsureConnectedAsync(ct);
+        try
+        {
+            if (_connection.State == HubConnectionState.Connected)
+                await _connection.InvokeAsync("JoinChat", chatId, ct);
+        }
+        catch
+        {
+            // Retained in _joinedChats; FlushJoinsAsync re-joins on the next (re)connect.
+        }
     }
 
     public async Task LeaveChatAsync(Guid chatId, CancellationToken ct = default)
     {
         lock (_joinedLock) _joinedChats.Remove(chatId);
-        await _connection.InvokeAsync("LeaveChat", chatId, ct);
+        try
+        {
+            if (_connection.State == HubConnectionState.Connected)
+                await _connection.InvokeAsync("LeaveChat", chatId, ct);
+        }
+        catch
+        {
+            // Nothing to retain — we already dropped the intent.
+        }
     }
 
-    public ValueTask DisposeAsync() => _connection.DisposeAsync();
+    /// <summary>
+    /// Starts the connection if it isn't already up, and flushes pending chat joins.
+    /// Safe to call repeatedly: failures are swallowed so a hub that's down at login
+    /// doesn't kill realtime for the whole session — the next call (e.g. opening a
+    /// chat) retries. WithAutomaticReconnect only revives an already-established
+    /// connection, so this action-driven retry is what covers a failed initial connect.
+    /// </summary>
+    private async Task EnsureConnectedAsync(CancellationToken ct = default)
+    {
+        if (_connection.State == HubConnectionState.Connected) return;
+
+        await _connectGate.WaitAsync(ct);
+        try
+        {
+            // Only Disconnected can be started; Connecting/Reconnecting will resolve
+            // on their own (and Reconnected flushes joins).
+            if (_connection.State != HubConnectionState.Disconnected) return;
+
+            await _connection.StartAsync(ct);
+            await FlushJoinsAsync(ct);
+        }
+        catch
+        {
+            // Hub unreachable — retried on the next EnsureConnectedAsync.
+        }
+        finally
+        {
+            _connectGate.Release();
+        }
+    }
+
+    private async Task FlushJoinsAsync(CancellationToken ct = default)
+    {
+        Guid[] chats;
+        lock (_joinedLock) chats = [.. _joinedChats];
+        foreach (var chatId in chats)
+            await _connection.InvokeAsync("JoinChat", chatId, ct);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _connectGate.Dispose();
+        await _connection.DisposeAsync();
+    }
 }

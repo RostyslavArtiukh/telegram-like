@@ -15,16 +15,37 @@ public sealed class SendMessageCommandHandler(
 {
     public async Task<Guid> Handle(SendMessageCommand request, CancellationToken cancellationToken)
     {
-        // Phase 8: strict membership check, fail-open until the read model is
-        // backfilled for legacy chats (created before this consumer existed).
-        var isMember = await membership.IsActiveMemberAsync(request.ChatId, request.AuthorId, cancellationToken);
-        if (!isMember)
+        // One read-model query drives three things: the membership check, the
+        // authoritative recipient list (no longer trusting the caller), and whether
+        // the chat is materialized at all. The read-model is event-sourced from Chats
+        // (MemberJoined/Kicked/Left).
+        var activeMembers = await membership.GetActiveMemberIdsAsync(request.ChatId, cancellationToken);
+        var chatKnown = activeMembers.Count > 0;
+        var isMember = activeMembers.Contains(request.AuthorId);
+
+        if (chatKnown && !isMember)
         {
+            // The chat is materialized and the author is not in it → a genuine
+            // non-member. Fail closed (→ 403 via DomainExceptionFilter).
+            throw new UnauthorizedAccessException("You are not an active member of this chat.");
+        }
+
+        if (!chatKnown)
+        {
+            // Chat not yet materialized (legacy chat, or the creator's MemberJoined is
+            // still in flight). Fall back to the previous fail-open so a freshly created
+            // chat's first send isn't rejected, and keep the caller-supplied recipients.
             logger.LogWarning(
-                "SendMessage: author {AuthorId} is not in the local membership read-model for chat {ChatId}; allowing through (fail-open).",
-                request.AuthorId,
+                "SendMessage: chat {ChatId} is not in the membership read-model yet; allowing through (fail-open).",
                 request.ChatId);
         }
+
+        // Recipients are authoritative from the read-model when the chat is known — this
+        // is what closes the recipient-spoofing vector; fall back to the caller's list
+        // only while the chat is still unknown.
+        var recipients = chatKnown
+            ? activeMembers.Where(id => id != request.AuthorId).ToList()
+            : request.Recipients;
 
         if (request.ReplyToMessageId.HasValue)
         {
@@ -61,7 +82,7 @@ public sealed class SendMessageCommandHandler(
             request.ChatId,
             request.AuthorId,
             content,
-            request.Recipients,
+            recipients,
             replyRef,
             forwardRef,
             isBroadcast: request.IsBroadcast);

@@ -9,6 +9,11 @@ public interface IChatMembershipReadModel
 {
     Task<bool> IsActiveMemberAsync(Guid chatId, Guid userId, CancellationToken ct = default);
 
+    // Every active member of the chat. An empty result means the chat isn't
+    // materialized yet (legacy chat, or a MemberJoined still in flight) — callers
+    // treat that as "unknown" and fall back rather than fail closed.
+    Task<IReadOnlyList<Guid>> GetActiveMemberIdsAsync(Guid chatId, CancellationToken ct = default);
+
     Task UpsertActiveAsync(Guid chatId, Guid userId, CancellationToken ct = default);
 
     Task RemoveAsync(Guid chatId, Guid userId, CancellationToken ct = default);

@@ -1,6 +1,7 @@
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using TelegramLike.Gateway.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +21,9 @@ builder.Services.AddOpenTelemetry()
     .WithTracing(t =>
     {
         t.AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation();
+            .AddHttpClientInstrumentation()
+            // Scrub the SignalR ?access_token= JWT from proxied hub-request spans.
+            .AddProcessor(new RedactAccessTokenProcessor());
 
         var otlpEndpoint = builder.Configuration["Tracing:OtlpEndpoint"];
         if (!string.IsNullOrWhiteSpace(otlpEndpoint))
