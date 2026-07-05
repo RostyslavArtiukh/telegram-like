@@ -8,6 +8,7 @@ Telegram-like messenger. Migrated from a modular monolith to **microservices + a
 - **Client SDK** — `src/client/TelegramLike.Client`. NuGet-packable typed clients for all 5 services (via the gateway) + auth flow; the Web BFF consumes it, future MAUI/console apps too. See `src/client/CLAUDE.md`.
 - **5 services** — `src/services/<name>/`, each = Domain/Application/Infrastructure/Api, own Mongo DB, own port:
   - identity **8085** · notifications **8081** · presence **8082** · chats **8083** · messaging **8084**
+- **Realtime** — `src/services/realtime`, port **8086**. Single-project SignalR hub for external clients (SDK/MAUI): relays integration events into per-user/per-chat hub groups. No DB, no domain. The Web BFF does not use it. See `src/services/realtime/CLAUDE.md`.
 - **Shared infra:** MongoDB (per-service DB, replica set `rs0`), Redis, RabbitMQ (vhost `telegramlike`), Jaeger (OTLP 4317, UI 16686).
 
 ## Gateway routing
@@ -22,6 +23,7 @@ BFF clients keep their service-relative paths (e.g. `/messages/{id}`); a `Servic
 - Presence → [src/services/presence/CLAUDE.md](src/services/presence/CLAUDE.md)
 - Chats → [src/services/chats/CLAUDE.md](src/services/chats/CLAUDE.md)
 - Messaging → [src/services/messaging/CLAUDE.md](src/services/messaging/CLAUDE.md)
+- Realtime (SignalR hub) → [src/services/realtime/CLAUDE.md](src/services/realtime/CLAUDE.md)
 
 ## Auth — Identity is the IdP
 - Identity signs short-lived HMAC-SHA256 JWTs: `iss=telegramlike-identity`, `aud=telegramlike-services`, `sub`=userId. Every service validates with the same shared secret and `MapInboundClaims=false`.

@@ -34,3 +34,12 @@ assert it appears on user1's still-open page (RabbitMQ → pubsub → circuit).
   `waitForURL('**/chat/**')` and take the id from the URL, not from a list link.
 - Composer: `getByPlaceholder('Type a message…')` + button `Send`.
 - Login error surface: `.alert-danger` (probe: wrong password → "Invalid email or password.").
+
+## SDK / realtime surface (external clients)
+For SDK or Realtime-service changes, drive the **package boundary** instead: a scratch
+console app referencing `src/client/TelegramLike.Client.csproj`, using
+`AddTelegramLikeClient(new Uri("http://localhost:8090"))` (the gateway). Flow:
+`session.RegisterAsync/LoginAsync` → `ITelegramLikeRealtimeClient.ConnectAsync` +
+`JoinChatAsync` → act over HTTP (`IChatsApi`/`IMessagingApi`/`IPresenceApi`) → assert
+hub pushes arrive (TaskCompletionSource + timeout). Probes that matter: anonymous hub
+connect must 401; after `LeaveChatAsync` chat-group pushes must stop.

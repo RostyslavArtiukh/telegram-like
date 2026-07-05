@@ -6,7 +6,7 @@
 - [integration_events_rabbitmq.md](integration_events_rabbitmq.md) — RabbitMQ + MassTransit + Transactional Outbox; як додавати нові integration events
 - [microservices_migration.md](microservices_migration.md) — Інкрементальна міграція з monolith у мікросервіси; прогрес і архітектурні рішення
 - [kubernetes_plan.md](kubernetes_plan.md) — Kubernetes-розгортання всього стека ЗРОБЛЕНО й live-verified ([TL-62]); k8s/ + kustomization.yaml у корені
-- [client_sdk_plan.md](client_sdk_plan.md) — TelegramLike.Client SDK ЗРОБЛЕНО [TL-64]; далі SignalR Hub → MAUI апка; деплой compose
+- [client_sdk_plan.md](client_sdk_plan.md) — SDK [TL-64] + Realtime SignalR hub [TL-65] ЗРОБЛЕНО; далі MAUI апка; деплой compose
 - [service_auth_jwt.md](service_auth_jwt.md) — JWT auth між Web BFF і downstream сервісами; рецепт додавання auth до нового сервісу
 - [realtime_blazor_pubsub.md](realtime_blazor_pubsub.md) — Real-time UI через RabbitMQ → in-memory pubsub → Blazor circuit (без окремого SignalR Hub)
 - [observability_tracing.md](observability_tracing.md) — OpenTelemetry → Jaeger; як додавати spans і пропагація через HTTP+RabbitMQ

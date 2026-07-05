@@ -265,6 +265,34 @@ services:
       ServiceAuth__Audience: telegramlike-services
       ServiceAuth__TokenLifetimeSeconds: "300"
 
+  realtime:
+    build:
+      context: .
+      dockerfile: src/services/realtime/TelegramLike.Realtime.Api/Dockerfile
+    image: telegramlike-realtime:latest
+    container_name: telegramlike-realtime
+    restart: unless-stopped
+    ports:
+      - "8086:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
+      interval: 10s
+      start_period: 20s
+      retries: 5
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+      RabbitMQ__VirtualHost: telegramlike
+      Tracing__OtlpEndpoint: "http://jaeger:4317"
+      ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
+      ServiceAuth__Issuer: telegramlike-identity
+      ServiceAuth__Audience: telegramlike-services
+
   gateway:
     build:
       context: .
@@ -285,6 +313,8 @@ services:
         condition: service_healthy
       identity:
         condition: service_healthy
+      realtime:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
       interval: 10s
@@ -298,6 +328,7 @@ services:
       ReverseProxy__Clusters__presence__Destinations__d1__Address: "http://presence:8080"
       ReverseProxy__Clusters__chats__Destinations__d1__Address: "http://chats:8080"
       ReverseProxy__Clusters__messaging__Destinations__d1__Address: "http://messaging:8080"
+      ReverseProxy__Clusters__realtime__Destinations__d1__Address: "http://realtime:8080"
 
   web:
     build:

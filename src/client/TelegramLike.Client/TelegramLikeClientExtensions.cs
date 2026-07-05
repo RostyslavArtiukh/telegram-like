@@ -7,6 +7,7 @@ using TelegramLike.Client.Identity;
 using TelegramLike.Client.Messaging;
 using TelegramLike.Client.Notifications;
 using TelegramLike.Client.Presence;
+using TelegramLike.Client.Realtime;
 
 namespace TelegramLike.Client;
 
@@ -42,7 +43,8 @@ public static class TelegramLikeClientExtensions
     /// <summary>
     /// Full standalone setup for desktop/mobile/console apps: the typed API clients plus
     /// a singleton <see cref="TelegramLikeSession"/> (login → session token → cached JWT)
-    /// as the <see cref="IAccessTokenProvider"/>. One user session per process.
+    /// as the <see cref="IAccessTokenProvider"/>, and the SignalR realtime client.
+    /// One user session per process.
     /// Swap the session-token persistence by registering an <see cref="ISessionStore"/>
     /// (e.g. MAUI SecureStorage) before calling this.
     /// </summary>
@@ -55,6 +57,10 @@ public static class TelegramLikeClientExtensions
             sp.GetRequiredService<IIdentityAuthApi>(),
             sp.GetRequiredService<ISessionStore>()));
         services.TryAddSingleton<IAccessTokenProvider>(sp => sp.GetRequiredService<TelegramLikeSession>());
+
+        services.TryAddSingleton<ITelegramLikeRealtimeClient>(sp => new TelegramLikeRealtimeClient(
+            gatewayBaseUrl,
+            sp.GetRequiredService<IAccessTokenProvider>()));
 
         return services;
     }

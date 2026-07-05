@@ -6,6 +6,7 @@ Typed .NET SDK every client app uses to talk to the backend **through the YARP g
 - `Identity/ Chats/ Messaging/ Notifications/ Presence/` — one typed client per service (`I<Name>Api` + internal `<Name>ApiClient`) with its wire DTOs (`*Contract` records; Notifications DTOs live in Contracts).
 - `Http/` — `ServicePrefixHandler` (prepends `/chats` etc., gateway strips it) + shared resilience pipeline (timeout/retry/circuit-breaker; POSTs retried only with `Idempotency-Key`).
 - `Auth/` — `IAccessTokenProvider` (per-request JWT resolution), `ISessionStore` (where the opaque session token persists), `TelegramLikeSession` (standalone login/exchange/caching, implements the provider).
+- `Realtime/` — `ITelegramLikeRealtimeClient` over SignalR (`{gateway}/realtime/hub`): connect after login, `JoinChatAsync` per open chat, C# events per push type (shapes/names from `Contracts/Realtime`). Re-joins chat groups on reconnect. Events fire on background threads — UI must marshal.
 - `TelegramLikeClientExtensions` — DI entry points.
 
 ## Rules

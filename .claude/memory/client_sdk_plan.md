@@ -32,4 +32,11 @@ metadata:
 - **Гочі:** Web Dockerfile restore-stage мусить COPY новий csproj (`src/client/...`), інакше образ не збирається. Playwright-верифікація повного флоу записана у проектний skill `.claude/skills/verify/SKILL.md` (Blazor prerender-trap, hidden inputs, navigate-on-create).
 - **Далі:** SignalR Hub для зовнішніх клієнтів (дірка №1) → MAUI Blazor Hybrid desktop → Android. Дірка №2 (enrichment) поки НЕ закрита server-side: `IChatsApi` enrichment-хелпери переїхали в SDK, standalone-апка робитиме enrichment клієнтом SDK (fail-open у messaging лишається — кандидат на окремий [TL-N]).
 
+**Прогрес [TL-65] (2026-07-05): Фаза 2 — SignalR Hub — ЗРОБЛЕНО й live-verified.** Дірка №1 закрита.
+- Рішення hub-hosting: **окремий одно-проектний сервіс** `src/services/realtime/TelegramLike.Realtime.Api` (порт 8086, без БД/домену), НЕ у Web — бо Web cookie-authed, а hub'у треба JWT; і SDK лишається на одному gateway base URL. Hub `/hub` → через gateway `/realtime/hub` (YARP проксує WebSocket з коробки).
+- Групи: `user:{sub}` auto-join на connect (сирий `sub` claim!), `chat:{chatId}` через `JoinChat`/`LeaveChat`. Спліт подій проти подвійної доставки: `MessageSent`→chat-група, `ChatActivity`→user-групи (recipients+author). Per-instance temporary черги як у Web [TL-63]. Payload-шейпи + імена у `Contracts/Realtime/RealtimeEvents.cs` (спільні з SDK).
+- SDK: `ITelegramLikeRealtimeClient` (SignalR client, auto-reconnect + re-join chat-груп, `AccessTokenProvider` → session). Реєструється в `AddTelegramLikeClient`.
+- Verified консольним SDK-клієнтом через gateway: anon connect → 401, typing/message/chat-activity/reaction пуші приходять, LeaveChat зупиняє. Рецепт у verify skill.
+- **Наступний крок: MAUI Blazor Hybrid desktop апка** (потім Android по USB).
+
 Див. [[realtime-blazor-pubsub]], [[api-gateway]], [[service-auth-jwt]], [[kubernetes-plan]], [[microservices-migration]].

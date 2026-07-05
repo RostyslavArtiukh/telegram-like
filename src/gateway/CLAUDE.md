@@ -3,7 +3,8 @@
 Single entry point for all BFF→service traffic. One project `TelegramLike.Gateway` (ASP.NET Core + `Yarp.ReverseProxy`). **No domain, no DB, no auth logic** — pure routing.
 
 ## What it does
-- Routes `/<service>/{**catch-all}` → that service's cluster and **strips the prefix** (`PathRemovePrefix`). Prefixes: `identity`, `notifications`, `presence`, `chats`, `messaging`.
+- Routes `/<service>/{**catch-all}` → that service's cluster and **strips the prefix** (`PathRemovePrefix`). Prefixes: `identity`, `notifications`, `presence`, `chats`, `messaging`, `realtime`.
+- `realtime` is a WebSocket route (SignalR hub at `/realtime/hub`) — YARP proxies WS upgrades out of the box, nothing special configured.
 - Prefix routing is required because chats and messaging **both** serve `/chats/*` (messaging owns `/chats/{chatId}/messages`) — you can't route those two on the natural path.
 - Forwards `Authorization` untouched; each service still validates the Identity-issued JWT. The gateway is not a trust boundary.
 - Emits OTel traces (`telegramlike.gateway`) so a request shows Web → gateway → service in Jaeger.

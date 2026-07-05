@@ -41,11 +41,12 @@ metadata:
 **Обмеження, що лишились:**
 - **Тільки typing/new-message/reactions/presence зараз** — для нових real-time типів той самий рецепт (нижче).
 
-**Чому НЕ окремий SignalR Hub:**
+**Чому НЕ окремий SignalR Hub (для Web):**
 - Дублює інфру (Blazor circuit вже SignalR)
 - Потрібен client-side `Microsoft.AspNetCore.SignalR.Client` + JS — для Blazor Server це зайва робота
 - Hub корисний для **interactive WASM** або зовнішніх клієнтів (mobile app etc.) — там Blazor circuit не існує
-- Pattern буде потрібен якщо колись додамо mobile app — тоді треба буде Hub поверх. Поки YAGNI.
+
+**UPD [TL-65] (2026-07-05):** Hub для зовнішніх клієнтів ДОДАНО — окремий сервіс `src/services/realtime` (порт 8086, `/realtime/hub` через gateway) + `ITelegramLikeRealtimeClient` у SDK. **Web і далі використовує in-proc pubsub** — hub тільки для SDK/MAUI клієнтів. Обидва консюмлять ті самі integration events через per-instance temporary черги.
 
 ## Як додати real-time для нового event типу (рецепт)
 1. Backend service: додай integration event у `Contracts/<Context>/`, publish-нь у відповідному handler через `IPublishEndpoint`.
