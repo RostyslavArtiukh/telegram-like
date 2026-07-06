@@ -61,7 +61,7 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
             new ReplaceOptions { IsUpsert = false },
             ct);
 
-    public Task MarkAllAsReadAsync(Guid recipientId, DateTime readAt, CancellationToken ct = default)
+    public async Task<long> MarkAllAsReadAsync(Guid recipientId, DateTime readAt, CancellationToken ct = default)
     {
         var filter = Builders<NotificationDocument>.Filter.And(
             Builders<NotificationDocument>.Filter.Eq(n => n.RecipientId, recipientId),
@@ -71,10 +71,11 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
             .Set(n => n.Status, NotificationStatus.Read)
             .Set(n => n.ReadAt, readAt);
 
-        return _notifications.UpdateManyAsync(filter, update, cancellationToken: ct);
+        var result = await _notifications.UpdateManyAsync(filter, update, cancellationToken: ct);
+        return result.ModifiedCount;
     }
 
-    public Task MarkAllForChatAsReadAsync(Guid recipientId, Guid chatId, DateTime readAt, CancellationToken ct = default)
+    public async Task<long> MarkAllForChatAsReadAsync(Guid recipientId, Guid chatId, DateTime readAt, CancellationToken ct = default)
     {
         var filter = Builders<NotificationDocument>.Filter.And(
             Builders<NotificationDocument>.Filter.Eq(n => n.RecipientId, recipientId),
@@ -85,6 +86,7 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
             .Set(n => n.Status, NotificationStatus.Read)
             .Set(n => n.ReadAt, readAt);
 
-        return _notifications.UpdateManyAsync(filter, update, cancellationToken: ct);
+        var result = await _notifications.UpdateManyAsync(filter, update, cancellationToken: ct);
+        return result.ModifiedCount;
     }
 }

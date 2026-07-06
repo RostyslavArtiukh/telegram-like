@@ -15,7 +15,10 @@ public sealed class MarkAllNotificationsAsReadCommandHandler(
         if (request.RecipientId == Guid.Empty)
             throw new ArgumentException("RecipientId cannot be empty.", nameof(request));
 
-        await repository.MarkAllAsReadAsync(request.RecipientId, DateTime.UtcNow, cancellationToken);
+        var changed = await repository.MarkAllAsReadAsync(request.RecipientId, DateTime.UtcNow, cancellationToken);
+
+        // Nothing was unread → the count didn't change → no need to make the badge refetch.
+        if (changed == 0) return;
 
         await publishEndpoint.Publish(new UnreadCountChangedIntegrationEvent(
             EventId: Guid.NewGuid(),

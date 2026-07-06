@@ -17,8 +17,11 @@ public sealed class MarkChatNotificationsAsReadCommandHandler(
         if (request.ChatId == Guid.Empty)
             throw new ArgumentException("ChatId cannot be empty.", nameof(request));
 
-        await repository.MarkAllForChatAsReadAsync(
+        var changed = await repository.MarkAllForChatAsReadAsync(
             request.RecipientId, request.ChatId, DateTime.UtcNow, cancellationToken);
+
+        // Nothing was unread for this chat → the count didn't change → skip the refetch signal.
+        if (changed == 0) return;
 
         await publishEndpoint.Publish(new UnreadCountChangedIntegrationEvent(
             EventId: Guid.NewGuid(),

@@ -47,8 +47,13 @@ public sealed class FanoutChatNotificationCommandHandler(
                 "Fanout {EventId}: {Inserted}/{Total} new notifications (rest were redeliveries)",
                 request.SourceEventId, inserted, notifications.Count);
 
-        if (inserted == 0) return;
-
+        // Publish independently of the insert count. Gating on inserted>0 loses the
+        // signal permanently in the fail-after-insert case: if a prior delivery wrote
+        // the rows but the publish threw, the redelivery dedup-skips (inserted==0) and
+        // would never re-signal. inserted==0 does NOT prove the badge already refreshed,
+        // so re-publishing (an at-most-cheap refetch) is the safe choice. There are
+        // always recipients here (we returned early on none). No transactional outbox
+        // in Notifications, so this is the idempotent-publish mitigation.
         await publishEndpoint.Publish(new UnreadCountChangedIntegrationEvent(
             EventId: Guid.NewGuid(),
             OccurredAt: DateTime.UtcNow,

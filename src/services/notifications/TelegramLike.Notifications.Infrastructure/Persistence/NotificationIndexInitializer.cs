@@ -15,7 +15,7 @@ internal sealed class NotificationIndexInitializer(
         using var scope = scopeFactory.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
         await EnsureIndexesAsync(database, cancellationToken);
-        logger.LogInformation("Notification unique index ensured.");
+        logger.LogInformation("Notification indexes ensured.");
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -29,19 +29,27 @@ internal sealed class NotificationIndexInitializer(
     {
         var collection = database.GetCollection<BsonDocument>("notifications");
 
-        var keys = Builders<BsonDocument>.IndexKeys
-            .Ascending("RecipientId")
-            .Ascending("SourceEventId");
+        var uniqueSourceEvent = new CreateIndexModel<BsonDocument>(
+            Builders<BsonDocument>.IndexKeys.Ascending("RecipientId").Ascending("SourceEventId"),
+            new CreateIndexOptions<BsonDocument>
+            {
+                Name = "uniq_recipient_source_event",
+                Unique = true,
+                PartialFilterExpression = Builders<BsonDocument>.Filter.Exists("SourceEventId")
+            });
 
-        var options = new CreateIndexOptions<BsonDocument>
-        {
-            Name = "uniq_recipient_source_event",
-            Unique = true,
-            PartialFilterExpression = Builders<BsonDocument>.Filter.Exists("SourceEventId")
-        };
+        // Backs GetFeedAsync (filter RecipientId, sort CreatedAt desc). Without it Mongo
+        // does an in-memory sort that fails past the 32 MB limit for a heavy recipient.
+        // Id is the tiebreaker for a stable keyset cursor over near-identical CreatedAt.
+        var feed = new CreateIndexModel<BsonDocument>(
+            Builders<BsonDocument>.IndexKeys.Ascending("RecipientId").Descending("CreatedAt").Descending("_id"),
+            new CreateIndexOptions { Name = "recipient_created" });
 
-        return collection.Indexes.CreateOneAsync(
-            new CreateIndexModel<BsonDocument>(keys, options),
-            cancellationToken: ct);
+        // Backs GetUnreadCountAsync and the unreadOnly feed filter.
+        var unread = new CreateIndexModel<BsonDocument>(
+            Builders<BsonDocument>.IndexKeys.Ascending("RecipientId").Ascending("Status"),
+            new CreateIndexOptions { Name = "recipient_status" });
+
+        return collection.Indexes.CreateManyAsync([uniqueSourceEvent, feed, unread], ct);
     }
 }

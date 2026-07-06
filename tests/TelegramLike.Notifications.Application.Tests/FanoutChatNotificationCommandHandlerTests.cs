@@ -126,8 +126,11 @@ public class FanoutChatNotificationCommandHandlerTests
     }
 
     [Fact]
-    public async Task Skips_unread_count_publish_when_all_were_duplicates()
+    public async Task Republishes_unread_count_on_redelivery_even_when_all_were_duplicates()
     {
+        // B11: inserted==0 (pure redelivery, or a fail-after-insert retry) must still
+        // publish. Gating on inserted>0 loses the signal for good in the latter case,
+        // and inserted==0 doesn't prove the badge already refreshed.
         _notifications.AddManyIgnoringDuplicatesAsync(
                 Arg.Any<IReadOnlyCollection<Notification>>(), Arg.Any<CancellationToken>())
             .Returns(0);
@@ -142,6 +145,6 @@ public class FanoutChatNotificationCommandHandlerTests
                 MessageId: Guid.NewGuid()),
             CancellationToken.None);
 
-        await _publish.DidNotReceiveWithAnyArgs().Publish<UnreadCountChangedIntegrationEvent>(default!);
+        await _publish.ReceivedWithAnyArgs(1).Publish<UnreadCountChangedIntegrationEvent>(default!);
     }
 }

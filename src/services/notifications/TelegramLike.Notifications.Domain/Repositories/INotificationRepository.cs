@@ -14,7 +14,9 @@ public interface INotificationRepository
 
     Task UpdateAsync(Notification notification, CancellationToken ct = default);
 
-    Task MarkAllAsReadAsync(Guid recipientId, DateTime readAt, CancellationToken ct = default);
+    // Return the number of rows actually flipped to Read so callers can skip
+    // publishing an UnreadCountChanged signal when nothing changed.
+    Task<long> MarkAllAsReadAsync(Guid recipientId, DateTime readAt, CancellationToken ct = default);
 
-    Task MarkAllForChatAsReadAsync(Guid recipientId, Guid chatId, DateTime readAt, CancellationToken ct = default);
+    Task<long> MarkAllForChatAsReadAsync(Guid recipientId, Guid chatId, DateTime readAt, CancellationToken ct = default);
 }
