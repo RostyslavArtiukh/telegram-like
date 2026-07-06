@@ -22,9 +22,16 @@ public sealed class TelegramLikeSession(IIdentityAuthApi identityAuth, ISessionS
     private volatile string? _accessToken;
     private long _expiresAtUtcTicks;
 
+    // Published as a single volatile reference to an immutable record so a concurrent
+    // reader (UI, heartbeat timer) never sees a torn Guid?/string pair — the previous
+    // plain auto-properties were written under the gate but read lock-free.
+    private volatile UserIdentity? _identity;
+
     /// <summary>Identity of the logged-in user, populated by the first successful token exchange.</summary>
-    public Guid? UserId { get; private set; }
-    public string? Username { get; private set; }
+    public Guid? UserId => _identity?.UserId;
+    public string? Username => _identity?.Username;
+
+    private sealed record UserIdentity(Guid UserId, string Username);
 
     public async Task<bool> IsAuthenticatedAsync(CancellationToken ct = default)
         => await store.GetSessionTokenAsync(ct) is not null;
@@ -48,8 +55,7 @@ public sealed class TelegramLikeSession(IIdentityAuthApi identityAuth, ISessionS
     {
         await store.SetSessionTokenAsync(null, ct);
         InvalidateAccessToken();
-        UserId = null;
-        Username = null;
+        _identity = null;
     }
 
     public async Task<string?> GetAccessTokenAsync(CancellationToken ct = default)
@@ -75,8 +81,7 @@ public sealed class TelegramLikeSession(IIdentityAuthApi identityAuth, ISessionS
                 return null;
             }
 
-            UserId = exchange.UserId;
-            Username = exchange.Username;
+            _identity = new UserIdentity(exchange.UserId, exchange.Username);
             Volatile.Write(ref _expiresAtUtcTicks,
                 DateTimeOffset.UtcNow.AddSeconds(Math.Max(30, exchange.ExpiresInSeconds - 30)).UtcTicks);
             _accessToken = exchange.AccessToken;

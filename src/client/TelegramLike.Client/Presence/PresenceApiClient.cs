@@ -57,7 +57,10 @@ internal sealed class PresenceApiClient(HttpClient http, IAccessTokenProvider to
         var payload = await response.Content.ReadFromJsonAsync<PresencePayload>(ct);
         if (payload is null) return null;
 
-        return new UserPresenceSummary(payload.UserId, payload.Status == 1, payload.LastSeenAt);
+        // Honor the privacy flag client-side too: never surface a last-seen timestamp
+        // when the user hid it, even if the service included one on the wire.
+        var lastSeenAt = payload.HideLastSeen ? null : payload.LastSeenAt;
+        return new UserPresenceSummary(payload.UserId, payload.Status == 1, lastSeenAt);
     }
 
     public async Task<IReadOnlyDictionary<Guid, bool>> GetBatchPresenceAsync(

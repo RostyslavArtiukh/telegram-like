@@ -124,7 +124,19 @@ internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
         Guid[] chats;
         lock (_joinedLock) chats = [.. _joinedChats];
         foreach (var chatId in chats)
-            await _connection.InvokeAsync("JoinChat", chatId, ct);
+        {
+            try
+            {
+                await _connection.InvokeAsync("JoinChat", chatId, ct);
+            }
+            catch when (!ct.IsCancellationRequested)
+            {
+                // One chat failing to re-join must not abort re-joining the rest — this
+                // runs from Reconnected too, where an unguarded throw would silently drop
+                // every remaining chat's live stream. The id stays in _joinedChats and is
+                // retried on the next (re)connect flush.
+            }
+        }
     }
 
     public async ValueTask DisposeAsync()
