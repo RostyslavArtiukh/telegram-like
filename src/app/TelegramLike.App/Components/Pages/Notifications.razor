@@ -1,0 +1,164 @@
+@page "/notifications"
+@implements IAsyncDisposable
+@using TelegramLike.Contracts.Notifications
+@inject TelegramLikeSession Session
+@inject INotificationsApi NotificationsApi
+@inject ITelegramLikeRealtimeClient Realtime
+@inject NavigationManager Nav
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Notifications</h1>
+    <div>
+        <div class="form-check form-switch d-inline-block me-3">
+            <input class="form-check-input" type="checkbox" id="unreadOnly"
+                   checked="@_unreadOnly" @onchange="ToggleUnreadAsync" />
+            <label class="form-check-label" for="unreadOnly">Unread only</label>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="MarkAllAsync" disabled="@_busy">
+            Mark all as read
+        </button>
+    </div>
+</div>
+
+@if (_feed is null && _loadFailed)
+{
+    <div class="alert alert-warning">
+        Notifications are temporarily unavailable. Retrying…
+    </div>
+}
+else if (_feed is null)
+{
+    <p>Loading…</p>
+}
+else if (_feed.Items.Count == 0)
+{
+    <div class="alert alert-info">Nothing to show.</div>
+}
+else
+{
+    @if (_loadFailed)
+    {
+        <div class="alert alert-warning py-1 small mb-2">
+            Showing the last update — the notifications service is temporarily unavailable.
+        </div>
+    }
+    <ul class="list-group" aria-live="polite">
+        @foreach (var n in _feed.Items)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-start
+                       @(n.Status != NotificationStatusContract.Read ? "fw-semibold" : "text-muted")">
+                <div>
+                    <div>@Describe(n)</div>
+                    <small class="text-muted">@n.CreatedAt.ToLocalTime().ToString("g") · @n.Status</small>
+                </div>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-primary" @onclick="() => OpenChat(n.ChatId)">Open chat</button>
+                    @if (n.Status != NotificationStatusContract.Read)
+                    {
+                        <button type="button" class="btn btn-outline-secondary" @onclick="() => MarkOneAsync(n.Id)" disabled="@_busy">
+                            Mark read
+                        </button>
+                    }
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private Guid _me;
+    private NotificationFeedApiDto? _feed;
+    // Default to unread-only so notifications cleared by the chat page (via
+    // MarkChatAsRead) disappear from the list automatically.
+    private bool _unreadOnly = true;
+    private bool _busy;
+    private bool _loadFailed;
+    private Timer? _poller;
+    private volatile bool _disposed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.UserId is not { } me)
+        {
+            Nav.NavigateTo("/");
+            return;
+        }
+        _me = me;
+
+        Realtime.UnreadCountChanged += OnUnreadChanged;
+
+        await ReloadAsync();
+
+        _poller = new Timer(async _ =>
+        {
+            if (_disposed) return;
+            try { await InvokeAsync(ReloadAsync); }
+            catch (ObjectDisposedException) { /* circuit gone before the timer fired */ }
+        }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+    }
+
+    private void OnUnreadChanged() =>
+        _ = InvokeAsync(ReloadAsync);
+
+    private async Task ReloadAsync()
+    {
+        try
+        {
+            _feed = await NotificationsApi.GetFeedAsync(_me, unreadOnly: _unreadOnly);
+            _loadFailed = false;
+            StateHasChanged();
+        }
+        catch
+        {
+            // Keep the last good feed (if any); surface a quiet unavailable state.
+            _loadFailed = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleUnreadAsync(ChangeEventArgs e)
+    {
+        _unreadOnly = e.Value is bool b && b;
+        await ReloadAsync();
+    }
+
+    private async Task MarkOneAsync(Guid id)
+    {
+        _busy = true;
+        try
+        {
+            await NotificationsApi.MarkAsReadAsync(_me, id);
+            await ReloadAsync();
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task MarkAllAsync()
+    {
+        _busy = true;
+        try
+        {
+            await NotificationsApi.MarkAllAsReadAsync(_me);
+            await ReloadAsync();
+        }
+        finally { _busy = false; }
+    }
+
+    private void OpenChat(Guid chatId) => Nav.NavigateTo($"/chat/{chatId}");
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        Realtime.UnreadCountChanged -= OnUnreadChanged;
+        if (_poller is not null) await _poller.DisposeAsync();
+    }
+
+    private static string Describe(NotificationApiDto n) => n.Type switch
+    {
+        NotificationTypeContract.NewMessage => "New message in a chat",
+        NotificationTypeContract.MentionInGroup => "You were mentioned",
+        NotificationTypeContract.MemberJoined => "Someone joined the chat",
+        NotificationTypeContract.MemberKicked => "A member was removed",
+        _ => n.Type.ToString()
+    };
+}

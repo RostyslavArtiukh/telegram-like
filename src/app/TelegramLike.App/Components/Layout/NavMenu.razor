@@ -16,11 +16,14 @@
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="chats">💬 Chats</NavLink>
             </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="notifications">🔔 Notifications</NavLink>
+            </div>
             <div class="px-3 py-2 text-white-50 small">
                 Signed in as <b>@Session.Username</b>
             </div>
             <div class="nav-item px-3">
-                <a class="nav-link" role="button" @onclick="SignOutAsync">Sign out</a>
+                <button type="button" class="nav-link btn btn-link text-start w-100 border-0" @onclick="SignOutAsync">Sign out</button>
             </div>
         }
     </nav>

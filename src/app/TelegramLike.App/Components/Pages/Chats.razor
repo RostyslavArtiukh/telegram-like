@@ -7,17 +7,27 @@
 @inject ITelegramLikeRealtimeClient Realtime
 @inject NavigationManager Nav
 
-<h3 class="mb-3">
-    Chats
-    @if (_unread > 0)
-    {
-        <span class="badge bg-danger ms-2">@_unread unread</span>
-    }
-</h3>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">
+        Chats
+        @if (_unread > 0)
+        {
+            <span class="badge bg-danger ms-2">@_unread unread</span>
+        }
+    </h1>
+    <a href="notifications" class="btn btn-sm btn-outline-secondary">🔔 Notifications</a>
+</div>
 
 <div class="row">
     <div class="col-md-7">
-        @if (_chats is null)
+        @if (_loadError is not null)
+        {
+            <div class="alert alert-warning">
+                @_loadError
+                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" @onclick="RefreshAsync">Retry</button>
+            </div>
+        }
+        else if (_chats is null)
         {
             <p>Loading…</p>
         }
@@ -27,49 +37,62 @@
         }
         else
         {
-            <ul class="list-group">
+            <div class="list-group">
                 @foreach (var chat in _chats)
                 {
-                    <li class="list-group-item d-flex justify-content-between align-items-center"
-                        role="button" @onclick='() => Nav.NavigateTo($"/chat/{chat.ChatId}")'>
+                    <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                            @onclick='() => Nav.NavigateTo($"/chat/{chat.ChatId}")'>
                         <div>
                             <span class="fw-semibold">@(chat.Name ?? "(direct)")</span>
                             <span class="badge bg-secondary ms-2">@chat.Type</span>
                             <small class="text-muted ms-2">@chat.ActiveMemberCount member(s) · you are @chat.MyRole</small>
                         </div>
-                    </li>
+                    </button>
                 }
-            </ul>
+            </div>
         }
     </div>
 
     <div class="col-md-5">
         <div class="card mb-3">
             <div class="card-body">
-                <h6 class="card-title">Create a group chat</h6>
+                <h2 class="h6 card-title">Create a group chat</h2>
                 <div class="input-group">
                     <input class="form-control" placeholder="Group name" @bind="_groupName" />
-                    <button class="btn btn-primary" @onclick="CreateGroupAsync" disabled="@_busy">Create</button>
+                    <button type="button" class="btn btn-primary" @onclick="CreateGroupAsync" disabled="@_busy">Create</button>
                 </div>
             </div>
         </div>
 
         <div class="card mb-3">
             <div class="card-body">
-                <h6 class="card-title">Start a direct chat</h6>
+                <h2 class="h6 card-title">Create a broadcast channel</h2>
+                <p class="card-text small text-muted mb-2">
+                    Only owners/admins can post; everyone else joins as a viewer.
+                </p>
+                <div class="input-group">
+                    <input class="form-control" placeholder="Channel name" @bind="_broadcastName" />
+                    <button type="button" class="btn btn-primary" @onclick="CreateBroadcastAsync" disabled="@_busy">Create</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h6 card-title">Start a direct chat</h2>
                 <div class="input-group">
                     <input class="form-control" placeholder="username" @bind="_directUsername" />
-                    <button class="btn btn-outline-secondary" @onclick="StartDirectAsync" disabled="@_busy">Start</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="StartDirectAsync" disabled="@_busy">Start</button>
                 </div>
             </div>
         </div>
 
         <div class="card mb-3">
             <div class="card-body">
-                <h6 class="card-title">Join by chat id</h6>
+                <h2 class="h6 card-title">Join by chat id</h2>
                 <div class="input-group">
                     <input class="form-control" placeholder="00000000-…" @bind="_joinId" />
-                    <button class="btn btn-outline-secondary" @onclick="JoinAsync" disabled="@_busy">Join</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="JoinAsync" disabled="@_busy">Join</button>
                 </div>
             </div>
         </div>
@@ -83,8 +106,10 @@
 
 @code {
     private IReadOnlyList<ChatSummaryContract>? _chats;
+    private string? _loadError;
     private long _unread;
     private string _groupName = "";
+    private string _broadcastName = "";
     private string _directUsername = "";
     private string _joinId = "";
     private string? _error;
@@ -108,8 +133,20 @@
 
     private async Task RefreshAsync()
     {
-        _chats = await ChatsApi.GetMyChatsAsync(_me);
-        _unread = await NotificationsApi.GetUnreadCountAsync(_me);
+        try
+        {
+            _chats = await ChatsApi.GetMyChatsAsync(_me);
+            _loadError = null;
+        }
+        catch (Exception)
+        {
+            // A transient Chats outage must not throw out of a lifecycle method —
+            // degrade to a retryable error state instead of an eternal spinner.
+            _loadError = "Chats are temporarily unavailable.";
+        }
+
+        try { _unread = await NotificationsApi.GetUnreadCountAsync(_me); }
+        catch { /* cosmetic — badge just stays at its last known value */ }
     }
 
     // Hub events arrive on background threads — hop onto the UI thread to touch state.
@@ -117,12 +154,23 @@
         _ = InvokeAsync(async () => { await RefreshAsync(); StateHasChanged(); });
 
     private void OnUnreadChanged() =>
-        _ = InvokeAsync(async ()  => { _unread = await NotificationsApi.GetUnreadCountAsync(_me); StateHasChanged(); });
+        _ = InvokeAsync(async () =>
+        {
+            try { _unread = await NotificationsApi.GetUnreadCountAsync(_me); } catch { /* cosmetic */ }
+            StateHasChanged();
+        });
 
     private Task CreateGroupAsync() => GuardedAsync(async () =>
     {
         if (string.IsNullOrWhiteSpace(_groupName)) return;
         var chatId = await ChatsApi.CreateGroupChatAsync(_me, _groupName.Trim());
+        Nav.NavigateTo($"/chat/{chatId}");
+    });
+
+    private Task CreateBroadcastAsync() => GuardedAsync(async () =>
+    {
+        if (string.IsNullOrWhiteSpace(_broadcastName)) return;
+        var chatId = await ChatsApi.CreateBroadcastChannelAsync(_me, _broadcastName.Trim());
         Nav.NavigateTo($"/chat/{chatId}");
     });
 
