@@ -47,6 +47,8 @@ spec:
               value: "http://chats:8080"
             - name: ReverseProxy__Clusters__messaging__Destinations__d1__Address
               value: "http://messaging:8080"
+            - name: ReverseProxy__Clusters__realtime__Destinations__d1__Address
+              value: "http://realtime:8080"
           ports:
             - containerPort: 8080
           readinessProbe:

@@ -48,3 +48,29 @@ jobs:
           name: test-results
           path: "**/TestResults/*.trx"
           if-no-files-found: ignore
+
+  build-maui:
+    name: Build MAUI app (Windows)
+    # The MAUI app targets a Windows TFM and is excluded from TelegramLike.sln (the
+    # ubuntu build-test job above). Nothing else compiles it, so an SDK signature
+    # change or a Razor break in src/app goes undetected until a manual build. This
+    # job compile-checks TelegramLike.App.slnx so that drift surfaces in CI. No tests
+    # (there are none for the app; its logic is covered via the SDK).
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Install MAUI (Windows) workload
+        run: dotnet workload install maui-windows
+
+      - name: Restore
+        run: dotnet restore TelegramLike.App.slnx
+
+      - name: Build
+        run: dotnet build TelegramLike.App.slnx -c Release --no-restore

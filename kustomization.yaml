@@ -21,6 +21,7 @@ resources:
   - k8s/22-presence.yaml
   - k8s/23-chats.yaml
   - k8s/24-messaging.yaml
+  - k8s/25-realtime.yaml
   - k8s/30-gateway.yaml
   - k8s/31-web.yaml
   - k8s/32-web-ingress.yaml

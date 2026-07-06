@@ -18,3 +18,9 @@ A context folder here is the **shared schema**, not the service's domain (that l
 - Changing an event/DTO shape is a **breaking change** for every publisher + consumer; evolve additively (nullable new fields) where possible.
 - **Now public API — a shipped external app depends on this.** Since TL-64/66 the `TelegramLike.Client` SDK (and a MAUI build) reference these types, including `Realtime/RealtimeEvents.cs` (the SignalR push contracts, shared server↔client). Backend and client no longer deploy in lockstep, so treat every type here as versioned public surface: **additive-only** evolution, semver the SDK NuGet, and never rename/retype a field a deployed client reads.
 - No `Identity/` folder: Identity publishes no integration events, and user data is fetched over HTTP into Web-local DTOs (`Web/Services/IdentityApi`).
+
+## Versioning convention (when additive isn't enough)
+MassTransit routes by the full type name/namespace and there is no schema registry, so a rename or field re-type is a wire break with no coexistence path. Rules:
+1. **Additive first.** New optional data → a nullable trailing field with a default (e.g. `MemberJoinedIntegrationEvent.Role` in [TL-74b]). Old publishers/consumers keep working; consumers that care read the new field, others ignore it.
+2. **Breaking change → a new versioned type in a `Vn` namespace** (`TelegramLike.Contracts.Chats.V2.MemberJoinedIntegrationEvent`), published *alongside* the old one until every consumer has migrated, then retire V1. Never mutate a shipped type's shape in place.
+3. **`Realtime/RealtimeEvents.cs` is a frozen external surface** — shared verbatim with deployed SDK/MAUI clients that don't deploy in lockstep. Treat any change there as breaking; version it, don't edit it.
