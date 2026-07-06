@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using TelegramLike.Messaging.Application.Common;
 using TelegramLike.Messaging.Application.Common.Interfaces;
 using TelegramLike.Messaging.Domain.Repositories;
 
@@ -13,19 +14,24 @@ public sealed class AddReactionCommandHandler(
 {
     public async Task Handle(AddReactionCommand request, CancellationToken cancellationToken)
     {
-        var message = await messageRepository.GetByIdAsync(request.MessageId, cancellationToken)
-                      ?? throw new InvalidOperationException("Message not found.");
-
-        var isMember = await membership.IsActiveMemberAsync(message.ChatId, request.UserId, cancellationToken);
-        if (!isMember)
+        // Reactions are highly concurrent (many users react to one message), so guard
+        // the write with optimistic-concurrency retry: reload-mutate-save each attempt.
+        await ConcurrencyRetry.ExecuteAsync(async () =>
         {
-            logger.LogWarning(
-                "AddReaction: user {UserId} is not in the local membership read-model for chat {ChatId}; allowing through (fail-open).",
-                request.UserId,
-                message.ChatId);
-        }
+            var message = await messageRepository.GetByIdAsync(request.MessageId, cancellationToken)
+                          ?? throw new InvalidOperationException("Message not found.");
 
-        message.AddReaction(request.UserId, request.Emoji, request.ActorIsPremium);
-        await messageRepository.UpdateAsync(message, cancellationToken);
+            var isMember = await membership.IsActiveMemberAsync(message.ChatId, request.UserId, cancellationToken);
+            if (!isMember)
+            {
+                logger.LogWarning(
+                    "AddReaction: user {UserId} is not in the local membership read-model for chat {ChatId}; allowing through (fail-open).",
+                    request.UserId,
+                    message.ChatId);
+            }
+
+            message.AddReaction(request.UserId, request.Emoji, request.ActorIsPremium);
+            await messageRepository.UpdateAsync(message, cancellationToken);
+        });
     }
 }

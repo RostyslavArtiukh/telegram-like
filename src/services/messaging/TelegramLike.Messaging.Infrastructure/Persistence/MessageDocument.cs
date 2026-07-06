@@ -91,6 +91,10 @@ internal sealed class MessageDocument
 
     public DateTime SentAt { get; set; }
 
+    // Optimistic-concurrency token. Missing on legacy docs => 0 (BSON default), which
+    // the repository's version-guarded write handles transparently.
+    public int Version { get; set; }
+
     public static MessageDocument FromDomain(Message m) => new()
     {
         Id = m.Id,
@@ -109,7 +113,8 @@ internal sealed class MessageDocument
         RetractedAt = m.Status.RetractedAt,
         RetractedBy = m.Status.RetractedBy,
         BroadcastReadCount = m.BroadcastReadCount,
-        SentAt = m.SentAt
+        SentAt = m.SentAt,
+        Version = m.Version
     };
 
     public Message ToDomain()
@@ -127,6 +132,6 @@ internal sealed class MessageDocument
         var reactions = Reactions.Select(r => r.ToDomain()).ToList();
 
         return Message.Reconstitute(
-            Id, ChatId, AuthorId, content, replyRef, forwardRef, status, SentAt, BroadcastReadCount, reactions);
+            Id, ChatId, AuthorId, content, replyRef, forwardRef, status, SentAt, BroadcastReadCount, reactions, Version);
     }
 }

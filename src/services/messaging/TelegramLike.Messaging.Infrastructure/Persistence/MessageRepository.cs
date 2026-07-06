@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using TelegramLike.Messaging.Domain.Aggregates;
+using TelegramLike.Messaging.Domain.Common;
 using TelegramLike.Messaging.Domain.Repositories;
 using TelegramLike.Messaging.Infrastructure.Outbox;
 
@@ -54,15 +55,29 @@ internal sealed class MessageRepository(
 
     public async Task UpdateAsync(Message message, CancellationToken ct = default)
     {
+        // Optimistic concurrency: guard the whole-document write on the version the
+        // aggregate was loaded at, and bump it. If another writer already advanced the
+        // version, MatchedCount is 0 → abort (no clobber, no event dispatched) and let
+        // the caller reload+retry. Fixes the reaction/retract lost-update.
+        var expectedVersion = message.Version;
+        var doc = MessageDocument.FromDomain(message);
+        doc.Version = expectedVersion + 1;
+
         using var session = await mongoClient.StartSessionAsync(cancellationToken: ct);
         await session.WithTransactionAsync(async (s, token) =>
         {
-            await _messages.ReplaceOneAsync(
+            var result = await _messages.ReplaceOneAsync(
                 s,
-                Builders<MessageDocument>.Filter.Eq(m => m.Id, message.Id),
-                MessageDocument.FromDomain(message),
+                Builders<MessageDocument>.Filter.And(
+                    Builders<MessageDocument>.Filter.Eq(m => m.Id, message.Id),
+                    Builders<MessageDocument>.Filter.Eq(m => m.Version, expectedVersion)),
+                doc,
                 new ReplaceOptions { IsUpsert = false },
                 token);
+
+            if (result.MatchedCount == 0)
+                throw new ConcurrencyConflictException(
+                    $"Message {message.Id} was modified concurrently (expected version {expectedVersion}).");
 
             await dispatcher.DispatchAsync(message.DomainEvents, s, token);
             return true;

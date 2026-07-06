@@ -21,6 +21,11 @@ public sealed class Message : AggregateRoot
     public DateTime SentAt { get; private set; }
     public int? BroadcastReadCount { get; private set; }
 
+    // Optimistic-concurrency token. The repository guards a whole-document write on
+    // this value and increments it, so two concurrent reaction/retract writers can't
+    // silently clobber each other via a last-write-wins ReplaceOne.
+    public int Version { get; private set; }
+
     public IReadOnlyList<Reaction> Reactions => _reactions.AsReadOnly();
     public bool IsRetracted => Status.IsRetracted;
 
@@ -35,7 +40,8 @@ public sealed class Message : AggregateRoot
         ForwardReference? forwardFrom,
         MessageStatus status,
         DateTime sentAt,
-        int? broadcastReadCount)
+        int? broadcastReadCount,
+        int version = 0)
         : base(id)
     {
         ChatId = chatId;
@@ -46,6 +52,7 @@ public sealed class Message : AggregateRoot
         Status = status;
         SentAt = sentAt;
         BroadcastReadCount = broadcastReadCount;
+        Version = version;
     }
 
     public static Message Send(
@@ -95,9 +102,10 @@ public sealed class Message : AggregateRoot
         MessageStatus status,
         DateTime sentAt,
         int? broadcastReadCount,
-        IEnumerable<Reaction> reactions)
+        IEnumerable<Reaction> reactions,
+        int version = 0)
     {
-        var message = new Message(id, chatId, authorId, content, replyTo, forwardFrom, status, sentAt, broadcastReadCount);
+        var message = new Message(id, chatId, authorId, content, replyTo, forwardFrom, status, sentAt, broadcastReadCount, version);
         message._reactions.AddRange(reactions);
         return message;
     }
