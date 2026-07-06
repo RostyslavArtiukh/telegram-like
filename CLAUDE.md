@@ -30,6 +30,7 @@ BFF clients keep their service-relative paths (e.g. `/messages/{id}`); a `Servic
 ## Auth — Identity is the IdP
 - Identity signs short-lived HMAC-SHA256 JWTs: `iss=telegramlike-identity`, `aud=telegramlike-services`, `sub`=userId. Every service validates with the same shared secret and `MapInboundClaims=false`.
 - Web holds a cookie session and exchanges the cookie's opaque session token for an access JWT at Identity (`ServiceTokenProvider`, scoped), forwarding `Bearer` on downstream calls. **Web signs nothing.**
+- ⚠️ **`ServiceAuth:JwtSecret` is a committed DEV DEFAULT** (same value in every `appsettings.json`, `docker-compose.yml`, and `k8s/01-secret.yaml`). Since the scheme is symmetric HMAC, that value **is** the validation key — anyone with the repo/images can forge a token for any `sub` and impersonate any user across every service. Fine for local dev; for any real deployment it must be replaced with a freshly generated secret injected only via env/secret store (never committed) and rotated. Tracked as a known accepted risk for this practice repo.
 
 ## Cross-service rule
 Never read another service's database. Embed needed data in integration events, or build a local materialized read-model from those events (e.g. Presence's `chat_memberships`). The Web BFF enriches commands with cross-context data (recipients, isBroadcast, isModerator, isPremium).

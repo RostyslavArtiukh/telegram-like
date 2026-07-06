@@ -3,7 +3,7 @@
 Messages, reactions, read receipts. 4 projects, namespace `TelegramLike.Messaging.*`.
 
 ## Domain
-- `Message` aggregate = one document; `Reaction` embedded. Attachments + reactions are embedded arrays (atomic `$push`/`$pull`). `HideMessage` → `hidden_messages` read-model. Read receipts: Direct/Group → `message_read_receipts`; Broadcast → `$inc broadcastReadCount` on the message.
+- `Message` aggregate = one document; `Reaction` embedded. Reaction/retract writes go through the aggregate and use **optimistic concurrency** ([TL-74b]): a `Version` field guards the `ReplaceOne` and callers retry via `ConcurrencyRetry` — so concurrent reactions don't lost-update. `HideMessage` → `hidden_messages` read-model. Read receipts: unique `(MessageId, MemberId)` index makes them idempotent; Broadcast additionally does an atomic `$inc broadcastReadCount` on the message, once per new receipt.
 - Own autonomous outbox. Publishes `MessageSent` (carries **embedded recipients**), `MessageRetracted`, `ReactionAdded/Removed`. Query `GetChatMessages` = keyset paging by `SentAt` DESC.
 
 ## BFF-enriched params (no cross-service query)

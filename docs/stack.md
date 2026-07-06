@@ -1,5 +1,7 @@
 # Tech Stack — TelegramLike
 
+> ⚠️ **ЗАСТАРІЛО (2026-05).** Описує монолітну Clean-Architecture структуру (`Domain/Application/Infrastructure/Web` в одному процесі, Blazor Server як єдиний клієнт) — цього більше немає. Реальність: мікросервіси + YARP gateway + Blazor BFF + client SDK + MAUI + realtime SignalR. Джерело істини — кореневий `CLAUDE.md`.
+
 > Зафіксовано: 2026-05-05.
 
 ---
