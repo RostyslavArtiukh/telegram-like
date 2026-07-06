@@ -8,11 +8,13 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using TelegramLike.Realtime.Api.Consumers;
 using TelegramLike.Realtime.Api.Hubs;
+using TelegramLike.Realtime.Api.Membership;
 using TelegramLike.Realtime.Api.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<IChatMembershipTracker, ChatMembershipTracker>();
 
 var jwtSecret = builder.Configuration["ServiceAuth:JwtSecret"]
                 ?? throw new InvalidOperationException("ServiceAuth:JwtSecret is not configured.");
@@ -82,6 +84,9 @@ builder.Services.AddMassTransit(bus =>
     bus.AddConsumer<UserCameOnlineConsumer>().Endpoint(PerInstanceQueue);
     bus.AddConsumer<UserWentOfflineConsumer>().Endpoint(PerInstanceQueue);
     bus.AddConsumer<UnreadCountChangedConsumer>().Endpoint(PerInstanceQueue);
+    bus.AddConsumer<MemberJoinedMembershipConsumer>().Endpoint(PerInstanceQueue);
+    bus.AddConsumer<MemberLeftMembershipConsumer>().Endpoint(PerInstanceQueue);
+    bus.AddConsumer<MemberKickedMembershipConsumer>().Endpoint(PerInstanceQueue);
 
     bus.UsingRabbitMq((ctx, cfg) =>
     {

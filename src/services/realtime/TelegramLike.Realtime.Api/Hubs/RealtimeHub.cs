@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using TelegramLike.Realtime.Api.Membership;
 
 namespace TelegramLike.Realtime.Api.Hubs;
 
@@ -11,7 +12,7 @@ namespace TelegramLike.Realtime.Api.Hubs;
 /// integration events into these groups.
 /// </summary>
 [Authorize]
-public sealed class RealtimeHub : Hub
+public sealed class RealtimeHub(IChatMembershipTracker membership) : Hub
 {
     public override async Task OnConnectedAsync()
     {
@@ -24,11 +25,22 @@ public sealed class RealtimeHub : Hub
         await base.OnConnectedAsync();
     }
 
-    // Membership is not re-validated here (same trust model as Presence.StartTyping:
-    // the caller holds an Identity-issued JWT). A non-member could subscribe to a
-    // chat's events — acceptable for now, tracked with the messaging fail-open.
+    // Reject a non-member from subscribing to a chat's live events. The membership
+    // tracker is event-sourced and ephemeral, so it fails closed only for chats it has
+    // actually observed; an unknown chat (e.g. just after a restart, before events
+    // flow) stays fail-open to avoid locking legitimate members out.
     public Task JoinChat(Guid chatId)
-        => Groups.AddToGroupAsync(Context.ConnectionId, RealtimeGroups.Chat(chatId));
+    {
+        var sub = Context.User?.FindFirst("sub")?.Value;
+        if (Guid.TryParse(sub, out var userId)
+            && membership.IsKnownChat(chatId)
+            && !membership.IsMember(chatId, userId))
+        {
+            throw new HubException("You are not a member of this chat.");
+        }
+
+        return Groups.AddToGroupAsync(Context.ConnectionId, RealtimeGroups.Chat(chatId));
+    }
 
     public Task LeaveChat(Guid chatId)
         => Groups.RemoveFromGroupAsync(Context.ConnectionId, RealtimeGroups.Chat(chatId));
