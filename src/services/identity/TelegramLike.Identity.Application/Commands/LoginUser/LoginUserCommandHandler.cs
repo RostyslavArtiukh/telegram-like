@@ -1,5 +1,6 @@
 using MediatR;
 using TelegramLike.Identity.Application.Common.Interfaces;
+using TelegramLike.Identity.Domain.Aggregates;
 using TelegramLike.Identity.Domain.Repositories;
 using TelegramLike.Identity.Domain.ValueObjects;
 
@@ -19,6 +20,12 @@ public sealed class LoginUserCommandHandler(
 
         if (!passwordHasher.Verify(request.Password, user.Password.Hash))
             throw new InvalidOperationException("Invalid email or password.");
+
+        // A banned/deleted user must not be able to mint a session (the durable
+        // credential that exchanges for access JWTs). The aggregate models the
+        // status; enforce it at the auth boundary.
+        if (user.Status != AccountStatus.Active)
+            throw new InvalidOperationException("This account is not active.");
 
         return await sessionService.CreateSessionAsync(user.Id, cancellationToken);
     }

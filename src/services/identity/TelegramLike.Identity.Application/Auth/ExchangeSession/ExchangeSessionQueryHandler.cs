@@ -1,5 +1,6 @@
 using MediatR;
 using TelegramLike.Identity.Application.Common.Interfaces;
+using TelegramLike.Identity.Domain.Aggregates;
 using TelegramLike.Identity.Domain.Repositories;
 
 namespace TelegramLike.Identity.Application.Auth.ExchangeSession;
@@ -20,6 +21,10 @@ public sealed class ExchangeSessionQueryHandler(
 
         var user = await userRepository.GetByIdAsync(userId.Value, cancellationToken);
         if (user is null) return null;
+
+        // A session that outlived a ban/soft-delete must stop minting access JWTs.
+        // Returning null makes the Web BFF treat the session as invalid.
+        if (user.Status != AccountStatus.Active) return null;
 
         var token = accessTokenIssuer.IssueForUser(user.Id);
         return new SessionExchangeDto(

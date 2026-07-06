@@ -51,8 +51,20 @@ internal sealed class UserRepository(IMongoDatabase database) : IUserRepository
         return docs.Select(d => d.ToDomain()).ToList();
     }
 
-    public async Task AddAsync(User user, CancellationToken ct = default) =>
-        await _collection.InsertOneAsync(UserDocument.FromDomain(user), cancellationToken: ct);
+    public async Task AddAsync(User user, CancellationToken ct = default)
+    {
+        try
+        {
+            await _collection.InsertOneAsync(UserDocument.FromDomain(user), cancellationToken: ct);
+        }
+        catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            // Race backstop for the check-then-act in RegisterUserCommandHandler: the
+            // unique email/username index rejected a concurrent duplicate. Map to the
+            // same 400 {error} the pre-check would have produced.
+            throw new InvalidOperationException("Email or username is already taken.");
+        }
+    }
 
     public async Task UpdateAsync(User user, CancellationToken ct = default) =>
         await _collection.ReplaceOneAsync(u => u.Id == user.Id, UserDocument.FromDomain(user),

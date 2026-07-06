@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
 using StackExchange.Redis;
 using TelegramLike.Identity.Application.Common.Interfaces;
@@ -21,6 +22,7 @@ public static class DependencyInjection
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddHostedService<UserIndexInitializer>();
 
         var ttlDays = int.TryParse(configuration["Auth:SessionTokenTtlDays"], out var days) ? days : 7;
         services.AddSingleton<ISessionService>(sp => new RedisSessionService(
