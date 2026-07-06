@@ -61,6 +61,12 @@ internal sealed class ChatQueryService(IMongoDatabase database) : IChatQueryServ
         return members.Select(MapMember).ToList();
     }
 
+    public Task<bool> IsActiveMemberAsync(Guid chatId, Guid userId, CancellationToken ct = default)
+        => _members
+            .Find(m => m.ChatId == chatId && m.UserId == userId && m.Status == MemberStatus.Active)
+            .Limit(1)
+            .AnyAsync(ct);
+
     private static ChatMemberDto MapMember(ChatMemberDocument m)
         => new(m.UserId, m.Role, m.Status, m.JoinedAt, m.LeftAt);
 }

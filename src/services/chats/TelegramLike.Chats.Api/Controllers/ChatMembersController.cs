@@ -22,7 +22,8 @@ public sealed class ChatMembersController : ApiControllerBase
     [HttpGet("{chatId:guid}/members")]
     public async Task<IActionResult> GetChatMembers(Guid chatId, CancellationToken ct)
     {
-        var result = await _mediator.Send(new GetChatMembersQuery(chatId), ct);
+        if (!TryGetUserId(out var userId)) return Unauthorized();
+        var result = await _mediator.Send(new GetChatMembersQuery(chatId, userId), ct);
         return Ok(result);
     }
 

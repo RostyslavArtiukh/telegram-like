@@ -26,6 +26,12 @@ internal sealed class OutboxDocument
     [BsonIgnoreIfNull]
     public string? LastError { get; set; }
 
+    // Lease taken by a publisher replica while it attempts this row. Another replica
+    // (or this one after a crash) only re-picks it once the lease has expired, so
+    // scaling the publisher past one instance no longer double-publishes every event.
+    [BsonIgnoreIfNull]
+    public DateTime? ClaimedUntil { get; set; }
+
     public static OutboxDocument FromMessage(OutboxMessage message) => new()
     {
         Id = message.Id,

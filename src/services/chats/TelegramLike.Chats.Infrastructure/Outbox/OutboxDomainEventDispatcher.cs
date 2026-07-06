@@ -35,7 +35,7 @@ internal sealed class OutboxDomainEventDispatcher : IDomainEventDispatcher
 
             messages.Add(new OutboxMessage(
                 Id: Guid.NewGuid(),
-                EventType: integrationEvent.GetType().AssemblyQualifiedName!,
+                EventType: StableTypeName(integrationEvent.GetType()),
                 Payload: payload,
                 OccurredAt: domainEvent.OccurredAt));
         }
@@ -43,4 +43,10 @@ internal sealed class OutboxDomainEventDispatcher : IDomainEventDispatcher
         if (messages.Count > 0)
             await _outboxStore.AddAsync(messages, session, ct);
     }
+
+    // Store a version-agnostic "Namespace.Type, Assembly" name instead of the fully
+    // version-qualified AssemblyQualifiedName. Type.GetType resolves both, but the
+    // qualified form returns null for in-flight rows after an assembly version bump,
+    // silently stranding them until they dead-letter.
+    private static string StableTypeName(Type t) => $"{t.FullName}, {t.Assembly.GetName().Name}";
 }

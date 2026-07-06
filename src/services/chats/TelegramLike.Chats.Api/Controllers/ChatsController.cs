@@ -30,7 +30,8 @@ public sealed class ChatsController : ApiControllerBase
     [HttpGet("{chatId:guid}")]
     public async Task<IActionResult> GetChatById(Guid chatId, CancellationToken ct)
     {
-        var result = await _mediator.Send(new GetChatByIdQuery(chatId), ct);
+        if (!TryGetUserId(out var userId)) return Unauthorized();
+        var result = await _mediator.Send(new GetChatByIdQuery(chatId, userId), ct);
         return result is null ? NotFound() : Ok(result);
     }
 
