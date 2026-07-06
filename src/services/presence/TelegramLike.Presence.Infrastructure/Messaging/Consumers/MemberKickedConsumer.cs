@@ -8,5 +8,6 @@ internal sealed class MemberKickedConsumer(IChatMembershipReadModel readModel)
     : IConsumer<MemberKickedIntegrationEvent>
 {
     public Task Consume(ConsumeContext<MemberKickedIntegrationEvent> context) =>
-        readModel.RemoveAsync(context.Message.ChatId, context.Message.UserId, context.CancellationToken);
+        readModel.DeactivateAsync(
+            context.Message.ChatId, context.Message.UserId, context.Message.OccurredAt, context.CancellationToken);
 }

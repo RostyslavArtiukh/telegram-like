@@ -17,5 +17,13 @@ internal sealed class ChatMembershipDocument
     [BsonRepresentation(BsonType.String)]
     public Guid UserId { get; set; }
 
+    // Soft membership state so the last-writer-wins guard has a timestamp to compare
+    // against even after a leave/kick. Legacy docs written before this field existed
+    // have neither — reads treat a missing IsActive as active, and the conditional
+    // update treats a missing LastEventAt as the epoch (so any real event wins).
+    public bool IsActive { get; set; } = true;
+
+    public DateTime LastEventAt { get; set; }
+
     public static string MakeId(Guid chatId, Guid userId) => $"{chatId:N}:{userId:N}";
 }

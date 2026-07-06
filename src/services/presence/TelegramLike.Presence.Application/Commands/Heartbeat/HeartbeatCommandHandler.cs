@@ -19,18 +19,22 @@ public sealed class HeartbeatCommandHandler(
         if (request.UserId == Guid.Empty)
             throw new ArgumentException("UserId cannot be empty.", nameof(request));
 
+        // Redis is authoritative for "currently online". Check it BEFORE refreshing the
+        // key so a reconnect after the heartbeat TTL expired is correctly seen as an
+        // offline→online transition. (Mongo Status can be a stale "Online" that was
+        // never reconciled when the key lapsed — gating on it would swallow the event.)
+        var wasOnline = await presenceCache.IsOnlineAsync(request.UserId, cancellationToken);
         await presenceCache.TouchAsync(request.UserId, cancellationToken);
+        if (wasOnline) return;
 
         var presence = await presenceRepository.GetByUserIdAsync(request.UserId, cancellationToken)
                        ?? UserPresence.CreateOffline(request.UserId);
 
-        if (presence.Status == OnlineStatus.Online) return;
-
         presence.GoOnline(DateTime.UtcNow);
         await presenceRepository.UpsertAsync(presence, cancellationToken);
 
-        // Only the offline→online transition publishes; subsequent heartbeats
-        // see Status==Online and skip both the upsert and the event.
+        // Publish on every Redis offline→online edge, regardless of the (possibly
+        // stale) durable Status, so consumers re-learn the user is back.
         await publishEndpoint.Publish(new UserCameOnlineIntegrationEvent(
             EventId: Guid.NewGuid(),
             OccurredAt: DateTime.UtcNow,

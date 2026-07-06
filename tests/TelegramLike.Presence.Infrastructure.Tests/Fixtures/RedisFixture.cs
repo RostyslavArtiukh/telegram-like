@@ -5,8 +5,7 @@ namespace TelegramLike.Presence.Infrastructure.Tests.Fixtures;
 
 public sealed class RedisFixture : IAsyncLifetime
 {
-    private readonly RedisContainer _redis = new RedisBuilder()
-        .WithImage("redis:7-alpine")
+    private readonly RedisContainer _redis = new RedisBuilder("redis:7-alpine")
         .Build();
 
     public IConnectionMultiplexer Redis { get; private set; } = null!;

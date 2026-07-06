@@ -14,9 +14,12 @@ public sealed class GetUserPresenceQueryHandler(
         var stored = await queryService.GetByUserIdAsync(request.UserId, cancellationToken);
         if (stored is null) return null;
 
-        // Live override: Redis heartbeat key is authoritative for "currently online" — Mongo doc may lag.
+        // Redis heartbeat key is authoritative for "currently online". Mongo Status is
+        // never reconciled to Offline when the key lapses (browser close), so a stale
+        // "Online" there must NOT leak through — a Redis miss means offline. This keeps
+        // this endpoint consistent with the batch endpoint (which reads Redis directly).
         var isOnlineNow = await presenceCache.IsOnlineAsync(request.UserId, cancellationToken);
-        var effectiveStatus = isOnlineNow ? OnlineStatus.Online : stored.Status;
+        var effectiveStatus = isOnlineNow ? OnlineStatus.Online : OnlineStatus.Offline;
 
         return stored with { Status = effectiveStatus };
     }

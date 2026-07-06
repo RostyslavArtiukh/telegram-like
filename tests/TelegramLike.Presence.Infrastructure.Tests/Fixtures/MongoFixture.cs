@@ -5,8 +5,7 @@ namespace TelegramLike.Presence.Infrastructure.Tests.Fixtures;
 
 public sealed class MongoFixture : IAsyncLifetime
 {
-    private readonly MongoDbContainer _mongo = new MongoDbBuilder()
-        .WithImage("mongo:7")
+    private readonly MongoDbContainer _mongo = new MongoDbBuilder("mongo:7")
         .Build();
 
     public IMongoClient MongoClient { get; private set; } = null!;
