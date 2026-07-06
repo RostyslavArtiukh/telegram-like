@@ -3,17 +3,25 @@ using TelegramLike.Messaging.Application.Common.Interfaces;
 
 namespace TelegramLike.Messaging.Application.Queries.GetChatMessages;
 
-public sealed class GetChatMessagesQueryHandler(IMessageQueryService messageQueryService)
+public sealed class GetChatMessagesQueryHandler(
+    IMessageQueryService messageQueryService,
+    IChatMembershipReadModel membership)
     : IRequestHandler<GetChatMessagesQuery, MessagePageDto>
 {
-    public Task<MessagePageDto> Handle(GetChatMessagesQuery request, CancellationToken cancellationToken)
+    public async Task<MessagePageDto> Handle(GetChatMessagesQuery request, CancellationToken cancellationToken)
     {
         var pageSize = request.PageSize is < 1 or > 200 ? 50 : request.PageSize;
 
-        // Used to fetch the chat through IChatRepository and assert that
-        // RequesterId is an active member. Membership lives in Chats now, so
-        // the Web BFF performs that check before calling Messaging.
-        return messageQueryService.GetChatMessagesAsync(
+        // Enforce membership here, not only in the BFF: external SDK/MAUI clients reach
+        // Messaging directly through the gateway, so a "the BFF checks first" assumption
+        // is not a control. Fail closed when the chat is materialized and the requester
+        // isn't a member; fall through for an unknown chat (same fail-open window as
+        // SendMessage, e.g. a MemberJoined still in flight).
+        var activeMembers = await membership.GetActiveMemberIdsAsync(request.ChatId, cancellationToken);
+        if (activeMembers.Count > 0 && !activeMembers.Contains(request.RequesterId))
+            throw new UnauthorizedAccessException("You are not an active member of this chat.");
+
+        return await messageQueryService.GetChatMessagesAsync(
             request.ChatId,
             request.RequesterId,
             request.BeforeSentAt,

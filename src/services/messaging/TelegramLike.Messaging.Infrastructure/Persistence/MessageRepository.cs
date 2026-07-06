@@ -70,4 +70,10 @@ internal sealed class MessageRepository(
 
         message.ClearDomainEvents();
     }
+
+    public Task IncrementBroadcastReadCountAsync(Guid messageId, CancellationToken ct = default)
+        => _messages.UpdateOneAsync(
+            Builders<MessageDocument>.Filter.Eq(m => m.Id, messageId),
+            Builders<MessageDocument>.Update.Inc(m => m.BroadcastReadCount, 1),
+            cancellationToken: ct);
 }

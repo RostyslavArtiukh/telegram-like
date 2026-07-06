@@ -8,19 +8,27 @@ internal sealed class MessageReadReceiptRepository(IMongoDatabase database) : IM
     private readonly IMongoCollection<MessageReadReceiptDocument> _receipts =
         database.GetCollection<MessageReadReceiptDocument>("message_read_receipts");
 
-    public async Task MarkAsReadAsync(Guid messageId, Guid memberId, DateTime readAt, CancellationToken ct = default)
+    public async Task<bool> MarkAsReadAsync(Guid messageId, Guid memberId, DateTime readAt, CancellationToken ct = default)
     {
-        var filter = Builders<MessageReadReceiptDocument>.Filter.And(
-            Builders<MessageReadReceiptDocument>.Filter.Eq(r => r.MessageId, messageId),
-            Builders<MessageReadReceiptDocument>.Filter.Eq(r => r.MemberId, memberId));
+        var doc = new MessageReadReceiptDocument
+        {
+            Id = Guid.NewGuid(),
+            MessageId = messageId,
+            MemberId = memberId,
+            ReadAt = readAt
+        };
 
-        var update = Builders<MessageReadReceiptDocument>.Update
-            .SetOnInsert(r => r.Id, Guid.NewGuid())
-            .SetOnInsert(r => r.MessageId, messageId)
-            .SetOnInsert(r => r.MemberId, memberId)
-            .Set(r => r.ReadAt, readAt);
-
-        await _receipts.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+        try
+        {
+            await _receipts.InsertOneAsync(doc, cancellationToken: ct);
+            return true;
+        }
+        catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            // Already read by this member (repeat call or concurrent race lost to the
+            // unique index). Idempotent no-op — the first read time stands.
+            return false;
+        }
     }
 
     public Task<bool> HasReceiptAsync(Guid messageId, Guid memberId, CancellationToken ct = default)

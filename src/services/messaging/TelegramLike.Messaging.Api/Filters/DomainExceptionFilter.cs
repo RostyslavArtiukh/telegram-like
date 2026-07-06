@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using FluentValidation;
 
 namespace TelegramLike.Messaging.Api.Filters;
 
@@ -29,6 +30,7 @@ public sealed class DomainExceptionFilter : IExceptionFilter
     {
         var statusCode = context.Exception switch
         {
+            ValidationException => StatusCodes.Status400BadRequest,
             InvalidOperationException => StatusCodes.Status400BadRequest,
             ArgumentException => StatusCodes.Status400BadRequest,
             UnauthorizedAccessException => StatusCodes.Status403Forbidden,

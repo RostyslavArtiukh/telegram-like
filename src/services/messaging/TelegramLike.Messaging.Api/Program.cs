@@ -8,14 +8,20 @@ using MongoDB.Driver;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using FluentValidation;
 using TelegramLike.Messaging.Api.Filters;
 using TelegramLike.Messaging.Application.Commands.SendMessage;
+using TelegramLike.Messaging.Application.Common.Behaviors;
 using TelegramLike.Messaging.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(SendMessageCommand).Assembly));
+{
+    cfg.RegisterServicesFromAssembly(typeof(SendMessageCommand).Assembly);
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+});
+builder.Services.AddValidatorsFromAssembly(typeof(SendMessageCommand).Assembly);
 
 builder.Services.AddMessagingInfrastructure(builder.Configuration);
 

@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<IHiddenMessageRepository, HiddenMessageRepository>();
         services.AddScoped<IMessageReadReceiptRepository, MessageReadReceiptRepository>();
         services.AddScoped<IChatMembershipReadModel, MongoChatMembershipReadModel>();
+        services.AddHostedService<MessageIndexInitializer>();
         services.AddOutbox(configuration);
         services.AddIntegrationMessaging(configuration);
         return services;

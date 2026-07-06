@@ -30,16 +30,14 @@ public sealed class MarkMessageAsReadCommandHandler(
         if (message.AuthorId == request.ReaderUserId)
             return;
 
-        if (request.IsBroadcast)
-        {
-            message.IncrementBroadcastReadCount();
-            await messageRepository.UpdateAsync(message, cancellationToken);
-            return;
-        }
+        // Every chat type records a per-reader receipt; the unique (MessageId, MemberId)
+        // index makes repeat/concurrent reads idempotent. For broadcast, bump the stored
+        // counter exactly once per reader via an atomic $inc — so N reads (or concurrent
+        // reads) can't over-count, and the whole-doc ReplaceOne lost-update is gone.
+        var newlyRead = await receiptRepository.MarkAsReadAsync(
+            message.Id, request.ReaderUserId, DateTime.UtcNow, cancellationToken);
 
-        if (await receiptRepository.HasReceiptAsync(message.Id, request.ReaderUserId, cancellationToken))
-            return;
-
-        await receiptRepository.MarkAsReadAsync(message.Id, request.ReaderUserId, DateTime.UtcNow, cancellationToken);
+        if (request.IsBroadcast && newlyRead)
+            await messageRepository.IncrementBroadcastReadCountAsync(message.Id, cancellationToken);
     }
 }
