@@ -18,6 +18,7 @@ public sealed class MemberJoinedEventMapper : IIntegrationEventMapper
             OccurredAt: e.OccurredAt,
             ChatId: e.ChatId,
             UserId: e.UserId,
-            Recipients: e.Recipients);
+            Recipients: e.Recipients,
+            Role: e.Role.ToString());
     }
 }

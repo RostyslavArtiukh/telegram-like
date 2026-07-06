@@ -77,6 +77,7 @@ public static class DependencyInjection
             bus.AddConsumer<MemberJoinedConsumer>();
             bus.AddConsumer<MemberKickedConsumer>();
             bus.AddConsumer<MemberLeftConsumer>();
+            bus.AddConsumer<MemberRoleChangedConsumer>();
 
             bus.UsingRabbitMq((ctx, cfg) =>
             {

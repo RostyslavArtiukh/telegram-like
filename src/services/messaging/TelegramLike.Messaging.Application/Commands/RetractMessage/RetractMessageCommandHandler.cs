@@ -30,10 +30,14 @@ public sealed class RetractMessageCommandHandler(
 
             var isAuthor = message.AuthorId == request.ActorUserId;
 
-            // Author can always retract own. Moderator (Owner/Admin per chat role)
-            // can retract anyone's — flag comes from the Web BFF since Messaging
-            // tracks membership but not role in its local read-model.
-            message.Retract(request.ActorUserId, isAuthor || request.ActorIsModerator);
+            // Moderator authority is now derived server-side from the materialized role
+            // read-model (Owner/Admin), NOT the client-supplied ActorIsModerator flag —
+            // external clients bypass the BFF and could otherwise spoof it to retract
+            // anyone's message. The flag is ignored (kept on the wire for compatibility).
+            var isModerator = await membership.IsModeratorAsync(
+                message.ChatId, request.ActorUserId, cancellationToken);
+
+            message.Retract(request.ActorUserId, isAuthor || isModerator);
             await messageRepository.UpdateAsync(message, cancellationToken);
         });
     }

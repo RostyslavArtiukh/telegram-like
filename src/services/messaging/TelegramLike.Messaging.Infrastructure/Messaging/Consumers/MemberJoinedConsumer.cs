@@ -9,5 +9,6 @@ internal sealed class MemberJoinedConsumer(IChatMembershipReadModel readModel)
 {
     public Task Consume(ConsumeContext<MemberJoinedIntegrationEvent> context) =>
         readModel.UpsertActiveAsync(
-            context.Message.ChatId, context.Message.UserId, context.Message.OccurredAt, context.CancellationToken);
+            context.Message.ChatId, context.Message.UserId, context.Message.Role,
+            context.Message.OccurredAt, context.CancellationToken);
 }

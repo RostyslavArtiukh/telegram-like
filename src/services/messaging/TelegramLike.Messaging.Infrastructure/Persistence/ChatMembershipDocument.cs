@@ -25,5 +25,10 @@ internal sealed class ChatMembershipDocument
 
     public DateTime LastEventAt { get; set; }
 
+    // Chat role ("Owner"/"Admin"/"Member"/"Viewer"), materialized from MemberJoined +
+    // MemberRoleChanged so retract can verify moderator authority server-side instead
+    // of trusting a client flag. Legacy docs default to a non-moderator role.
+    public string Role { get; set; } = "Member";
+
     public static string MakeId(Guid chatId, Guid userId) => $"{chatId:N}:{userId:N}";
 }
