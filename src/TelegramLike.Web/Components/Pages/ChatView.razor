@@ -1,5 +1,6 @@
 @page "/chat/{ChatId:guid}"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using System.Collections.Concurrent
 @using TelegramLike.Web.Services
 @using TelegramLike.Client.Identity
 @using TelegramLike.Web.Services.ChatChanged
@@ -164,7 +165,8 @@ else
         </div>
     }
 
-    <div class="border rounded p-3 mb-3" style="height: 50vh; overflow-y: auto; background: #f9f9f9;">
+    <div class="border rounded p-3 mb-3" style="height: 50vh; overflow-y: auto; background: #f9f9f9;"
+         aria-live="polite" aria-relevant="additions" aria-label="Messages">
         @if (_messages.Count == 0)
         {
             <p class="text-muted text-center">No messages yet — say hi.</p>
@@ -228,8 +230,9 @@ else
                                 @foreach (var group in m.Reactions.GroupBy(r => r.Emoji))
                                 {
                                     var mine = group.Any(r => r.UserId == _userId);
-                                    <button class="btn btn-sm py-0 px-1 me-1 @(mine ? "btn-light border" : "btn-outline-light border")"
+                                    <button type="button" class="btn btn-sm py-0 px-1 me-1 @(mine ? "btn-light border" : "btn-outline-light border")"
                                             style="@(isMine ? "" : "color:#333;")"
+                                            aria-label="@($"{group.Key} reaction, {group.Count()}{(mine ? ", added by you — click to remove" : " — click to add")}")"
                                             @onclick="() => ToggleReactionAsync(m, group.Key)">
                                         @Glyph(group.Key) @group.Count()
                                     </button>
@@ -245,22 +248,22 @@ else
                         @if (!m.IsRetracted)
                         {
                             <div class="mt-1">
-                                <a class="small @(isMine ? "text-white-50" : "text-muted")" role="button"
-                                   @onclick="() => ToggleReactPicker(m.MessageId)">react</a>
+                                <button type="button" class="btn btn-link btn-sm p-0 align-baseline small @(isMine ? "text-white-50" : "text-muted")"
+                                        @onclick="() => ToggleReactPicker(m.MessageId)">react</button>
                                 <span class="@(isMine ? "text-white-50" : "text-muted")"> · </span>
-                                <a class="small @(isMine ? "text-white-50" : "text-muted")" role="button"
-                                   @onclick="() => SetReply(m)">reply</a>
+                                <button type="button" class="btn btn-link btn-sm p-0 align-baseline small @(isMine ? "text-white-50" : "text-muted")"
+                                        @onclick="() => SetReply(m)">reply</button>
                                 <span class="@(isMine ? "text-white-50" : "text-muted")"> · </span>
-                                <a class="small @(isMine ? "text-white-50" : "text-muted")" role="button"
-                                   @onclick="() => OpenForwardAsync(m)">forward</a>
+                                <button type="button" class="btn btn-link btn-sm p-0 align-baseline small @(isMine ? "text-white-50" : "text-muted")"
+                                        @onclick="() => OpenForwardAsync(m)">forward</button>
                                 <span class="@(isMine ? "text-white-50" : "text-muted")"> · </span>
-                                <a class="small @(isMine ? "text-white-50" : "text-muted")" role="button"
-                                   @onclick="() => HideAsync(m)">hide</a>
+                                <button type="button" class="btn btn-link btn-sm p-0 align-baseline small @(isMine ? "text-white-50" : "text-muted")"
+                                        @onclick="() => HideAsync(m)">hide</button>
                                 @if (isMine || _isModerator)
                                 {
                                     <span class="@(isMine ? "text-white-50" : "text-muted")"> · </span>
-                                    <a class="small @(isMine ? "text-white-50" : "text-muted")" role="button"
-                                       @onclick="() => RetractAsync(m)">retract</a>
+                                    <button type="button" class="btn btn-link btn-sm p-0 align-baseline small @(isMine ? "text-white-50" : "text-muted")"
+                                            @onclick="() => RetractAsync(m)">retract</button>
                                 }
                             </div>
                             @if (_reactPickerFor == m.MessageId)
@@ -268,7 +271,8 @@ else
                                 <div class="mt-1">
                                     @foreach (var (emoji, glyph) in AllEmojis)
                                     {
-                                        <button class="btn btn-sm btn-light border py-0 px-1 me-1"
+                                        <button type="button" class="btn btn-sm btn-light border py-0 px-1 me-1"
+                                                aria-label="@emoji.ToString()"
                                                 @onclick="() => ToggleReactionAsync(m, emoji)">@glyph</button>
                                     }
                                 </div>
@@ -297,7 +301,8 @@ else
                 var a = _attachments[i];
                 <span class="badge bg-secondary me-1">
                     @a.Type: @(a.FileName ?? a.Url)
-                    <span role="button" class="ms-1" @onclick="() => RemoveStagedAttachment(idx)">✕</span>
+                    <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-white" aria-label="Remove attachment"
+                            @onclick="() => RemoveStagedAttachment(idx)">✕</button>
                 </span>
             }
         </div>
@@ -409,11 +414,15 @@ else
     private string? _actionError;
     private bool _sending;
     private Timer? _poller;
+    private volatile bool _disposed;
     private IDisposable? _typingSubscription;
     private IDisposable? _newMessageSubscription;
     private IDisposable? _chatChangedSubscription;
     private readonly List<IDisposable> _presenceSubscriptions = new();
-    private readonly Dictionary<Guid, DateTime> _typingExpiry = new();
+    // Written from the pubsub consumer thread (OnRemoteTypingAsync) and read/mutated
+    // from the dispatcher-driven poller (SweepExpiredTyping) — a plain Dictionary
+    // would race there, so this uses a concurrent collection instead.
+    private readonly ConcurrentDictionary<Guid, DateTime> _typingExpiry = new();
     private List<Guid> _othersTyping = [];
     private int _onlineCount;
     private Dictionary<Guid, bool> _presence = new();
@@ -478,8 +487,14 @@ else
 
         SubscribeToPresenceForMembers();
 
-        _poller = new Timer(async _ => await InvokeAsync(PollAsync), null,
-            TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+        _poller = new Timer(async _ =>
+        {
+            // Guard against firing into a torn-down circuit (tab closed mid-interval),
+            // which would otherwise throw ObjectDisposedException on a threadpool thread.
+            if (_disposed) return;
+            try { await InvokeAsync(PollAsync); }
+            catch (ObjectDisposedException) { /* circuit gone before the timer fired */ }
+        }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
     }
 
     private int _pollTick;
@@ -565,11 +580,21 @@ else
         try
         {
             var page = await MessagingApi.GetChatMessagesAsync(_userId, ChatId);
-            var grew = page.Items.Count > _messages.Count;
-            _messages = page.Items.ToList();
-            StateHasChanged();
 
-            if (grew) await MarkChatNotificationsReadAsync();
+            // Compare message ids rather than counts: a concurrent hide/retract can
+            // shrink or hold steady the count in the same refresh a real new message
+            // arrives, which would mask it under a simple Count comparison.
+            var existingIds = _messages.Select(m => m.MessageId).ToHashSet();
+            var hasNewMessage = page.Items.Any(m => !existingIds.Contains(m.MessageId));
+
+            _messages = page.Items.ToList();
+
+            // No StateHasChanged here: this method also runs off the dispatcher (from
+            // the MassTransit consumer thread via OnNewMessageAsync/OnChatChangedAsync),
+            // where calling it directly throws. Callers on the dispatcher (lifecycle /
+            // event handlers) get an implicit re-render anyway; off-dispatcher callers
+            // already wrap this call in InvokeAsync(StateHasChanged).
+            if (hasNewMessage) await MarkChatNotificationsReadAsync();
         }
         catch { /* keep last good state */ }
     }
@@ -620,7 +645,7 @@ else
         var expired = _typingExpiry.Where(kv => kv.Value <= now).Select(kv => kv.Key).ToList();
         if (expired.Count == 0) return;
 
-        foreach (var id in expired) _typingExpiry.Remove(id);
+        foreach (var id in expired) _typingExpiry.TryRemove(id, out _);
         RebuildTypingList();
         StateHasChanged();
     }
@@ -912,6 +937,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         _typingSubscription?.Dispose();
         _newMessageSubscription?.Dispose();
         _chatChangedSubscription?.Dispose();

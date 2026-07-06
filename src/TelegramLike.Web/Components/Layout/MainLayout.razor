@@ -1,4 +1,6 @@
 @inherits LayoutComponentBase
+@inject NavigationManager Nav
+@implements IDisposable
 
 <div class="page">
     <div class="sidebar">
@@ -7,7 +9,20 @@
 
     <main>
         <article class="content px-4">
-            @Body
+            @* Top-level safety net: a page-level lifecycle exception (e.g. a transient
+               downstream outage that a page forgot to catch) trips this instead of
+               tearing down the whole Blazor Server circuit for the user. *@
+            <ErrorBoundary @ref="_errorBoundary">
+                <ChildContent>
+                    @Body
+                </ChildContent>
+                <ErrorContent>
+                    <div class="alert alert-danger m-3">
+                        <p class="mb-2">Something went wrong loading this page.</p>
+                        <a href="/" class="btn btn-sm btn-outline-danger">Go to Chats</a>
+                    </div>
+                </ErrorContent>
+            </ErrorBoundary>
         </article>
     </main>
 </div>
@@ -19,3 +34,19 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private ErrorBoundary? _errorBoundary;
+
+    protected override void OnInitialized()
+    {
+        // Without this, once the boundary trips it stays tripped for every
+        // subsequent in-app navigation (enhanced nav reuses the same layout instance).
+        Nav.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => _errorBoundary?.Recover();
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}

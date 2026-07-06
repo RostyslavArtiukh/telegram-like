@@ -2,6 +2,7 @@
 @using TelegramLike.Client.Identity
 @inject IIdentityAuthApi IdentityAuth
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 @rendermode InteractiveServer
 
 <PageTitle>Sign in</PageTitle>
@@ -48,6 +49,12 @@
     </div>
 </div>
 
+@* Hidden auto-submitting form: hands the session token to /auth/signin as a POST
+   body (see Program.cs) so it never appears in the URL / browser history / Referer. *@
+<form @ref="_signinFormRef" method="post" action="/auth/signin" style="display:none" aria-hidden="true">
+    <input type="hidden" name="token" value="@_pendingToken" />
+</form>
+
 @code {
     [SupplyParameterFromQuery] private string? Registered { get; set; }
     [SupplyParameterFromQuery] private string? Error { get; set; }
@@ -57,6 +64,9 @@
     private string? _urlError;
     private bool _loading;
     private bool _justRegistered;
+    private string? _pendingToken;
+    private bool _signinFormSubmitted;
+    private ElementReference _signinFormRef;
 
     protected override void OnParametersSet()
     {
@@ -72,13 +82,32 @@
         try
         {
             var token = await IdentityAuth.LoginAsync(Model.Email, Model.Password);
-            // Navigate to auth callback which sets the cookie and redirects to home
-            Nav.NavigateTo($"/auth/signin?token={Uri.EscapeDataString(token)}", forceLoad: true);
+            // Hand off to the hidden form (submitted from OnAfterRenderAsync once the
+            // token has actually reached the DOM) rather than navigating with the
+            // token in the query string.
+            _pendingToken = token;
+            _signinFormSubmitted = false;
         }
         catch (InvalidOperationException ex)
         {
+            // Identity rejected the credentials / request — show its message verbatim.
             _error = ex.Message;
             _loading = false;
+        }
+        catch (Exception)
+        {
+            // Downstream outage: timeout, open circuit breaker, DNS/connection failure, etc.
+            _error = "Sign-in is temporarily unavailable. Please try again in a moment.";
+            _loading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingToken is not null && !_signinFormSubmitted)
+        {
+            _signinFormSubmitted = true;
+            await JS.InvokeVoidAsync("telegramLike.submitForm", _signinFormRef);
         }
     }
 

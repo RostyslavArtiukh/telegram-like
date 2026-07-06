@@ -4,6 +4,7 @@
 @inject INotificationsApi NotificationsApi
 @inject IUnreadCountPubSub UnreadCountPubSub
 @inject CurrentUserAccessor CurrentUser
+@rendermode InteractiveServer
 @implements IDisposable
 
 <div class="top-row ps-3 navbar navbar-dark">
@@ -36,9 +37,14 @@
                     <small>Signed in as @auth.User.Identity?.Name</small>
                 </div>
                 <div class="nav-item px-3">
-                    <a class="nav-link" href="/auth/signout">
-                        <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Sign out
-                    </a>
+                    @* Side-effecting sign-out is a POST guarded by the antiforgery token
+                       (see Program.cs "/auth/signout") rather than a plain GET link. *@
+                    <form method="post" action="/auth/signout">
+                        <AntiforgeryToken />
+                        <button type="submit" class="nav-link" style="background:none;border:none;text-align:left;width:100%;">
+                            <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Sign out
+                        </button>
+                    </form>
                 </div>
             </Authorized>
             <NotAuthorized>

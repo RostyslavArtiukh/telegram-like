@@ -67,7 +67,13 @@
         }
         catch (InvalidOperationException ex)
         {
+            // Identity rejected the request (validation / duplicate email, etc.) — show its message verbatim.
             _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            // Downstream outage: timeout, open circuit breaker, DNS/connection failure, etc.
+            _error = "Registration is temporarily unavailable. Please try again in a moment.";
         }
         finally
         {

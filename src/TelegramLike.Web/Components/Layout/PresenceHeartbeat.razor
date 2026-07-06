@@ -12,6 +12,7 @@
 @code {
     private Timer? _heartbeat;
     private Guid? _userId;
+    private volatile bool _disposed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -19,8 +20,16 @@
         if (_userId is null) return;
 
         await SendHeartbeatAsync();
-        _heartbeat = new Timer(async _ => await InvokeAsync(SendHeartbeatAsync), null,
-            TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20));
+        _heartbeat = new Timer(async _ =>
+        {
+            // The circuit/renderer can be disposed between the timer firing and this
+            // callback running (tab closed, sign-out); guard against dispatching into
+            // a torn-down circuit, which would throw ObjectDisposedException on a
+            // threadpool thread.
+            if (_disposed) return;
+            try { await InvokeAsync(SendHeartbeatAsync); }
+            catch (ObjectDisposedException) { /* circuit gone before the timer fired */ }
+        }, null, TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20));
     }
 
     private async Task SendHeartbeatAsync()
@@ -38,6 +47,7 @@
     // offline. The new island's immediate heartbeat keeps the key alive across navigations.
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         if (_heartbeat is not null) await _heartbeat.DisposeAsync();
     }
 }

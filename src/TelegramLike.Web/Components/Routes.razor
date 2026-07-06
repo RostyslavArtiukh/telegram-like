@@ -5,6 +5,15 @@
                 <RedirectToLogin />
             </NotAuthorized>
         </AuthorizeRouteView>
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1, h2, h3" />
     </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(Layout.MainLayout)">
+            <div class="alert alert-warning m-3">
+                <h3>Page not found</h3>
+                <p>Sorry, there's nothing at this address.</p>
+                <a href="/" class="btn btn-primary btn-sm">Go to Chats</a>
+            </div>
+        </LayoutView>
+    </NotFound>
 </Router>

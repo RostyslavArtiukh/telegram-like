@@ -81,6 +81,7 @@ else
     // quiet "temporarily unavailable" state instead of an eternal "Loading…" spinner.
     private bool _loadFailed;
     private Timer? _poller;
+    private volatile bool _disposed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -89,8 +90,14 @@ else
         _userId = u.Value;
         await ReloadAsync();
 
-        _poller = new Timer(async _ => await InvokeAsync(ReloadAsync), null,
-            TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+        _poller = new Timer(async _ =>
+        {
+            // Guard against firing into a torn-down circuit (tab closed mid-interval),
+            // which would otherwise throw ObjectDisposedException on a threadpool thread.
+            if (_disposed) return;
+            try { await InvokeAsync(ReloadAsync); }
+            catch (ObjectDisposedException) { /* circuit gone before the timer fired */ }
+        }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
     }
 
     private async Task ReloadAsync()
@@ -139,6 +146,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         if (_poller is not null) await _poller.DisposeAsync();
     }
 

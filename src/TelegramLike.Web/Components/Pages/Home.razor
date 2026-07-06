@@ -15,7 +15,14 @@
 
 <div class="row">
     <div class="col-md-7">
-        @if (_chats is null)
+        @if (_loadError is not null)
+        {
+            <div class="alert alert-warning">
+                @_loadError
+                <button class="btn btn-sm btn-outline-secondary ms-2" @onclick="ReloadAsync">Retry</button>
+            </div>
+        }
+        else if (_chats is null)
         {
             <p>Loading…</p>
         }
@@ -133,6 +140,7 @@
     private string? _joinError;
     private string? _directUsername;
     private string? _joinId;
+    private string? _loadError;
     private bool _busy;
     private Guid _userId;
 
@@ -146,7 +154,17 @@
 
     private async Task ReloadAsync()
     {
-        _chats = await ChatsApi.GetMyChatsAsync(_userId);
+        try
+        {
+            _chats = await ChatsApi.GetMyChatsAsync(_userId);
+            _loadError = null;
+        }
+        catch (Exception)
+        {
+            // A transient Chats outage must not throw out of a lifecycle method and
+            // kill the whole circuit — degrade to a retryable error state instead.
+            _loadError = "Chats are temporarily unavailable.";
+        }
     }
 
     private async Task CreateGroupAsync()
