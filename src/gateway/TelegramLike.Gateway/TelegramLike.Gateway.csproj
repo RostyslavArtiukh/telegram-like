@@ -16,4 +16,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="TelegramLike.Gateway.Tests" />
+  </ItemGroup>
+
 </Project>
