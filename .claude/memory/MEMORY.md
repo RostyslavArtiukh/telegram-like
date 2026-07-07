@@ -20,4 +20,5 @@
 - [permissions_preference.md](permissions_preference.md) — Юзер не хоче постійних prompts; широкий allowlist у settings.local.json
 - [nomenclature_step_not_day.md](nomenclature_step_not_day.md) — Маркувати нові ітерації як "Step N" а не "Day N" (продовжувати нумерацію після Day 21)
 - [memory_dual_write.md](memory_dual_write.md) — Дзеркалити memory у `.claude/memory/` репо для синхронізації між машинами
+- [readable_naming_and_mudblazor.md](readable_naming_and_mudblazor.md) — Стиль: людські імена (без техно-жаргону) + UI на MudBlazor всюди по максимуму
 - [user_profile.md](user_profile.md) — Профіль користувача та стиль роботи
