@@ -1,15 +1,16 @@
 # Memory Index — TelegramLike
 
-- [project_status.md](project_status.md) — Поточний стан та план розробки TelegramLike
+- [project_status.md](project_status.md) — ЗАСТАРІЛО (стан ~День 18); архітектура — у CLAUDE.md, прогрес — microservices_migration + quality_audit_done
+- [quality_audit_done.md](quality_audit_done.md) — Наскрізний аудит якості 9 агентами + фікси [TL-71..82] ЗРОБЛЕНО; що виправлено/відкладено, 156→343 тести
 - [chats_persistence.md](chats_persistence.md) — Дві колекції + MongoDB транзакція для агрегату Chat
 - [notifications_fanout.md](notifications_fanout.md) — Cross-context fanout: тепер асинхронно через RabbitMQ (MessageSentIntegrationEvent → consumer → FanoutChatNotificationCommand)
 - [integration_events_rabbitmq.md](integration_events_rabbitmq.md) — RabbitMQ + MassTransit + Transactional Outbox; як додавати нові integration events
 - [microservices_migration.md](microservices_migration.md) — Інкрементальна міграція з monolith у мікросервіси; прогрес і архітектурні рішення
 - [kubernetes_plan.md](kubernetes_plan.md) — Kubernetes-розгортання всього стека ЗРОБЛЕНО й live-verified ([TL-62]); k8s/ + kustomization.yaml у корені
 - [client_sdk_plan.md](client_sdk_plan.md) — SDK [TL-64] + hub [TL-65] + MAUI desktop [TL-66] ЗРОБЛЕНО; далі Android по USB; деплой compose
-- [quality_audit_plan.md](quality_audit_plan.md) — НАСТУПНА СЕСІЯ: повний аудит якості всього репо всіма агентами (баги/безпека/dead code/дублювання) + фікси
+- [quality_audit_plan.md](quality_audit_plan.md) — ВИКОНАНО → див. quality_audit_done (це був pre-execution план)
 - [service_auth_jwt.md](service_auth_jwt.md) — JWT auth між Web BFF і downstream сервісами; рецепт додавання auth до нового сервісу
-- [realtime_blazor_pubsub.md](realtime_blazor_pubsub.md) — Real-time UI через RabbitMQ → in-memory pubsub → Blazor circuit (без окремого SignalR Hub)
+- [realtime_blazor_pubsub.md](realtime_blazor_pubsub.md) — Real-time UI Web BFF через RabbitMQ → in-memory pubsub → Blazor circuit (Web НЕ юзає окремий hub; realtime-сервіс існує окремо для SDK/MAUI)
 - [observability_tracing.md](observability_tracing.md) — OpenTelemetry → Jaeger; як додавати spans і пропагація через HTTP+RabbitMQ
 - [observability_metrics.md](observability_metrics.md) — Prometheus /metrics на всіх 7 apps + Grafana dashboard; Docker publish-layer cache gotcha
 - [testing_setup.md](testing_setup.md) — xUnit + FluentAssertions + NSubstitute + Testcontainers; directConnection fix для Mongo
