@@ -1,91 +1,82 @@
 @page "/register"
 @using TelegramLike.Client.Identity
 @inject IIdentityAuthApi IdentityAuth
-@inject NavigationManager Nav
-@rendermode InteractiveServer
+@inject NavigationManager Navigation
 
 <PageTitle>Register</PageTitle>
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-5">
-        <h2 class="mb-4">Create account</h2>
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudCard Elevation="4">
+        <MudCardContent>
+            <MudText Typo="Typo.h4" GutterBottom="true">Create account</MudText>
 
-        <EditForm Model="Model" OnValidSubmit="HandleSubmit" FormName="register">
-            <DataAnnotationsValidator />
+            <MudTextField @bind-Value="emailAddress" Label="Email" Placeholder="you@example.com"
+                          Variant="Variant.Outlined" InputType="InputType.Email" Class="mb-3" Immediate="true" />
 
-            <div class="mb-3">
-                <label class="form-label">Email</label>
-                <InputText class="form-control" @bind-Value="Model.Email" />
-            </div>
+            <MudTextField @bind-Value="username" Label="Username" Placeholder="unique handle"
+                          Variant="Variant.Outlined" Class="mb-3" Immediate="true" />
 
-            <div class="mb-3">
-                <label class="form-label">Username</label>
-                <InputText class="form-control" @bind-Value="Model.Username" />
-            </div>
+            <MudTextField @bind-Value="displayName" Label="Display name" Placeholder="shown to others"
+                          Variant="Variant.Outlined" Class="mb-3" Immediate="true" />
 
-            <div class="mb-3">
-                <label class="form-label">Display name</label>
-                <InputText class="form-control" @bind-Value="Model.DisplayName" />
-            </div>
+            <MudTextField @bind-Value="password" Label="Password" Placeholder="choose a password"
+                          Variant="Variant.Outlined" InputType="InputType.Password" Class="mb-3" Immediate="true"
+                          OnKeyDown="@(args => SubmitOnEnterAsync(args))" />
 
-            <div class="mb-3">
-                <label class="form-label">Password</label>
-                <InputText type="password" class="form-control" @bind-Value="Model.Password" />
-            </div>
-
-            @if (!string.IsNullOrEmpty(_error))
+            @if (!string.IsNullOrEmpty(errorMessage))
             {
-                <div class="alert alert-danger">@_error</div>
+                <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
             }
 
-            <button type="submit" class="btn btn-primary w-100" disabled="@_loading">
-                @(_loading ? "Creating account..." : "Register")
-            </button>
-        </EditForm>
+            <MudButton OnClick="CreateAccountAsync" Variant="Variant.Filled" Color="Color.Primary"
+                       FullWidth="true" Disabled="isCreatingAccount"
+                       StartIcon="@Icons.Material.Filled.PersonAdd">
+                @(isCreatingAccount ? "Creating account…" : "Register")
+            </MudButton>
 
-        <p class="mt-3 text-center">
-            Already have an account? <a href="/login">Sign in</a>
-        </p>
-    </div>
-</div>
+            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-4">
+                Already have an account? <MudLink Href="/login">Sign in</MudLink>
+            </MudText>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
 
 @code {
-    private RegisterModel Model { get; set; } = new();
-    private string? _error;
-    private bool _loading;
+    private string emailAddress = "";
+    private string username = "";
+    private string displayName = "";
+    private string password = "";
+    private string? errorMessage;
+    private bool isCreatingAccount;
 
-    private async Task HandleSubmit()
+    private async Task SubmitOnEnterAsync(KeyboardEventArgs args)
     {
-        _error = null;
-        _loading = true;
+        if (args.Key is "Enter" or "NumpadEnter") await CreateAccountAsync();
+    }
+
+    private async Task CreateAccountAsync()
+    {
+        errorMessage = null;
+        isCreatingAccount = true;
 
         try
         {
-            await IdentityAuth.RegisterAsync(
-                Model.Email, Model.Username, Model.DisplayName, Model.Password);
-            Nav.NavigateTo("/login?registered=true");
+            await IdentityAuth.RegisterAsync(emailAddress, username, displayName, password);
+            Navigation.NavigateTo("/login?registered=true");
         }
         catch (InvalidOperationException ex)
         {
             // Identity rejected the request (validation / duplicate email, etc.) — show its message verbatim.
-            _error = ex.Message;
+            errorMessage = ex.Message;
         }
         catch (Exception)
         {
             // Downstream outage: timeout, open circuit breaker, DNS/connection failure, etc.
-            _error = "Registration is temporarily unavailable. Please try again in a moment.";
+            errorMessage = "Registration is temporarily unavailable. Please try again in a moment.";
         }
         finally
         {
-            _loading = false;
+            isCreatingAccount = false;
         }
-    }
-
-    private sealed class RegisterModel
-    {
-        public string Email { get; set; } = "";
-        public string Username { get; set; } = "";
-        public string DisplayName { get; set; } = "";
-        public string Password { get; set; } = "";
     }
 }

@@ -6,241 +6,244 @@
 @inject IChatsApi ChatsApi
 @inject IIdentityUsersApi IdentityUsers
 @inject CurrentUserAccessor CurrentUser
-@inject NavigationManager Nav
-@rendermode InteractiveServer
+@inject NavigationManager Navigation
 
 <PageTitle>Chats</PageTitle>
 
-<h1>Chats</h1>
+<MudText Typo="Typo.h4" GutterBottom="true">Chats</MudText>
 
-<div class="row">
-    <div class="col-md-7">
-        @if (_loadError is not null)
+<MudGrid>
+    <MudItem xs="12" md="7">
+        @if (chatListError is not null)
         {
-            <div class="alert alert-warning">
-                @_loadError
-                <button class="btn btn-sm btn-outline-secondary ms-2" @onclick="ReloadAsync">Retry</button>
-            </div>
+            <MudAlert Severity="Severity.Warning" Class="mb-3">
+                @chatListError
+                <MudButton Variant="Variant.Text" Size="Size.Small" Class="ml-2"
+                           OnClick="ReloadChatListAsync">Retry</MudButton>
+            </MudAlert>
         }
-        else if (_chats is null)
+        else if (myChats is null)
         {
-            <p>Loading…</p>
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
         }
-        else if (_chats.Count == 0)
+        else if (myChats.Count == 0)
         {
-            <div class="alert alert-info">You have no chats yet. Create one on the right.</div>
+            <MudAlert Severity="Severity.Info">You have no chats yet. Create one on the right.</MudAlert>
         }
         else
         {
-            <ul class="list-group">
-                @foreach (var chat in _chats)
+            <MudList T="string" Class="pa-0">
+                @foreach (var chat in myChats)
                 {
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <a href="/chat/@chat.ChatId" class="text-decoration-none fw-semibold">
-                                @(chat.Name ?? "(direct)")
-                            </a>
-                            <span class="badge @TypeBadgeClass(chat.Type) ms-2">@chat.Type</span>
-                            <small class="text-muted ms-2">
-                                @chat.ActiveMemberCount member(s) · you are @chat.MyRole
-                            </small>
+                    <MudListItem T="string" Href="@($"/chat/{chat.ChatId}")"
+                                 Icon="@ChatTypeIcon(chat.Type)">
+                        <div class="d-flex align-center justify-space-between" style="width:100%">
+                            <div>
+                                <MudText Typo="Typo.body1">@(chat.Name ?? "(direct)")</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @chat.ActiveMemberCount member(s) · you are @chat.MyRole
+                                </MudText>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Color="@ChatTypeColor(chat.Type)"
+                                     Variant="Variant.Filled">@chat.Type</MudChip>
                         </div>
-                        <code class="text-muted small">@chat.ChatId</code>
-                    </li>
+                    </MudListItem>
+                    <MudDivider />
                 }
-            </ul>
+            </MudList>
         }
-    </div>
+    </MudItem>
 
-    <div class="col-md-5">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Create a group chat</h5>
-                <EditForm Model="@_group" OnValidSubmit="CreateGroupAsync" FormName="create-group">
-                    <DataAnnotationsValidator />
-                    <div class="mb-3">
-                        <label class="form-label">Name</label>
-                        <InputText class="form-control" @bind-Value="_group.Name" />
-                    </div>
-                    @if (!string.IsNullOrEmpty(_groupError))
-                    {
-                        <div class="alert alert-danger">@_groupError</div>
-                    }
-                    <button type="submit" class="btn btn-primary" disabled="@_busy">
-                        @(_busy ? "Creating…" : "Create group")
-                    </button>
-                </EditForm>
-            </div>
-        </div>
+    <MudItem xs="12" md="5">
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" GutterBottom="true">Create a group chat</MudText>
+                <MudTextField @bind-Value="newGroupName" Label="Group name" Variant="Variant.Outlined"
+                              Immediate="true" Class="mb-2" />
+                @if (!string.IsNullOrEmpty(groupCreationError))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">@groupCreationError</MudAlert>
+                }
+                <MudButton OnClick="CreateGroupChatAsync" Variant="Variant.Filled" Color="Color.Primary"
+                           Disabled="isSubmitting" StartIcon="@Icons.Material.Filled.GroupAdd">
+                    @(isSubmitting ? "Creating…" : "Create group")
+                </MudButton>
+            </MudCardContent>
+        </MudCard>
 
-        <div class="card mt-3">
-            <div class="card-body">
-                <h5 class="card-title">Create a broadcast channel</h5>
-                <p class="card-text small text-muted">
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" GutterBottom="true">Create a broadcast channel</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
                     Only owners/admins can post; everyone else joins as a viewer.
-                </p>
-                <EditForm Model="@_broadcast" OnValidSubmit="CreateBroadcastAsync" FormName="create-broadcast">
-                    <DataAnnotationsValidator />
-                    <div class="mb-3">
-                        <label class="form-label">Name</label>
-                        <InputText class="form-control" @bind-Value="_broadcast.Name" />
-                    </div>
-                    @if (!string.IsNullOrEmpty(_broadcastError))
-                    {
-                        <div class="alert alert-danger">@_broadcastError</div>
-                    }
-                    <button type="submit" class="btn btn-primary" disabled="@_busy">
-                        @(_busy ? "Creating…" : "Create channel")
-                    </button>
-                </EditForm>
-            </div>
-        </div>
-
-        <div class="card mt-3">
-            <div class="card-body">
-                <h6 class="card-title">Start a direct chat</h6>
-                <p class="card-text small text-muted">Enter the other person's username:</p>
-                <div class="input-group">
-                    <input class="form-control" placeholder="username" @bind="_directUsername" />
-                    <button class="btn btn-outline-secondary" @onclick="CreateDirectAsync" disabled="@_busy">Start</button>
-                </div>
-                @if (!string.IsNullOrEmpty(_directError))
+                </MudText>
+                <MudTextField @bind-Value="newBroadcastName" Label="Channel name" Variant="Variant.Outlined"
+                              Immediate="true" Class="mb-2" />
+                @if (!string.IsNullOrEmpty(broadcastCreationError))
                 {
-                    <div class="alert alert-danger mt-2 mb-0 small">@_directError</div>
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">@broadcastCreationError</MudAlert>
                 }
-            </div>
-        </div>
+                <MudButton OnClick="CreateBroadcastChannelAsync" Variant="Variant.Filled" Color="Color.Primary"
+                           Disabled="isSubmitting" StartIcon="@Icons.Material.Filled.Campaign">
+                    @(isSubmitting ? "Creating…" : "Create channel")
+                </MudButton>
+            </MudCardContent>
+        </MudCard>
 
-        <div class="card mt-3">
-            <div class="card-body">
-                <h6 class="card-title">Join an existing chat</h6>
-                <p class="card-text small text-muted">
-                    Paste a chat id (someone shared it with you):
-                </p>
-                <div class="input-group">
-                    <input class="form-control" placeholder="00000000-…" @bind="_joinId" />
-                    <button class="btn btn-outline-secondary" @onclick="JoinAsync" disabled="@_busy">Join</button>
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" GutterBottom="true">Start a direct chat</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                    Enter the other person's username.
+                </MudText>
+                <div class="d-flex align-center" style="gap:8px">
+                    <MudTextField @bind-Value="directChatUsername" Placeholder="username"
+                                  Variant="Variant.Outlined" Immediate="true" Class="flex-grow-1" />
+                    <MudButton OnClick="StartDirectChatAsync" Variant="Variant.Outlined" Color="Color.Primary"
+                               Disabled="isSubmitting">Start</MudButton>
                 </div>
-                @if (!string.IsNullOrEmpty(_joinError))
+                @if (!string.IsNullOrEmpty(directChatError))
                 {
-                    <div class="alert alert-danger mt-2 mb-0 small">@_joinError</div>
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@directChatError</MudAlert>
                 }
-            </div>
-        </div>
-    </div>
-</div>
+            </MudCardContent>
+        </MudCard>
+
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" GutterBottom="true">Join an existing chat</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                    Paste a chat id (someone shared it with you).
+                </MudText>
+                <div class="d-flex align-center" style="gap:8px">
+                    <MudTextField @bind-Value="joinChatIdText" Placeholder="00000000-…"
+                                  Variant="Variant.Outlined" Immediate="true" Class="flex-grow-1" />
+                    <MudButton OnClick="JoinChatByIdAsync" Variant="Variant.Outlined" Color="Color.Primary"
+                               Disabled="isSubmitting">Join</MudButton>
+                </div>
+                @if (!string.IsNullOrEmpty(joinChatError))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@joinChatError</MudAlert>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
 
 @code {
-    private IReadOnlyList<ChatSummaryContract>? _chats;
-    private CreateChatModel _group = new();
-    private CreateChatModel _broadcast = new();
-    private string? _groupError;
-    private string? _broadcastError;
-    private string? _directError;
-    private string? _joinError;
-    private string? _directUsername;
-    private string? _joinId;
-    private string? _loadError;
-    private bool _busy;
-    private Guid _userId;
+    private IReadOnlyList<ChatSummaryContract>? myChats;
+    private string newGroupName = "";
+    private string newBroadcastName = "";
+    private string? groupCreationError;
+    private string? broadcastCreationError;
+    private string? directChatError;
+    private string? joinChatError;
+    private string? directChatUsername;
+    private string? joinChatIdText;
+    private string? chatListError;
+    private bool isSubmitting;
+    private Guid currentUserId;
 
     protected override async Task OnInitializedAsync()
     {
         var user = await CurrentUser.GetUserIdAsync();
         if (user is null) return;
-        _userId = user.Value;
-        await ReloadAsync();
+        currentUserId = user.Value;
+        await ReloadChatListAsync();
     }
 
-    private async Task ReloadAsync()
+    private async Task ReloadChatListAsync()
     {
         try
         {
-            _chats = await ChatsApi.GetMyChatsAsync(_userId);
-            _loadError = null;
+            myChats = await ChatsApi.GetMyChatsAsync(currentUserId);
+            chatListError = null;
         }
         catch (Exception)
         {
             // A transient Chats outage must not throw out of a lifecycle method and
             // kill the whole circuit — degrade to a retryable error state instead.
-            _loadError = "Chats are temporarily unavailable.";
+            chatListError = "Chats are temporarily unavailable.";
         }
     }
 
-    private async Task CreateGroupAsync()
+    private async Task CreateGroupChatAsync()
     {
-        _groupError = null;
-        _busy = true;
+        groupCreationError = null;
+        if (string.IsNullOrWhiteSpace(newGroupName)) { groupCreationError = "Enter a group name."; return; }
+        isSubmitting = true;
         try
         {
-            var id = await ChatsApi.CreateGroupChatAsync(_userId, _group.Name);
-            _group = new CreateChatModel();
-            Nav.NavigateTo($"/chat/{id}");
+            var createdChatId = await ChatsApi.CreateGroupChatAsync(currentUserId, newGroupName.Trim());
+            newGroupName = "";
+            Navigation.NavigateTo($"/chat/{createdChatId}");
         }
-        catch (Exception ex) { _groupError = ex.Message; }
-        finally { _busy = false; }
+        catch (Exception ex) { groupCreationError = ex.Message; }
+        finally { isSubmitting = false; }
     }
 
-    private async Task CreateBroadcastAsync()
+    private async Task CreateBroadcastChannelAsync()
     {
-        _broadcastError = null;
-        _busy = true;
+        broadcastCreationError = null;
+        if (string.IsNullOrWhiteSpace(newBroadcastName)) { broadcastCreationError = "Enter a channel name."; return; }
+        isSubmitting = true;
         try
         {
-            var id = await ChatsApi.CreateBroadcastChannelAsync(_userId, _broadcast.Name);
-            _broadcast = new CreateChatModel();
-            Nav.NavigateTo($"/chat/{id}");
+            var createdChatId = await ChatsApi.CreateBroadcastChannelAsync(currentUserId, newBroadcastName.Trim());
+            newBroadcastName = "";
+            Navigation.NavigateTo($"/chat/{createdChatId}");
         }
-        catch (Exception ex) { _broadcastError = ex.Message; }
-        finally { _busy = false; }
+        catch (Exception ex) { broadcastCreationError = ex.Message; }
+        finally { isSubmitting = false; }
     }
 
-    private async Task CreateDirectAsync()
+    private async Task StartDirectChatAsync()
     {
-        _directError = null;
-        if (string.IsNullOrWhiteSpace(_directUsername)) { _directError = "Enter a username."; return; }
+        directChatError = null;
+        if (string.IsNullOrWhiteSpace(directChatUsername)) { directChatError = "Enter a username."; return; }
 
-        _busy = true;
+        isSubmitting = true;
         try
         {
-            var peerId = await IdentityUsers.GetUserIdByUsernameAsync(_directUsername.Trim());
-            if (peerId is null) { _directError = "User not found."; return; }
-            if (peerId == _userId) { _directError = "You can't start a direct chat with yourself."; return; }
+            var otherUserId = await IdentityUsers.GetUserIdByUsernameAsync(directChatUsername.Trim());
+            if (otherUserId is null) { directChatError = "User not found."; return; }
+            if (otherUserId == currentUserId) { directChatError = "You can't start a direct chat with yourself."; return; }
 
-            var id = await ChatsApi.CreateDirectChatAsync(_userId, peerId.Value);
-            _directUsername = null;
-            Nav.NavigateTo($"/chat/{id}");
+            var createdChatId = await ChatsApi.CreateDirectChatAsync(currentUserId, otherUserId.Value);
+            directChatUsername = null;
+            Navigation.NavigateTo($"/chat/{createdChatId}");
         }
-        catch (Exception ex) { _directError = ex.Message; }
-        finally { _busy = false; }
+        catch (Exception ex) { directChatError = ex.Message; }
+        finally { isSubmitting = false; }
     }
 
-    private async Task JoinAsync()
+    private async Task JoinChatByIdAsync()
     {
-        _joinError = null;
-        if (!Guid.TryParse(_joinId, out var chatId)) { _joinError = "Invalid id"; return; }
-        _busy = true;
+        joinChatError = null;
+        if (!Guid.TryParse(joinChatIdText, out var chatId)) { joinChatError = "Invalid id"; return; }
+        isSubmitting = true;
         try
         {
-            await ChatsApi.JoinChatAsync(_userId, chatId);
-            Nav.NavigateTo($"/chat/{chatId}");
+            await ChatsApi.JoinChatAsync(currentUserId, chatId);
+            Navigation.NavigateTo($"/chat/{chatId}");
         }
-        catch (Exception ex) { _joinError = ex.Message; }
-        finally { _busy = false; }
+        catch (Exception ex) { joinChatError = ex.Message; }
+        finally { isSubmitting = false; }
     }
 
-    private static string TypeBadgeClass(ChatTypeContract type) => type switch
+    private static Color ChatTypeColor(ChatTypeContract chatType) => chatType switch
     {
-        ChatTypeContract.Direct => "bg-secondary",
-        ChatTypeContract.Group => "bg-primary",
-        ChatTypeContract.Broadcast => "bg-info text-dark",
-        _ => "bg-secondary"
+        ChatTypeContract.Direct => Color.Default,
+        ChatTypeContract.Group => Color.Primary,
+        ChatTypeContract.Broadcast => Color.Info,
+        _ => Color.Default
     };
 
-    private sealed class CreateChatModel
+    private static string ChatTypeIcon(ChatTypeContract chatType) => chatType switch
     {
-        [System.ComponentModel.DataAnnotations.Required]
-        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]
-        public string Name { get; set; } = "";
-    }
+        ChatTypeContract.Direct => Icons.Material.Filled.Person,
+        ChatTypeContract.Group => Icons.Material.Filled.Group,
+        ChatTypeContract.Broadcast => Icons.Material.Filled.Campaign,
+        _ => Icons.Material.Filled.Chat
+    };
 }

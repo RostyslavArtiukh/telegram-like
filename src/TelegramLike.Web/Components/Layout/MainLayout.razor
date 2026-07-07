@@ -1,34 +1,58 @@
 @inherits LayoutComponentBase
-@inject NavigationManager Nav
+@inject NavigationManager Navigation
 @implements IDisposable
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+@* MudBlazor's root providers. They render once here and back every dialog,
+   snackbar and popover in the app, so they must live above the router content. *@
+<MudThemeProvider @bind-IsDarkMode="isDarkMode" Theme="applicationTheme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
-    <main>
-        <article class="content px-4">
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                       OnClick="ToggleNavigationDrawer" aria-label="Toggle navigation menu" />
+        <MudText Typo="Typo.h6">TelegramLike</MudText>
+        <MudSpacer />
+        <MudTooltip Text="@(isDarkMode ? "Switch to light theme" : "Switch to dark theme")">
+            <MudIconButton Icon="@(isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                           Color="Color.Inherit" OnClick="ToggleDarkMode"
+                           aria-label="Toggle light and dark theme" />
+        </MudTooltip>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="isNavigationDrawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always"
+               Variant="@DrawerVariant.Responsive">
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
             @* Top-level safety net: a page-level lifecycle exception (e.g. a transient
                downstream outage that a page forgot to catch) trips this instead of
                tearing down the whole Blazor Server circuit for the user. *@
-            <ErrorBoundary @ref="_errorBoundary">
+            <ErrorBoundary @ref="pageErrorBoundary">
                 <ChildContent>
                     @Body
                 </ChildContent>
                 <ErrorContent>
-                    <div class="alert alert-danger m-3">
-                        <p class="mb-2">Something went wrong loading this page.</p>
-                        <a href="/" class="btn btn-sm btn-outline-danger">Go to Chats</a>
-                    </div>
+                    <MudAlert Severity="Severity.Error" Class="my-4">
+                        <MudText>Something went wrong loading this page.</MudText>
+                        <MudButton Href="/" Variant="Variant.Text" Color="Color.Error" Class="mt-2">
+                            Go to Chats
+                        </MudButton>
+                    </MudAlert>
                 </ErrorContent>
             </ErrorBoundary>
-        </article>
-    </main>
-</div>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
 
 <PresenceHeartbeat />
 
+@* Blazor Server's built-in reconnection/error banner. blazor.web.js toggles it
+   when the circuit drops; kept out of the Mud layout tree on purpose. *@
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
@@ -36,17 +60,38 @@
 </div>
 
 @code {
-    private ErrorBoundary? _errorBoundary;
+    private bool isNavigationDrawerOpen = true;
+    private bool isDarkMode;
+    private ErrorBoundary? pageErrorBoundary;
+
+    // A calm blue-forward palette so the app reads as a messenger, not the default demo.
+    private readonly MudTheme applicationTheme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#2b7de9",
+            AppbarBackground = "#2b7de9",
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#5c9dff",
+        },
+    };
 
     protected override void OnInitialized()
     {
         // Without this, once the boundary trips it stays tripped for every
         // subsequent in-app navigation (enhanced nav reuses the same layout instance).
-        Nav.LocationChanged += OnLocationChanged;
+        Navigation.LocationChanged += RecoverErrorBoundaryOnNavigation;
     }
 
-    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
-        => _errorBoundary?.Recover();
+    private void ToggleNavigationDrawer() => isNavigationDrawerOpen = !isNavigationDrawerOpen;
 
-    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+    private void ToggleDarkMode() => isDarkMode = !isDarkMode;
+
+    private void RecoverErrorBoundaryOnNavigation(
+        object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => pageErrorBoundary?.Recover();
+
+    public void Dispose() => Navigation.LocationChanged -= RecoverErrorBoundaryOnNavigation;
 }

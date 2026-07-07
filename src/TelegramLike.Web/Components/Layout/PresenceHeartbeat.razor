@@ -1,32 +1,31 @@
-@rendermode InteractiveServer
 @using TelegramLike.Web.Services
 @using TelegramLike.Client.Presence
 @inject IPresenceApi PresenceApi
 @inject CurrentUserAccessor CurrentUser
 @implements IAsyncDisposable
 
-@* Headless interactive island. Kept separate from MainLayout so the heartbeat
-   runs on a persistent circuit (the layout itself is statically server-rendered),
-   while the rest of the layout stays static SSR. *@
+@* Headless interactive island: renders nothing, just keeps the presence key alive
+   while the user has a live circuit. It lives in MainLayout (which now runs
+   InteractiveServer), so the heartbeat timer survives across page navigations. *@
 
 @code {
-    private Timer? _heartbeat;
-    private Guid? _userId;
-    private volatile bool _disposed;
+    private Timer? heartbeatTimer;
+    private Guid? signedInUserId;
+    private volatile bool isDisposed;
 
     protected override async Task OnInitializedAsync()
     {
-        _userId = await CurrentUser.GetUserIdAsync();
-        if (_userId is null) return;
+        signedInUserId = await CurrentUser.GetUserIdAsync();
+        if (signedInUserId is null) return;
 
         await SendHeartbeatAsync();
-        _heartbeat = new Timer(async _ =>
+        heartbeatTimer = new Timer(async _ =>
         {
             // The circuit/renderer can be disposed between the timer firing and this
             // callback running (tab closed, sign-out); guard against dispatching into
             // a torn-down circuit, which would throw ObjectDisposedException on a
             // threadpool thread.
-            if (_disposed) return;
+            if (isDisposed) return;
             try { await InvokeAsync(SendHeartbeatAsync); }
             catch (ObjectDisposedException) { /* circuit gone before the timer fired */ }
         }, null, TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20));
@@ -34,8 +33,8 @@
 
     private async Task SendHeartbeatAsync()
     {
-        if (_userId is null) return;
-        try { await PresenceApi.HeartbeatAsync(_userId.Value); }
+        if (signedInUserId is null) return;
+        try { await PresenceApi.HeartbeatAsync(signedInUserId.Value); }
         catch { /* presence is best-effort */ }
     }
 
@@ -47,7 +46,7 @@
     // offline. The new island's immediate heartbeat keeps the key alive across navigations.
     public async ValueTask DisposeAsync()
     {
-        _disposed = true;
-        if (_heartbeat is not null) await _heartbeat.DisposeAsync();
+        isDisposed = true;
+        if (heartbeatTimer is not null) await heartbeatTimer.DisposeAsync();
     }
 }

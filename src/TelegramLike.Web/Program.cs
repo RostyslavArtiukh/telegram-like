@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using MassTransit;
+using MudBlazor.Services;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
@@ -64,6 +65,11 @@ builder.Services.AddOpenTelemetry()
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options => options.DetailedErrors = builder.Environment.IsDevelopment());
+
+// MudBlazor: dialogs, snackbars, popovers, theming. The whole UI runs
+// InteractiveServer (set on <Routes> in App.razor) so these services have a live
+// circuit to talk to.
+builder.Services.AddMudServices();
 
 builder.Services.AddAuthentication("Cookies")
     .AddCookie("Cookies", options =>

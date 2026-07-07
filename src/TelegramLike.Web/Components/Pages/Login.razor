@@ -1,119 +1,121 @@
 @page "/login"
 @using TelegramLike.Client.Identity
 @inject IIdentityAuthApi IdentityAuth
-@inject NavigationManager Nav
-@inject IJSRuntime JS
-@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject IJSRuntime JavaScript
 
 <PageTitle>Sign in</PageTitle>
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-5">
-        <h2 class="mb-4">Sign in</h2>
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudCard Elevation="4">
+        <MudCardContent>
+            <MudText Typo="Typo.h4" GutterBottom="true">Sign in</MudText>
 
-        @if (_justRegistered)
-        {
-            <div class="alert alert-success">Account created! Please sign in.</div>
-        }
-        @if (!string.IsNullOrEmpty(_urlError))
-        {
-            <div class="alert alert-danger">Invalid session. Please try again.</div>
-        }
-
-        <EditForm Model="Model" OnValidSubmit="HandleSubmit" FormName="login">
-            <DataAnnotationsValidator />
-
-            <div class="mb-3">
-                <label class="form-label">Email</label>
-                <InputText class="form-control" @bind-Value="Model.Email" />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Password</label>
-                <InputText type="password" class="form-control" @bind-Value="Model.Password" />
-            </div>
-
-            @if (!string.IsNullOrEmpty(_error))
+            @if (showAccountCreatedNotice)
             {
-                <div class="alert alert-danger">@_error</div>
+                <MudAlert Severity="Severity.Success" Class="mb-4">
+                    Account created! Please sign in.
+                </MudAlert>
+            }
+            @if (hadInvalidSession)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">
+                    Invalid session. Please try again.
+                </MudAlert>
             }
 
-            <button type="submit" class="btn btn-primary w-100" disabled="@_loading">
-                @(_loading ? "Signing in..." : "Sign in")
-            </button>
-        </EditForm>
+            <MudTextField @bind-Value="emailAddress" Label="Email" Placeholder="you@example.com"
+                          Variant="Variant.Outlined" InputType="InputType.Email" Class="mb-3"
+                          Immediate="true" />
 
-        <p class="mt-3 text-center">
-            No account? <a href="/register">Register</a>
-        </p>
-    </div>
-</div>
+            <MudTextField @bind-Value="password" Label="Password" Placeholder="Your password"
+                          Variant="Variant.Outlined" InputType="InputType.Password" Class="mb-3"
+                          Immediate="true"
+                          OnKeyDown="@(args => SubmitOnEnterAsync(args))" />
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+            }
+
+            <MudButton OnClick="SignInAsync" Variant="Variant.Filled" Color="Color.Primary"
+                       FullWidth="true" Disabled="isSigningIn"
+                       StartIcon="@Icons.Material.Filled.Login">
+                @(isSigningIn ? "Signing in…" : "Sign in")
+            </MudButton>
+
+            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-4">
+                No account? <MudLink Href="/register">Register</MudLink>
+            </MudText>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
 
 @* Hidden auto-submitting form: hands the session token to /auth/signin as a POST
    body (see Program.cs) so it never appears in the URL / browser history / Referer. *@
-<form @ref="_signinFormRef" method="post" action="/auth/signin" style="display:none" aria-hidden="true">
-    <input type="hidden" name="token" value="@_pendingToken" />
+<form @ref="sessionTokenFormElement" method="post" action="/auth/signin" style="display:none" aria-hidden="true">
+    <input type="hidden" name="token" value="@pendingSessionToken" />
 </form>
 
 @code {
-    [SupplyParameterFromQuery] private string? Registered { get; set; }
-    [SupplyParameterFromQuery] private string? Error { get; set; }
+    [SupplyParameterFromQuery(Name = "registered")] private string? RegisteredFlag { get; set; }
+    [SupplyParameterFromQuery(Name = "error")] private string? ErrorFlag { get; set; }
 
-    private LoginModel Model { get; set; } = new();
-    private string? _error;
-    private string? _urlError;
-    private bool _loading;
-    private bool _justRegistered;
-    private string? _pendingToken;
-    private bool _signinFormSubmitted;
-    private ElementReference _signinFormRef;
+    private string emailAddress = "";
+    private string password = "";
+    private string? errorMessage;
+    private bool hadInvalidSession;
+    private bool isSigningIn;
+    private bool showAccountCreatedNotice;
+    private string? pendingSessionToken;
+    private bool sessionTokenFormSubmitted;
+    private ElementReference sessionTokenFormElement;
 
     protected override void OnParametersSet()
     {
-        _justRegistered = Registered == "true";
-        _urlError = Error;
+        showAccountCreatedNotice = RegisteredFlag == "true";
+        hadInvalidSession = ErrorFlag is not null;
     }
 
-    private async Task HandleSubmit()
+    private async Task SubmitOnEnterAsync(KeyboardEventArgs args)
     {
-        _error = null;
-        _loading = true;
+        if (args.Key is "Enter" or "NumpadEnter") await SignInAsync();
+    }
+
+    private async Task SignInAsync()
+    {
+        errorMessage = null;
+        isSigningIn = true;
 
         try
         {
-            var token = await IdentityAuth.LoginAsync(Model.Email, Model.Password);
+            var sessionToken = await IdentityAuth.LoginAsync(emailAddress, password);
             // Hand off to the hidden form (submitted from OnAfterRenderAsync once the
             // token has actually reached the DOM) rather than navigating with the
             // token in the query string.
-            _pendingToken = token;
-            _signinFormSubmitted = false;
+            pendingSessionToken = sessionToken;
+            sessionTokenFormSubmitted = false;
         }
         catch (InvalidOperationException ex)
         {
             // Identity rejected the credentials / request — show its message verbatim.
-            _error = ex.Message;
-            _loading = false;
+            errorMessage = ex.Message;
+            isSigningIn = false;
         }
         catch (Exception)
         {
             // Downstream outage: timeout, open circuit breaker, DNS/connection failure, etc.
-            _error = "Sign-in is temporarily unavailable. Please try again in a moment.";
-            _loading = false;
+            errorMessage = "Sign-in is temporarily unavailable. Please try again in a moment.";
+            isSigningIn = false;
         }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_pendingToken is not null && !_signinFormSubmitted)
+        if (pendingSessionToken is not null && !sessionTokenFormSubmitted)
         {
-            _signinFormSubmitted = true;
-            await JS.InvokeVoidAsync("telegramLike.submitForm", _signinFormRef);
+            sessionTokenFormSubmitted = true;
+            await JavaScript.InvokeVoidAsync("telegramLike.submitForm", sessionTokenFormElement);
         }
-    }
-
-    private sealed class LoginModel
-    {
-        public string Email { get; set; } = "";
-        public string Password { get; set; } = "";
     }
 }

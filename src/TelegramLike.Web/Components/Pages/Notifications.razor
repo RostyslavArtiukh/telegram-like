@@ -5,157 +5,162 @@
 @using TelegramLike.Client.Notifications
 @inject INotificationsApi NotificationsApi
 @inject CurrentUserAccessor CurrentUser
-@inject NavigationManager Nav
-@rendermode InteractiveServer
+@inject NavigationManager Navigation
 @implements IAsyncDisposable
 
 <PageTitle>Notifications</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="mb-0">Notifications</h1>
-    <div>
-        <div class="form-check form-switch d-inline-block me-3">
-            <input class="form-check-input" type="checkbox" id="unreadOnly"
-                   checked="@_unreadOnly" @onchange="ToggleUnreadAsync" />
-            <label class="form-check-label" for="unreadOnly">Unread only</label>
-        </div>
-        <button class="btn btn-sm btn-outline-secondary" @onclick="MarkAllAsync" disabled="@_busy">
+<div class="d-flex align-center justify-space-between mb-4">
+    <MudText Typo="Typo.h4">Notifications</MudText>
+    <div class="d-flex align-center" style="gap:12px">
+        <MudSwitch T="bool" Value="showUnreadOnly" ValueChanged="OnUnreadOnlyToggledAsync"
+                   Color="Color.Primary" Label="Unread only" />
+        <MudButton OnClick="MarkAllNotificationsReadAsync" Variant="Variant.Outlined" Size="Size.Small"
+                   Disabled="isSubmitting" StartIcon="@Icons.Material.Filled.DoneAll">
             Mark all as read
-        </button>
+        </MudButton>
     </div>
 </div>
 
-@if (_feed is null && _loadFailed)
+@if (notificationFeed is null && loadFailed)
 {
-    <div class="alert alert-warning">
-        Notifications are temporarily unavailable. Retrying…
-    </div>
+    <MudAlert Severity="Severity.Warning">Notifications are temporarily unavailable. Retrying…</MudAlert>
 }
-else if (_feed is null)
+else if (notificationFeed is null)
 {
-    <p>Loading…</p>
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
 }
-else if (_feed.Items.Count == 0)
+else if (notificationFeed.Items.Count == 0)
 {
-    <div class="alert alert-info">Nothing to show.</div>
+    <MudAlert Severity="Severity.Info">Nothing to show.</MudAlert>
 }
 else
 {
-    @if (_loadFailed)
+    @if (loadFailed)
     {
-        <div class="alert alert-warning py-1 small mb-2">
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
             Showing the last update — the notifications service is temporarily unavailable.
-        </div>
+        </MudAlert>
     }
-    <ul class="list-group">
-        @foreach (var n in _feed.Items)
+    <MudList T="string" Class="pa-0">
+        @foreach (var notification in notificationFeed.Items)
         {
-            <li class="list-group-item d-flex justify-content-between align-items-start
-                       @(n.Status != NotificationStatusContract.Read ? "fw-semibold" : "text-muted")">
-                <div>
-                    <div>@Describe(n)</div>
-                    <small class="text-muted">@n.CreatedAt.ToLocalTime().ToString("g") · @n.Status</small>
+            var isUnread = notification.Status != NotificationStatusContract.Read;
+            <MudListItem T="string">
+                <div class="d-flex align-center justify-space-between" style="width:100%">
+                    <div>
+                        <MudText Typo="Typo.body1"
+                                 Style="@(isUnread ? "font-weight:600" : "opacity:.7")">
+                            @DescribeNotification(notification)
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @notification.CreatedAt.ToLocalTime().ToString("g") · @notification.Status
+                        </MudText>
+                    </div>
+                    <div class="d-flex align-center" style="gap:8px">
+                        <MudButton Href="@($"/chat/{notification.ChatId}")" Variant="Variant.Outlined"
+                                   Size="Size.Small" Color="Color.Primary">Open chat</MudButton>
+                        @if (isUnread)
+                        {
+                            <MudButton OnClick="() => MarkNotificationReadAsync(notification.Id)"
+                                       Variant="Variant.Text" Size="Size.Small" Disabled="isSubmitting">
+                                Mark read
+                            </MudButton>
+                        }
+                    </div>
                 </div>
-                <div class="btn-group btn-group-sm">
-                    <a class="btn btn-outline-primary" href="/chat/@n.ChatId">Open chat</a>
-                    @if (n.Status != NotificationStatusContract.Read)
-                    {
-                        <button class="btn btn-outline-secondary" @onclick="() => MarkOneAsync(n.Id)" disabled="@_busy">
-                            Mark read
-                        </button>
-                    }
-                </div>
-            </li>
+            </MudListItem>
+            <MudDivider />
         }
-    </ul>
+    </MudList>
 }
 
 @code {
-    private Guid _userId;
-    private NotificationFeedApiDto? _feed;
+    private Guid currentUserId;
+    private NotificationFeedApiDto? notificationFeed;
     // Default to unread-only so notifications cleared by chat-view (via MarkChatAsRead)
     // disappear from the list automatically. User can toggle to see the full audit log.
-    private bool _unreadOnly = true;
-    private bool _busy;
+    private bool showUnreadOnly = true;
+    private bool isSubmitting;
     // Set when a load fails (e.g. Notifications service down / circuit open). Drives a
     // quiet "temporarily unavailable" state instead of an eternal "Loading…" spinner.
-    private bool _loadFailed;
-    private Timer? _poller;
-    private volatile bool _disposed;
+    private bool loadFailed;
+    private Timer? refreshTimer;
+    private volatile bool isDisposed;
 
     protected override async Task OnInitializedAsync()
     {
-        var u = await CurrentUser.GetUserIdAsync();
-        if (u is null) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        _userId = u.Value;
-        await ReloadAsync();
+        var user = await CurrentUser.GetUserIdAsync();
+        if (user is null) { Navigation.NavigateTo("/login", forceLoad: true); return; }
+        currentUserId = user.Value;
+        await ReloadFeedAsync();
 
-        _poller = new Timer(async _ =>
+        refreshTimer = new Timer(async _ =>
         {
             // Guard against firing into a torn-down circuit (tab closed mid-interval),
             // which would otherwise throw ObjectDisposedException on a threadpool thread.
-            if (_disposed) return;
-            try { await InvokeAsync(ReloadAsync); }
+            if (isDisposed) return;
+            try { await InvokeAsync(ReloadFeedAsync); }
             catch (ObjectDisposedException) { /* circuit gone before the timer fired */ }
         }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
     }
 
-    private async Task ReloadAsync()
+    private async Task ReloadFeedAsync()
     {
         try
         {
-            _feed = await NotificationsApi.GetFeedAsync(_userId, unreadOnly: _unreadOnly);
-            _loadFailed = false;
+            notificationFeed = await NotificationsApi.GetFeedAsync(currentUserId, unreadOnly: showUnreadOnly);
+            loadFailed = false;
             StateHasChanged();
         }
         catch
         {
             // Keep the last good feed (if any); surface a quiet unavailable state.
-            _loadFailed = true;
+            loadFailed = true;
             StateHasChanged();
         }
     }
 
-    private async Task ToggleUnreadAsync(ChangeEventArgs e)
+    private async Task OnUnreadOnlyToggledAsync(bool unreadOnly)
     {
-        _unreadOnly = e.Value is bool b && b;
-        await ReloadAsync();
+        showUnreadOnly = unreadOnly;
+        await ReloadFeedAsync();
     }
 
-    private async Task MarkOneAsync(Guid id)
+    private async Task MarkNotificationReadAsync(Guid notificationId)
     {
-        _busy = true;
+        isSubmitting = true;
         try
         {
-            await NotificationsApi.MarkAsReadAsync(_userId, id);
-            await ReloadAsync();
+            await NotificationsApi.MarkAsReadAsync(currentUserId, notificationId);
+            await ReloadFeedAsync();
         }
-        finally { _busy = false; }
+        finally { isSubmitting = false; }
     }
 
-    private async Task MarkAllAsync()
+    private async Task MarkAllNotificationsReadAsync()
     {
-        _busy = true;
+        isSubmitting = true;
         try
         {
-            await NotificationsApi.MarkAllAsReadAsync(_userId);
-            await ReloadAsync();
+            await NotificationsApi.MarkAllAsReadAsync(currentUserId);
+            await ReloadFeedAsync();
         }
-        finally { _busy = false; }
+        finally { isSubmitting = false; }
     }
 
     public async ValueTask DisposeAsync()
     {
-        _disposed = true;
-        if (_poller is not null) await _poller.DisposeAsync();
+        isDisposed = true;
+        if (refreshTimer is not null) await refreshTimer.DisposeAsync();
     }
 
-    private static string Describe(NotificationApiDto n) => n.Type switch
+    private static string DescribeNotification(NotificationApiDto notification) => notification.Type switch
     {
         NotificationTypeContract.NewMessage => "New message in a chat",
         NotificationTypeContract.MentionInGroup => "You were mentioned",
         NotificationTypeContract.MemberJoined => "Someone joined the chat",
         NotificationTypeContract.MemberKicked => "A member was removed",
-        _ => n.Type.ToString()
+        _ => notification.Type.ToString()
     };
 }

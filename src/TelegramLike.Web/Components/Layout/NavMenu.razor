@@ -4,90 +4,81 @@
 @inject INotificationsApi NotificationsApi
 @inject IUnreadCountPubSub UnreadCountPubSub
 @inject CurrentUserAccessor CurrentUser
-@rendermode InteractiveServer
 @implements IDisposable
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">TelegramLike</a>
-    </div>
-</div>
+<MudNavMenu>
+    <AuthorizeView Context="authenticationState">
+        <Authorized>
+            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Chat">
+                Chats
+            </MudNavLink>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+            <MudNavLink Href="/notifications" Icon="@Icons.Material.Filled.Notifications">
+                <div class="d-flex align-center justify-space-between" style="width:100%">
+                    <span>Notifications</span>
+                    @if (unreadNotificationCount > 0)
+                    {
+                        <MudBadge Content="unreadNotificationCount" Color="Color.Error" Overlap="false" />
+                    }
+                </div>
+            </MudNavLink>
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <AuthorizeView Context="auth">
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
-                        <span class="bi bi-chat-dots-fill-nav-menu" aria-hidden="true"></span> Chats
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/notifications">
-                        <span class="bi bi-bell-fill-nav-menu" aria-hidden="true"></span> Notifications
-                        @if (_unread > 0)
-                        {
-                            <span class="badge bg-danger ms-2">@_unread</span>
-                        }
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3 mt-3 text-white-50">
-                    <small>Signed in as @auth.User.Identity?.Name</small>
-                </div>
-                <div class="nav-item px-3">
-                    @* Side-effecting sign-out is a POST guarded by the antiforgery token
-                       (see Program.cs "/auth/signout") rather than a plain GET link. *@
-                    <form method="post" action="/auth/signout">
-                        <AntiforgeryToken />
-                        <button type="submit" class="nav-link" style="background:none;border:none;text-align:left;width:100%;">
-                            <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Sign out
-                        </button>
-                    </form>
-                </div>
-            </Authorized>
-            <NotAuthorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/login">Sign in</NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/register">Register</NavLink>
-                </div>
-            </NotAuthorized>
-        </AuthorizeView>
-    </nav>
-</div>
+            <MudDivider Class="my-2" />
+
+            <div class="px-4 py-2">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Signed in as @authenticationState.User.Identity?.Name
+                </MudText>
+            </div>
+
+            @* Side-effecting sign-out is a POST guarded by the antiforgery token
+               (see Program.cs "/auth/signout"). Keeping it a real <form> submit means
+               the browser navigates natively — no interactive circuit dependency. *@
+            <form method="post" action="/auth/signout" class="px-2">
+                <AntiforgeryToken />
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Text" Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.Logout" FullWidth="true"
+                           Class="justify-start">
+                    Sign out
+                </MudButton>
+            </form>
+        </Authorized>
+        <NotAuthorized>
+            <MudNavLink Href="/login" Icon="@Icons.Material.Filled.Login">Sign in</MudNavLink>
+            <MudNavLink Href="/register" Icon="@Icons.Material.Filled.PersonAdd">Register</MudNavLink>
+        </NotAuthorized>
+    </AuthorizeView>
+</MudNavMenu>
 
 @code {
-    private Guid _userId;
-    private long _unread;
-    private IDisposable? _subscription;
+    private Guid currentUserId;
+    private long unreadNotificationCount;
+    private IDisposable? unreadCountSubscription;
 
     protected override async Task OnInitializedAsync()
     {
         var userId = await CurrentUser.GetUserIdAsync();
         if (userId is null) return;
 
-        _userId = userId.Value;
-        await RefreshUnreadAsync();
-        _subscription = UnreadCountPubSub.Subscribe(_userId, OnUnreadChangedAsync);
+        currentUserId = userId.Value;
+        await RefreshUnreadCountAsync();
+        unreadCountSubscription = UnreadCountPubSub.Subscribe(currentUserId, OnUnreadCountChangedAsync);
     }
 
-    private async Task OnUnreadChangedAsync()
+    private async Task OnUnreadCountChangedAsync()
     {
-        await RefreshUnreadAsync();
+        await RefreshUnreadCountAsync();
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task RefreshUnreadAsync()
+    private async Task RefreshUnreadCountAsync()
     {
         try
         {
-            var count = await NotificationsApi.GetUnreadCountAsync(_userId);
-            if (count != _unread)
+            var latestCount = await NotificationsApi.GetUnreadCountAsync(currentUserId);
+            if (latestCount != unreadNotificationCount)
             {
-                _unread = count;
+                unreadNotificationCount = latestCount;
                 StateHasChanged();
             }
         }
@@ -97,5 +88,5 @@
         }
     }
 
-    public void Dispose() => _subscription?.Dispose();
+    public void Dispose() => unreadCountSubscription?.Dispose();
 }

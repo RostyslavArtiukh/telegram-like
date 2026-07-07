@@ -5,15 +5,17 @@
                 <RedirectToLogin />
             </NotAuthorized>
         </AuthorizeRouteView>
-        <FocusOnNavigate RouteData="routeData" Selector="h1, h2, h3" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1, h2, h3, h4" />
     </Found>
     <NotFound>
         <LayoutView Layout="typeof(Layout.MainLayout)">
-            <div class="alert alert-warning m-3">
-                <h3>Page not found</h3>
-                <p>Sorry, there's nothing at this address.</p>
-                <a href="/" class="btn btn-primary btn-sm">Go to Chats</a>
-            </div>
+            <MudAlert Severity="Severity.Warning" Class="my-4">
+                <MudText Typo="Typo.h6">Page not found</MudText>
+                <MudText Typo="Typo.body2">Sorry, there's nothing at this address.</MudText>
+                <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="mt-2">
+                    Go to Chats
+                </MudButton>
+            </MudAlert>
         </LayoutView>
     </NotFound>
 </Router>
