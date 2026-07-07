@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using MudBlazor.Services;
 using TelegramLike.App.Services;
 using TelegramLike.Client;
 
@@ -17,6 +18,9 @@ public static class MauiProgram
 			});
 
 		builder.Services.AddMauiBlazorWebView();
+
+		// MudBlazor: theme, dialogs, snackbars, popovers for the Blazor Hybrid UI.
+		builder.Services.AddMudServices();
 
 		// Everything the app needs to talk to the backend comes from the SDK:
 		// typed HTTP clients through the gateway, TelegramLikeSession (login →

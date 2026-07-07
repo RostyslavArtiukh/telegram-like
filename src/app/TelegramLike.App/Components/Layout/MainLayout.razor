@@ -1,23 +1,61 @@
 @inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<MudThemeProvider @bind-IsDarkMode="isDarkMode" Theme="applicationTheme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
-    <main>
-        <article class="content px-4 pt-3">
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                       OnClick="ToggleNavigationDrawer" aria-label="Toggle navigation menu" />
+        <MudText Typo="Typo.h6">TelegramLike</MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@(isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                       Color="Color.Inherit" OnClick="ToggleDarkMode"
+                       aria-label="Toggle light and dark theme" />
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="isNavigationDrawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always"
+               Variant="@DrawerVariant.Responsive">
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
             <ErrorBoundary>
                 <ChildContent>
                     @Body
                 </ChildContent>
-                <ErrorContent Context="ex">
-                    <div class="alert alert-danger m-3">
-                        <h1 class="h5">Something went wrong</h1>
-                        <p class="mb-0">@ex.Message</p>
-                    </div>
+                <ErrorContent Context="thrownException">
+                    <MudAlert Severity="Severity.Error" Class="my-4">
+                        <MudText Typo="Typo.subtitle1">Something went wrong</MudText>
+                        <MudText Typo="Typo.body2">@thrownException.Message</MudText>
+                    </MudAlert>
                 </ErrorContent>
             </ErrorBoundary>
-        </article>
-    </main>
-</div>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool isNavigationDrawerOpen = true;
+    private bool isDarkMode;
+
+    private readonly MudTheme applicationTheme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#2b7de9",
+            AppbarBackground = "#2b7de9",
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#5c9dff",
+        },
+    };
+
+    private void ToggleNavigationDrawer() => isNavigationDrawerOpen = !isNavigationDrawerOpen;
+
+    private void ToggleDarkMode() => isDarkMode = !isDarkMode;
+}

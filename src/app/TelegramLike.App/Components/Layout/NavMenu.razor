@@ -1,33 +1,30 @@
 @inject TelegramLikeSession Session
 @inject ITelegramLikeRealtimeClient Realtime
 @inject PresenceHeartbeat Heartbeat
-@inject NavigationManager Nav
+@inject NavigationManager Navigation
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="chats">TelegramLike</a>
-    </div>
-</div>
+<MudNavMenu>
+    @if (Session.UserId is not null)
+    {
+        <MudNavLink Href="chats" Icon="@Icons.Material.Filled.Chat">Chats</MudNavLink>
+        <MudNavLink Href="notifications" Icon="@Icons.Material.Filled.Notifications">Notifications</MudNavLink>
 
-<div class="nav-scrollable">
-    <nav class="nav flex-column">
-        @if (Session.UserId is not null)
-        {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="chats">💬 Chats</NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="notifications">🔔 Notifications</NavLink>
-            </div>
-            <div class="px-3 py-2 text-white-50 small">
+        <MudDivider Class="my-2" />
+
+        <div class="px-4 py-2">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
                 Signed in as <b>@Session.Username</b>
-            </div>
-            <div class="nav-item px-3">
-                <button type="button" class="nav-link btn btn-link text-start w-100 border-0" @onclick="SignOutAsync">Sign out</button>
-            </div>
-        }
-    </nav>
-</div>
+            </MudText>
+        </div>
+
+        <div class="px-2">
+            <MudButton OnClick="SignOutAsync" Variant="Variant.Text" Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.Logout" FullWidth="true" Class="justify-start">
+                Sign out
+            </MudButton>
+        </div>
+    }
+</MudNavMenu>
 
 @code {
     private async Task SignOutAsync()
@@ -35,6 +32,6 @@
         Heartbeat.Stop();
         try { await Realtime.DisconnectAsync(); } catch { /* already down is fine */ }
         await Session.LogoutAsync();
-        Nav.NavigateTo("/");
+        Navigation.NavigateTo("/");
     }
 }

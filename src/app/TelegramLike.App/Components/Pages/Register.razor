@@ -1,71 +1,70 @@
 @page "/register"
 @inject TelegramLikeSession Session
-@inject NavigationManager Nav
+@inject NavigationManager Navigation
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-6" style="max-width: 420px">
-        <h1 class="h2 mb-4">Create account</h1>
+<MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="mt-8">
+    <MudCard Elevation="4">
+        <MudCardContent>
+            <MudText Typo="Typo.h4" GutterBottom="true">Create account</MudText>
 
-        <div class="mb-3">
-            <label class="form-label">Email</label>
-            <input class="form-control" @bind="_email" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Username</label>
-            <input class="form-control" @bind="_username" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Display name</label>
-            <input class="form-control" @bind="_displayName" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Password</label>
-            <input type="password" class="form-control" @bind="_password" />
-        </div>
+            <MudTextField @bind-Value="emailAddress" Label="Email" Placeholder="you@example.com"
+                          Variant="Variant.Outlined" InputType="InputType.Email" Class="mb-3" Immediate="true" />
+            <MudTextField @bind-Value="username" Label="Username" Placeholder="unique handle"
+                          Variant="Variant.Outlined" Class="mb-3" Immediate="true" />
+            <MudTextField @bind-Value="displayName" Label="Display name" Placeholder="shown to others"
+                          Variant="Variant.Outlined" Class="mb-3" Immediate="true" />
+            <MudTextField @bind-Value="password" Label="Password" Placeholder="choose a password"
+                          Variant="Variant.Outlined" InputType="InputType.Password" Class="mb-3" Immediate="true"
+                          OnKeyDown="SubmitOnEnterAsync" />
 
-        @if (_error is not null)
-        {
-            <div class="alert alert-danger">@_error</div>
-        }
+            @if (errorMessage is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+            }
 
-        <button class="btn btn-primary w-100" @onclick="RegisterAsync" disabled="@_busy">
-            @(_busy ? "Creating account…" : "Register")
-        </button>
+            <MudButton OnClick="CreateAccountAsync" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                       Disabled="isCreatingAccount" StartIcon="@Icons.Material.Filled.PersonAdd">
+                @(isCreatingAccount ? "Creating account…" : "Register")
+            </MudButton>
 
-        <p class="mt-3 text-center">
-            Already have an account? <a href="/">Sign in</a>
-        </p>
-    </div>
-</div>
+            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-4">
+                Already have an account? <MudLink Href="/">Sign in</MudLink>
+            </MudText>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
 
 @code {
-    private string _email = "";
-    private string _username = "";
-    private string _displayName = "";
-    private string _password = "";
-    private string? _error;
-    private bool _busy;
+    private string emailAddress = "";
+    private string username = "";
+    private string displayName = "";
+    private string password = "";
+    private string? errorMessage;
+    private bool isCreatingAccount;
 
-    private async Task RegisterAsync()
+    private Task SubmitOnEnterAsync(KeyboardEventArgs args)
+        => args.Key is "Enter" or "NumpadEnter" ? CreateAccountAsync() : Task.CompletedTask;
+
+    private async Task CreateAccountAsync()
     {
-        _error = null;
-        _busy = true;
+        errorMessage = null;
+        isCreatingAccount = true;
         try
         {
-            await Session.RegisterAsync(_email.Trim(), _username.Trim(), _displayName.Trim(), _password);
-            Nav.NavigateTo("/?registered=true");
+            await Session.RegisterAsync(emailAddress.Trim(), username.Trim(), displayName.Trim(), password);
+            Navigation.NavigateTo("/?registered=true");
         }
         catch (InvalidOperationException ex)
         {
-            _error = ex.Message;
+            errorMessage = ex.Message;
         }
         catch (HttpRequestException)
         {
-            _error = $"Cannot reach the backend at {AppConfig.GatewayBaseUrl} — is the stack running?";
+            errorMessage = $"Cannot reach the backend at {AppConfig.GatewayBaseUrl} — is the stack running?";
         }
         finally
         {
-            _busy = false;
+            isCreatingAccount = false;
         }
     }
 }

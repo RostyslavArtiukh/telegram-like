@@ -8,29 +8,29 @@
 @inject IIdentityUsersApi IdentityUsers
 @inject UsernameCache Usernames
 @inject ITelegramLikeRealtimeClient Realtime
-@inject NavigationManager Nav
+@inject NavigationManager Navigation
 
-@if (_loadError is not null)
+@if (chatLoadError is not null)
 {
-    <div class="alert alert-danger">@_loadError</div>
-    <a href="chats" class="btn btn-link">← Back to chats</a>
+    <MudAlert Severity="Severity.Error" Class="mb-2">@chatLoadError</MudAlert>
+    <MudButton Href="chats" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack">Back to chats</MudButton>
 }
-else if (_chat is null)
+else if (openedChat is null)
 {
-    <p>Loading…</p>
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
 }
 else
 {
-    <div class="d-flex justify-content-between align-items-start mb-2">
+    <div class="d-flex justify-space-between align-start mb-2">
         <div>
-            <h1 class="h3 mb-1">@ChatTitle()</h1>
-            <div class="text-muted small">
-                @if (_chat.Type == ChatTypeContract.Direct)
+            <MudText Typo="Typo.h5">@GetChatTitle()</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @if (openedChat.Type == ChatTypeContract.Direct)
                 {
-                    var peer = OtherDirectMember();
-                    if (peer is not null && _online.Contains(peer.UserId))
+                    var otherMember = GetOtherDirectMember();
+                    if (otherMember is not null && onlineMemberIds.Contains(otherMember.UserId))
                     {
-                        <span class="text-success">● online</span>
+                        <span>● online</span>
                     }
                     else
                     {
@@ -39,449 +39,454 @@ else
                 }
                 else
                 {
-                    <text>@_chat.Type · @_chat.Members.Count(m => m.Status == MemberStatusContract.Active) active</text>
-                    if (_online.Count > 0)
+                    <text>@openedChat.Type · @openedChat.Members.Count(m => m.Status == MemberStatusContract.Active) active</text>
+                    if (onlineMemberIds.Count > 0)
                     {
-                        <span class="text-success"> · @_online.Count online</span>
+                        <span> · @onlineMemberIds.Count online</span>
                     }
-                    <text> · you are @_myRole</text>
+                    <text> · you are @currentUserRole</text>
                 }
-            </div>
-            <div class="small fst-italic" style="min-height: 1.2em">
-                @if (TypingNames() is { Length: > 0 } typing)
+            </MudText>
+            <div style="min-height:1.2em">
+                @if (BuildTypingNames() is { Length: > 0 } typingNames)
                 {
-                    <span class="text-primary">@typing typing…</span>
+                    <MudText Typo="Typo.caption" Color="Color.Primary" Class="fst-italic">@typingNames typing…</MudText>
                 }
             </div>
         </div>
-        <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-outline-secondary" @onclick="ToggleManage">Manage</button>
-            <a href="chats" class="btn btn-outline-secondary">All chats</a>
+        <div class="d-flex align-center" style="gap:8px">
+            <MudButton OnClick="ToggleManagePanel" Variant="Variant.Outlined" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Settings">Manage</MudButton>
+            <MudButton Href="chats" Variant="Variant.Outlined" Size="Size.Small">All chats</MudButton>
         </div>
     </div>
 
-    @if (_showManage)
+    @if (showManagePanel)
     {
-        <div class="card mb-3">
-            <div class="card-body">
-                <h2 class="h5 card-title">Manage chat</h2>
-                @if (!string.IsNullOrEmpty(_actionError))
+        <MudCard Elevation="2" Class="mb-3">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" GutterBottom="true">Manage chat</MudText>
+                @if (!string.IsNullOrEmpty(manageActionError))
                 {
-                    <div class="alert alert-danger">@_actionError</div>
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@manageActionError</MudAlert>
                 }
 
-                @if (_chat.Type != ChatTypeContract.Direct && _isModerator)
+                @if (openedChat.Type != ChatTypeContract.Direct && currentUserIsModerator)
                 {
-                    <div class="input-group input-group-sm mb-3" style="max-width: 420px;">
-                        <span class="input-group-text">Rename</span>
-                        <input class="form-control" @bind="_renameValue" placeholder="@_chat.Name" />
-                        <button type="button" class="btn btn-outline-primary" @onclick="RenameAsync" disabled="@_busyManage">Save</button>
+                    <div class="d-flex align-center mb-3" style="gap:8px;max-width:420px">
+                        <MudTextField @bind-Value="renameChatValue" Label="Rename" Placeholder="@openedChat.Name"
+                                      Variant="Variant.Outlined" Immediate="true" Class="flex-grow-1" />
+                        <MudButton OnClick="RenameChatAsync" Variant="Variant.Filled" Color="Color.Primary"
+                                   Disabled="isManageActionRunning">Save</MudButton>
                     </div>
                 }
 
-                <h3 class="h6">Members</h3>
-                <ul class="list-group mb-3">
-                    @foreach (var member in _chat.Members.OrderBy(m => m.Role))
+                <MudText Typo="Typo.subtitle2" GutterBottom="true">Members</MudText>
+                <MudList T="string" Class="pa-0 mb-3">
+                    @foreach (var member in openedChat.Members.OrderBy(m => m.Role))
                     {
-                        var toggle = RoleToggle(member);
-                        var canKick = _isModerator
-                            && _chat.Type != ChatTypeContract.Direct
+                        var roleToggle = GetRoleToggle(member);
+                        var canKickMember = currentUserIsModerator
+                            && openedChat.Type != ChatTypeContract.Direct
                             && member.Status == MemberStatusContract.Active
-                            && member.UserId != _me
+                            && member.UserId != currentUserId
                             && member.Role != MemberRoleContract.Owner;
-                        var canTransfer = _myRole == MemberRoleContract.Owner
-                            && _chat.Type != ChatTypeContract.Direct
+                        var canTransferOwnership = currentUserRole == MemberRoleContract.Owner
+                            && openedChat.Type != ChatTypeContract.Direct
                             && member.Status == MemberStatusContract.Active
-                            && member.UserId != _me
+                            && member.UserId != currentUserId
                             && member.Role != MemberRoleContract.Owner;
 
-                        <li class="list-group-item d-flex justify-content-between align-items-center
-                                   @(member.Status != MemberStatusContract.Active ? "text-muted" : "")">
-                            <div>
-                                @Usernames.Get(member.UserId)
-                                @if (member.UserId == _me) { <span class="text-muted">(you)</span> }
-                                <span class="badge bg-light text-dark ms-1">@member.Role</span>
-                                @if (member.Status != MemberStatusContract.Active)
-                                {
-                                    <span class="badge bg-secondary ms-1">@member.Status</span>
-                                }
+                        <MudListItem T="string">
+                            <div class="d-flex align-center justify-space-between" style="width:100%">
+                                <div class="d-flex align-center" style="gap:6px">
+                                    <MudText Typo="Typo.body2"
+                                             Style="@(member.Status != MemberStatusContract.Active ? "opacity:.6" : "")">
+                                        @Usernames.Get(member.UserId)
+                                        @if (member.UserId == currentUserId) { <span>(you)</span> }
+                                    </MudText>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@member.Role</MudChip>
+                                    @if (member.Status != MemberStatusContract.Active)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@member.Status</MudChip>
+                                    }
+                                </div>
+                                <div class="d-flex align-center" style="gap:6px">
+                                    @if (roleToggle is not null && currentUserIsModerator
+                                        && member.Status == MemberStatusContract.Active && member.UserId != currentUserId)
+                                    {
+                                        <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                                                   OnClick="() => ChangeMemberRoleAsync(member.UserId, roleToggle.Value.TargetRole)"
+                                                   Disabled="isManageActionRunning">@roleToggle.Value.Label</MudButton>
+                                    }
+                                    @if (canTransferOwnership)
+                                    {
+                                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning"
+                                                   OnClick="() => TransferOwnershipAsync(member.UserId)"
+                                                   Disabled="isManageActionRunning">Make owner</MudButton>
+                                    }
+                                    @if (canKickMember)
+                                    {
+                                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
+                                                   OnClick="() => KickMemberAsync(member.UserId)"
+                                                   Disabled="isManageActionRunning">Kick</MudButton>
+                                    }
+                                </div>
                             </div>
-                            <div class="btn-group btn-group-sm">
-                                @if (toggle is not null && _isModerator && member.Status == MemberStatusContract.Active && member.UserId != _me)
-                                {
-                                    <button type="button" class="btn btn-outline-secondary"
-                                            @onclick="() => ChangeRoleAsync(member.UserId, toggle.Value.Target)"
-                                            disabled="@_busyManage">
-                                        @toggle.Value.Label
-                                    </button>
-                                }
-                                @if (canTransfer)
-                                {
-                                    <button type="button" class="btn btn-outline-warning"
-                                            @onclick="() => TransferAsync(member.UserId)" disabled="@_busyManage">
-                                        Make owner
-                                    </button>
-                                }
-                                @if (canKick)
-                                {
-                                    <button type="button" class="btn btn-outline-danger"
-                                            @onclick="() => KickAsync(member.UserId)" disabled="@_busyManage">
-                                        Kick
-                                    </button>
-                                }
-                            </div>
-                        </li>
+                        </MudListItem>
                     }
-                </ul>
+                </MudList>
 
-                @if (_chat.Type != ChatTypeContract.Direct)
+                @if (openedChat.Type != ChatTypeContract.Direct)
                 {
-                    <button type="button" class="btn btn-sm btn-outline-danger" @onclick="LeaveAsync" disabled="@_busyManage">
-                        Leave chat
-                    </button>
+                    <MudButton OnClick="LeaveChatAsync" Variant="Variant.Outlined" Color="Color.Error"
+                               Size="Size.Small" Disabled="isManageActionRunning"
+                               StartIcon="@Icons.Material.Filled.ExitToApp">Leave chat</MudButton>
                 }
-            </div>
-        </div>
+            </MudCardContent>
+        </MudCard>
     }
 
-    <div class="border rounded p-3 mb-3" style="height: 50vh; overflow-y: auto; background: #f8f9fa"
-         aria-live="polite" aria-relevant="additions" aria-label="Messages">
-        @if (_older is not null)
+    <MudPaper Elevation="0" Outlined="true" Class="pa-3 mb-3" Style="height:50vh;overflow-y:auto"
+              aria-live="polite" aria-relevant="additions" aria-label="Messages">
+        @if (olderMessagesCursor is not null)
         {
-            <div class="text-center mb-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="LoadOlderAsync">Load older</button>
+            <div class="d-flex justify-center mb-2">
+                <MudButton OnClick="LoadOlderMessagesAsync" Variant="Variant.Text" Size="Size.Small">Load older</MudButton>
             </div>
         }
-        @foreach (var m in _messages)
+        @foreach (var message in messages)
         {
-            var mine = m.AuthorId == _me;
-            var reply = ReplyPreviewFor(m);
-            <div class="d-flex @(mine ? "justify-content-end" : "justify-content-start") mb-2">
-                <div class="rounded p-2 @(mine ? "bg-primary text-white" : "bg-white border")" style="max-width: 70%">
-                    <div class="small @(mine ? "text-white-50" : "text-muted")">
-                        @(mine ? "you" : Usernames.Get(m.AuthorId)) · @m.SentAt.ToLocalTime().ToString("HH:mm")
-                        @if (m.ForwardOriginalMessageId is not null)
+            var sentByCurrentUser = message.AuthorId == currentUserId;
+            var repliedToMessage = FindRepliedToMessage(message);
+            <div class="d-flex mb-2 @(sentByCurrentUser ? "justify-end" : "justify-start")">
+                <MudPaper Elevation="1" Class="pa-2 px-3"
+                          Style="@($"max-width:70%;{(sentByCurrentUser ? "background:var(--mud-palette-primary);color:var(--mud-palette-primary-text)" : "")}")">
+                    <MudText Typo="Typo.caption" Style="@(sentByCurrentUser ? "opacity:.8" : "opacity:.6")">
+                        @(sentByCurrentUser ? "you" : Usernames.Get(message.AuthorId)) · @message.SentAt.ToLocalTime().ToString("HH:mm")
+                        @if (message.ForwardOriginalMessageId is not null)
                         {
                             <span class="fst-italic"> · forwarded</span>
                         }
-                    </div>
+                    </MudText>
 
-                    @if (reply is not null)
+                    @if (repliedToMessage is not null)
                     {
-                        <div class="border-start ps-2 my-1 small @(mine ? "border-light" : "border-secondary")" style="opacity:.85;">
-                            ↪ @(mine ? "" : Usernames.Get(reply.AuthorId) + ": ")@Snippet(reply)
-                        </div>
+                        <MudText Typo="Typo.caption" Class="pl-2 my-1"
+                                 Style="border-left:2px solid currentColor;opacity:.85;display:block">
+                            ↪ @(sentByCurrentUser ? "" : Usernames.Get(repliedToMessage.AuthorId) + ": ")@BuildShortMessagePreview(repliedToMessage)
+                        </MudText>
                     }
 
-                    @if (m.IsRetracted)
+                    @if (message.IsRetracted)
                     {
-                        <em class="@(mine ? "text-white-50" : "text-muted")">[retracted]</em>
+                        <MudText Class="fst-italic" Style="opacity:.7">[retracted]</MudText>
                     }
                     else
                     {
-                        @if (!string.IsNullOrWhiteSpace(m.Text))
+                        @if (!string.IsNullOrWhiteSpace(message.Text))
                         {
-                            <div>@m.Text</div>
+                            <MudText Typo="Typo.body2" Style="white-space:pre-wrap">@message.Text</MudText>
                         }
-                        @foreach (var a in m.Attachments)
+                        @foreach (var attachment in message.Attachments)
                         {
-                            @if (a.Type == AttachmentTypeContract.Image)
+                            @if (attachment.Type == AttachmentTypeContract.Image)
                             {
-                                <img src="@a.Url" alt="@(a.FileName ?? "image")" class="img-fluid rounded mt-1" style="max-height: 220px;" />
+                                <MudImage Src="@attachment.Url" Alt="@(attachment.FileName ?? "image")"
+                                          Fluid="true" Class="rounded mt-1" Style="max-height:220px" />
                             }
                             else
                             {
-                                <a href="@a.Url" target="_blank" class="d-block mt-1 @(mine ? "text-white" : "")">
-                                    📎 @(a.FileName ?? a.Url)
-                                </a>
+                                <MudLink Href="@attachment.Url" Target="_blank" Class="d-block mt-1">
+                                    📎 @(attachment.FileName ?? attachment.Url)
+                                </MudLink>
                             }
                         }
-                        @if (m.Reactions.Count > 0)
+                        @if (message.Reactions.Count > 0)
                         {
-                            <div class="small mt-1">
-                                @foreach (var g in m.Reactions.GroupBy(r => r.Emoji))
+                            <div class="d-flex flex-wrap mt-1" style="gap:4px">
+                                @foreach (var reactionGroup in message.Reactions.GroupBy(r => r.Emoji))
                                 {
-                                    var picked = g.Any(r => r.UserId == _me);
-                                    <button type="button" class="btn btn-sm py-0 px-1 me-1 @(picked ? "btn-light border" : "btn-outline-light border")"
-                                            style="@(mine ? "" : "color:#333;")"
-                                            aria-label="@($"{g.Key} reaction, {g.Count()}{(picked ? ", added by you — click to remove" : " — click to add")}")"
-                                            @onclick="() => ToggleReactionAsync(m, g.Key)">
-                                        @Glyph(g.Key) @g.Count()
-                                    </button>
+                                    var reactedByCurrentUser = reactionGroup.Any(r => r.UserId == currentUserId);
+                                    <MudButton Size="Size.Small" Class="pa-1"
+                                               Variant="@(reactedByCurrentUser ? Variant.Filled : Variant.Outlined)"
+                                               aria-label="@($"{reactionGroup.Key} reaction, {reactionGroup.Count()}{(reactedByCurrentUser ? ", added by you — click to remove" : " — click to add")}")"
+                                               OnClick="() => ToggleReactionAsync(message, reactionGroup.Key)">
+                                        @GetReactionGlyph(reactionGroup.Key) @reactionGroup.Count()
+                                    </MudButton>
                                 }
                             </div>
                         }
-                        @if (_chat.Type == ChatTypeContract.Broadcast && mine && m.BroadcastReadCount is > 0)
+                        @if (openedChat.Type == ChatTypeContract.Broadcast && sentByCurrentUser && message.BroadcastReadCount is > 0)
                         {
-                            <div class="small text-white-50 mt-1">👁 @m.BroadcastReadCount read</div>
+                            <MudText Typo="Typo.caption" Style="opacity:.8" Class="mt-1">👁 @message.BroadcastReadCount read</MudText>
                         }
-                        <div class="small mt-1">
-                            <button type="button" class="btn btn-link btn-sm p-0 align-baseline @(mine ? "text-white-50" : "")"
-                                    @onclick="() => ToggleReactPicker(m.MessageId)">react</button>
-                            <span class="@(mine ? "text-white-50" : "")"> · </span>
-                            <button type="button" class="btn btn-link btn-sm p-0 align-baseline @(mine ? "text-white-50" : "")"
-                                    @onclick="() => SetReply(m)">reply</button>
-                            <span class="@(mine ? "text-white-50" : "")"> · </span>
-                            <button type="button" class="btn btn-link btn-sm p-0 align-baseline @(mine ? "text-white-50" : "")"
-                                    @onclick="() => OpenForwardAsync(m)">forward</button>
-                            <span class="@(mine ? "text-white-50" : "")"> · </span>
-                            <button type="button" class="btn btn-link btn-sm p-0 align-baseline @(mine ? "text-white-50" : "")"
-                                    @onclick="() => HideAsync(m)">hide</button>
-                            @if (mine || _isModerator)
+                        <div class="d-flex align-center mt-1">
+                            <MudTooltip Text="React">
+                                <MudIconButton Icon="@Icons.Material.Filled.AddReaction" Size="Size.Small"
+                                               OnClick="() => ToggleReactionPicker(message.MessageId)" aria-label="React" />
+                            </MudTooltip>
+                            <MudTooltip Text="Reply">
+                                <MudIconButton Icon="@Icons.Material.Filled.Reply" Size="Size.Small"
+                                               OnClick="() => StartReplyingTo(message)" aria-label="Reply" />
+                            </MudTooltip>
+                            <MudTooltip Text="Forward">
+                                <MudIconButton Icon="@Icons.Material.Filled.Forward" Size="Size.Small"
+                                               OnClick="() => OpenForwardDialogAsync(message)" aria-label="Forward" />
+                            </MudTooltip>
+                            <MudTooltip Text="Hide for me">
+                                <MudIconButton Icon="@Icons.Material.Filled.VisibilityOff" Size="Size.Small"
+                                               OnClick="() => HideMessageAsync(message)" aria-label="Hide" />
+                            </MudTooltip>
+                            @if (sentByCurrentUser || currentUserIsModerator)
                             {
-                                <span class="@(mine ? "text-white-50" : "")"> · </span>
-                                <button type="button" class="btn btn-link btn-sm p-0 align-baseline @(mine ? "text-white-50" : "")"
-                                        @onclick="() => RetractAsync(m)">retract</button>
+                                <MudTooltip Text="Retract for everyone">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                   OnClick="() => RetractMessageAsync(message)" aria-label="Retract" />
+                                </MudTooltip>
                             }
                         </div>
-                        @if (_reactPickerFor == m.MessageId)
+                        @if (reactionPickerMessageId == message.MessageId)
                         {
-                            <div class="small mt-1">
+                            <div class="d-flex flex-wrap mt-1" style="gap:4px">
                                 @foreach (var emoji in Enum.GetValues<EmojiContract>())
                                 {
-                                    var picked = m.Reactions.Any(r => r.UserId == _me && r.Emoji == emoji);
-                                    <button type="button" class="btn btn-sm py-0 px-1 me-1 @(picked ? "btn-light border" : "btn-outline-light border")"
-                                            aria-label="@emoji.ToString()"
-                                            @onclick="() => ToggleReactionAsync(m, emoji)">@Glyph(emoji)</button>
+                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="pa-1"
+                                               aria-label="@emoji.ToString()"
+                                               OnClick="() => ToggleReactionAsync(message, emoji)">@GetReactionGlyph(emoji)</MudButton>
                                 }
                             </div>
                         }
                     }
-                </div>
+                </MudPaper>
             </div>
         }
-    </div>
+    </MudPaper>
 
-    @if (_replyTo is not null)
+    @if (messageBeingRepliedTo is not null)
     {
-        <div class="d-flex justify-content-between align-items-center bg-light border rounded px-3 py-1 mb-1 small">
-            <span>↪ Replying to @Usernames.Get(_replyTo.AuthorId): @Snippet(_replyTo)</span>
-            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" @onclick="CancelReply">✕</button>
-        </div>
+        <MudPaper Outlined="true" Elevation="0" Class="d-flex align-center justify-space-between px-3 py-1 mb-1">
+            <MudText Typo="Typo.caption">
+                ↪ Replying to @Usernames.Get(messageBeingRepliedTo.AuthorId): @BuildShortMessagePreview(messageBeingRepliedTo)
+            </MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="CancelReply"
+                           aria-label="Cancel reply" />
+        </MudPaper>
     }
 
-    @if (_attachments.Count > 0)
+    @if (stagedAttachments.Count > 0)
     {
-        <div class="mb-1">
-            @for (var i = 0; i < _attachments.Count; i++)
+        <div class="d-flex flex-wrap mb-1" style="gap:6px">
+            @for (var index = 0; index < stagedAttachments.Count; index++)
             {
-                var idx = i;
-                var a = _attachments[i];
-                <span class="badge bg-secondary me-1">
-                    @a.Type: @(a.FileName ?? a.Url)
-                    <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-white" aria-label="Remove attachment"
-                            @onclick="() => RemoveStagedAttachment(idx)">✕</button>
-                </span>
+                var attachmentIndex = index;
+                var attachment = stagedAttachments[index];
+                <MudChip T="string" Size="Size.Small" Color="Color.Default"
+                         OnClose="() => RemoveStagedAttachment(attachmentIndex)">
+                    @attachment.Type: @(attachment.FileName ?? attachment.Url)
+                </MudChip>
             }
         </div>
     }
 
-    <div class="input-group">
-        <button type="button" class="btn btn-outline-secondary" @onclick="() => _showAttach = !_showAttach">📎</button>
-        <input class="form-control" placeholder="Type a message…" @bind="_draft" @bind:event="oninput"
-               @bind:after="OnTypedAsync" @onkeydown="OnKeyDown" />
-        <button type="button" class="btn btn-primary" @onclick="SendAsync"
-                disabled="@(_sending || (string.IsNullOrWhiteSpace(_draft) && _attachments.Count == 0))">
-            @(_sending ? "…" : "Send")
-        </button>
+    <div class="d-flex align-center" style="gap:8px">
+        <MudTooltip Text="Add attachment">
+            <MudIconButton Icon="@Icons.Material.Filled.AttachFile"
+                           OnClick="() => showAttachmentComposer = !showAttachmentComposer"
+                           aria-label="Add attachment" />
+        </MudTooltip>
+        <MudTextField @bind-Value="messageDraft" @bind-Value:after="OnComposerChangedAsync"
+                      Placeholder="Type a message…" Variant="Variant.Outlined" Immediate="true"
+                      Class="flex-grow-1" OnKeyDown="SendOnEnterAsync" />
+        <MudButton OnClick="SendMessageAsync" Variant="Variant.Filled" Color="Color.Primary"
+                   EndIcon="@Icons.Material.Filled.Send"
+                   Disabled="@(isSendingMessage || (string.IsNullOrWhiteSpace(messageDraft) && stagedAttachments.Count == 0))">
+            @(isSendingMessage ? "…" : "Send")
+        </MudButton>
     </div>
 
-    @if (_showAttach)
+    @if (showAttachmentComposer)
     {
-        <div class="card mt-2">
-            <div class="card-body py-2">
-                <div class="row g-2 align-items-end">
-                    <div class="col-auto">
-                        <label class="form-label small mb-0">Type</label>
-                        <select class="form-select form-select-sm" @bind="_attachDraft.Type">
-                            @foreach (var t in Enum.GetValues<AttachmentTypeContract>())
-                            {
-                                <option value="@t">@t</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col">
-                        <label class="form-label small mb-0">URL</label>
-                        <input class="form-control form-control-sm" @bind="_attachDraft.Url" placeholder="https://…" />
-                    </div>
-                    <div class="col">
-                        <label class="form-label small mb-0">File name (optional)</label>
-                        <input class="form-control form-control-sm" @bind="_attachDraft.FileName" />
-                    </div>
-                    <div class="col-auto">
-                        <label class="form-label small mb-0">Size (bytes)</label>
-                        <input type="number" class="form-control form-control-sm" @bind="_attachDraft.SizeBytes" style="width:110px;" />
-                    </div>
-                    <div class="col-auto">
-                        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddStagedAttachment">Attach</button>
-                    </div>
+        <MudCard Elevation="1" Class="mt-2">
+            <MudCardContent>
+                <div class="d-flex flex-wrap align-end" style="gap:12px">
+                    <MudSelect T="AttachmentTypeContract" @bind-Value="attachmentDraft.Type" Label="Type"
+                               Variant="Variant.Outlined" Dense="true" Style="min-width:120px">
+                        @foreach (var attachmentType in Enum.GetValues<AttachmentTypeContract>())
+                        {
+                            <MudSelectItem Value="attachmentType">@attachmentType</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudTextField @bind-Value="attachmentDraft.Url" Label="URL" Placeholder="https://…"
+                                  Variant="Variant.Outlined" Class="flex-grow-1" />
+                    <MudTextField @bind-Value="attachmentDraft.FileName" Label="File name (optional)"
+                                  Variant="Variant.Outlined" Class="flex-grow-1" />
+                    <MudTextField @bind-Value="attachmentDraft.SizeBytes" Label="Size (bytes)"
+                                  Variant="Variant.Outlined" Style="width:120px" />
+                    <MudButton OnClick="AddStagedAttachment" Variant="Variant.Outlined" Color="Color.Primary">Attach</MudButton>
                 </div>
-            </div>
-        </div>
+            </MudCardContent>
+        </MudCard>
     }
 
-    @if (_error is not null)
+    @if (actionError is not null)
     {
-        <div class="alert alert-danger mt-2">@_error</div>
+        <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@actionError</MudAlert>
     }
 }
 
-@if (_forwardSource is not null)
-{
-    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.4);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="h5 modal-title">Forward to…</h2>
-                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseForward"></button>
-                </div>
-                <div class="modal-body">
-                    @if (!string.IsNullOrEmpty(_forwardError))
-                    {
-                        <div class="alert alert-danger">@_forwardError</div>
-                    }
-                    @if (_forwardTargets is null)
-                    {
-                        <p>Loading…</p>
-                    }
-                    else if (_forwardTargets.Count == 0)
-                    {
-                        <p class="text-muted">No other chats to forward to.</p>
-                    }
-                    else
-                    {
-                        <div class="list-group">
-                            @foreach (var target in _forwardTargets)
-                            {
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>@(target.Name ?? "(direct)") <span class="badge bg-light text-dark ms-1">@target.Type</span></span>
-                                    <button type="button" class="btn btn-sm btn-primary" @onclick="() => ForwardToAsync(target.ChatId)"
-                                            disabled="@_forwarding">
-                                        Forward
-                                    </button>
-                                </div>
-                            }
+<MudDialog Visible="messageBeingForwarded is not null" VisibleChanged="OnForwardDialogVisibleChanged"
+           Options="new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent>Forward to…</TitleContent>
+    <DialogContent>
+        @if (!string.IsNullOrEmpty(forwardError))
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">@forwardError</MudAlert>
+        }
+        @if (forwardTargetChats is null)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else if (forwardTargetChats.Count == 0)
+        {
+            <MudText Color="Color.Secondary">No other chats to forward to.</MudText>
+        }
+        else
+        {
+            <MudList T="string" Class="pa-0">
+                @foreach (var targetChat in forwardTargetChats)
+                {
+                    <MudListItem T="string">
+                        <div class="d-flex align-center justify-space-between" style="width:100%">
+                            <div class="d-flex align-center" style="gap:6px">
+                                <MudText Typo="Typo.body2">@(targetChat.Name ?? "(direct)")</MudText>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@targetChat.Type</MudChip>
+                            </div>
+                            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                                       OnClick="() => ForwardMessageToChatAsync(targetChat.ChatId)"
+                                       Disabled="isForwarding">Forward</MudButton>
                         </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-}
+                    </MudListItem>
+                }
+            </MudList>
+        }
+    </DialogContent>
+</MudDialog>
 
 @code {
     [Parameter] public Guid ChatId { get; set; }
 
-    private Guid _me;
-    private ChatDetailsContract? _chat;
-    private readonly List<MessageContract> _messages = [];
-    private DateTime? _older;
-    private string _draft = "";
-    private string? _error;
-    private string? _loadError;
-    private bool _sending;
-    private DateTime _lastTypingSent = DateTime.MinValue;
-    private readonly HashSet<Guid> _online = [];
-    private readonly Dictionary<Guid, DateTime> _typingUntil = [];
-    private Timer? _typingSweep;
-    private Guid? _reactPickerFor;
+    private Guid currentUserId;
+    private ChatDetailsContract? openedChat;
+    private readonly List<MessageContract> messages = [];
+    private DateTime? olderMessagesCursor;
+    private string messageDraft = "";
+    private string? actionError;
+    private string? chatLoadError;
+    private bool isSendingMessage;
+    private DateTime lastTypingSignalSentAt = DateTime.MinValue;
+    private readonly HashSet<Guid> onlineMemberIds = [];
+    private readonly Dictionary<Guid, DateTime> typingExpiryByUser = [];
+    private Timer? typingSweepTimer;
+    private Guid? reactionPickerMessageId;
 
-    // Actor capabilities
-    private bool _isModerator;
-    private bool _isPremium;
-    private MemberRoleContract? _myRole;
+    // What the current user is allowed to do in this chat.
+    private bool currentUserIsModerator;
+    private bool currentUserIsPremium;
+    private MemberRoleContract? currentUserRole;
 
-    // Reply
-    private MessageContract? _replyTo;
+    // Reply.
+    private MessageContract? messageBeingRepliedTo;
 
-    // Forward modal
-    private MessageContract? _forwardSource;
-    private IReadOnlyList<ChatSummaryContract>? _forwardTargets;
-    private bool _forwarding;
-    private string? _forwardError;
+    // Forward dialog.
+    private MessageContract? messageBeingForwarded;
+    private IReadOnlyList<ChatSummaryContract>? forwardTargetChats;
+    private bool isForwarding;
+    private string? forwardError;
 
-    // Attachment composer
-    private bool _showAttach;
-    private readonly List<SendMessageAttachmentContract> _attachments = new();
-    private AttachmentDraft _attachDraft = new();
+    // Attachment composer.
+    private bool showAttachmentComposer;
+    private readonly List<SendMessageAttachmentContract> stagedAttachments = new();
+    private AttachmentDraft attachmentDraft = new();
 
-    // Management panel
-    private bool _showManage;
-    private string? _renameValue;
-    private bool _busyManage;
-    private string? _actionError;
+    // Management panel.
+    private bool showManagePanel;
+    private string? renameChatValue;
+    private bool isManageActionRunning;
+    private string? manageActionError;
 
     protected override async Task OnInitializedAsync()
     {
-        if (Session.UserId is not { } me)
+        if (Session.UserId is not { } userId)
         {
-            Nav.NavigateTo("/");
+            Navigation.NavigateTo("/");
             return;
         }
-        _me = me;
+        currentUserId = userId;
 
-        Realtime.MessageSent += OnMessageSent;
-        Realtime.MessageRetracted += OnMessageRetracted;
-        Realtime.ReactionAdded += OnReactionChanged;
-        Realtime.ReactionRemoved += OnReactionChanged;
-        Realtime.UserTyping += OnUserTyping;
-        Realtime.PresenceChanged += OnPresenceChanged;
+        Realtime.MessageSent += OnMessageSentPush;
+        Realtime.MessageRetracted += OnMessageRetractedPush;
+        Realtime.ReactionAdded += OnReactionChangedPush;
+        Realtime.ReactionRemoved += OnReactionChangedPush;
+        Realtime.UserTyping += OnUserTypingPush;
+        Realtime.PresenceChanged += OnPresenceChangedPush;
 
         // Core load: the chat itself. A failure here leaves the page in an
         // error state rather than an eternal spinner.
         try
         {
-            _chat = await ChatsApi.GetChatByIdAsync(_me, ChatId);
+            openedChat = await ChatsApi.GetChatByIdAsync(currentUserId, ChatId);
         }
         catch (Exception ex)
         {
-            _loadError = ex.Message;
+            chatLoadError = ex.Message;
             return;
         }
-        if (_chat is null)
+        if (openedChat is null)
         {
-            _loadError = "Chat not found, or you no longer have access to it.";
+            chatLoadError = "Chat not found, or you no longer have access to it.";
             return;
         }
 
         // Core load: the message history.
         try
         {
-            var page = await MessagingApi.GetChatMessagesAsync(_me, ChatId, pageSize: 50);
-            _messages.AddRange(page.Items.Reverse());
-            _older = page.NextCursor;
+            var page = await MessagingApi.GetChatMessagesAsync(currentUserId, ChatId, pageSize: 50);
+            messages.AddRange(page.Items.Reverse());
+            olderMessagesCursor = page.NextCursor;
         }
         catch (Exception ex)
         {
-            _loadError = ex.Message;
+            chatLoadError = ex.Message;
             return;
         }
 
-        var memberIds = _chat.Members.Select(m => m.UserId).ToList();
+        var memberIds = openedChat.Members.Select(m => m.UserId).ToList();
 
         // Everything below is cosmetic/enrichment — a transient failure of any
         // one of these must not abort the whole render.
-        try { await Usernames.EnsureAsync(memberIds.Append(_me)); }
+        try { await Usernames.EnsureAsync(memberIds.Append(currentUserId)); }
         catch { /* names fall back to short ids */ }
 
         try
         {
-            var presence = await PresenceApi.GetBatchPresenceAsync(_me, memberIds);
-            foreach (var (id, isOnline) in presence)
-                if (isOnline) _online.Add(id);
+            var presenceByUser = await PresenceApi.GetBatchPresenceAsync(currentUserId, memberIds);
+            foreach (var (memberId, isOnline) in presenceByUser)
+                if (isOnline) onlineMemberIds.Add(memberId);
         }
         catch { /* online indicator just stays empty */ }
 
-        _myRole = _chat.Members.FirstOrDefault(m => m.UserId == _me && m.Status == MemberStatusContract.Active)?.Role;
-        try { _isModerator = await ChatsApi.IsModeratorAsync(_me, ChatId, _me); }
-        catch { _isModerator = false; }
+        currentUserRole = openedChat.Members
+            .FirstOrDefault(m => m.UserId == currentUserId && m.Status == MemberStatusContract.Active)?.Role;
+        try { currentUserIsModerator = await ChatsApi.IsModeratorAsync(currentUserId, ChatId, currentUserId); }
+        catch { currentUserIsModerator = false; }
 
         try
         {
-            var user = await IdentityUsers.GetUserByIdAsync(_me);
-            _isPremium = user?.IsPremium ?? false;
+            var currentUser = await IdentityUsers.GetUserByIdAsync(currentUserId);
+            currentUserIsPremium = currentUser?.IsPremium ?? false;
         }
-        catch { _isPremium = false; }
+        catch { currentUserIsPremium = false; }
 
         try
         {
@@ -491,37 +496,38 @@ else
         }
         catch { /* live updates degrade to manual refresh */ }
 
-        try { await NotificationsApi.MarkChatAsReadAsync(_me, ChatId); }
+        try { await NotificationsApi.MarkChatAsReadAsync(currentUserId, ChatId); }
         catch { /* best-effort */ }
 
         // Typing indicators expire client-side (5s TTL, matching the server's Redis TTL).
-        _typingSweep = new Timer(_ => _ = InvokeAsync(() =>
+        typingSweepTimer = new Timer(_ => _ = InvokeAsync(() =>
         {
             var now = DateTime.UtcNow;
-            var expired = _typingUntil.Where(kv => kv.Value < now).Select(kv => kv.Key).ToList();
-            if (expired.Count == 0) return;
-            foreach (var id in expired) _typingUntil.Remove(id);
+            var expiredUserIds = typingExpiryByUser.Where(kv => kv.Value < now).Select(kv => kv.Key).ToList();
+            if (expiredUserIds.Count == 0) return;
+            foreach (var userId2 in expiredUserIds) typingExpiryByUser.Remove(userId2);
             StateHasChanged();
         }), null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
     }
 
-    private ChatMemberContract? OtherDirectMember() => _chat?.Members.FirstOrDefault(m => m.UserId != _me);
+    private ChatMemberContract? GetOtherDirectMember() =>
+        openedChat?.Members.FirstOrDefault(m => m.UserId != currentUserId);
 
-    private string ChatTitle()
+    private string GetChatTitle()
     {
-        if (_chat is null) return "Chat";
-        if (_chat.Type == ChatTypeContract.Direct)
+        if (openedChat is null) return "Chat";
+        if (openedChat.Type == ChatTypeContract.Direct)
         {
-            var peer = OtherDirectMember();
-            return peer is not null ? Usernames.Get(peer.UserId) : "Direct chat";
+            var otherMember = GetOtherDirectMember();
+            return otherMember is not null ? Usernames.Get(otherMember.UserId) : "Direct chat";
         }
-        return _chat.Name ?? "Chat";
+        return openedChat.Name ?? "Chat";
     }
 
-    private string TypingNames()
-        => string.Join(", ", _typingUntil.Keys.Where(id => id != _me).Select(Usernames.Get));
+    private string BuildTypingNames()
+        => string.Join(", ", typingExpiryByUser.Keys.Where(id => id != currentUserId).Select(Usernames.Get));
 
-    private static string Glyph(EmojiContract e) => e switch
+    private static string GetReactionGlyph(EmojiContract emoji) => emoji switch
     {
         EmojiContract.Like => "👍",
         EmojiContract.Heart => "❤️",
@@ -531,352 +537,358 @@ else
         EmojiContract.Angry => "😠",
         EmojiContract.Fire => "🔥",
         EmojiContract.Dislike => "👎",
-        _ => e.ToString()
+        _ => emoji.ToString()
     };
 
-    private string Snippet(MessageContract m)
+    private string BuildShortMessagePreview(MessageContract message)
     {
-        if (m.IsRetracted) return "[retracted]";
-        if (!string.IsNullOrWhiteSpace(m.Text))
-            return m.Text!.Length > 60 ? m.Text[..60] + "…" : m.Text;
-        if (m.Attachments.Count > 0) return $"[{m.Attachments[0].Type.ToString().ToLowerInvariant()}]";
+        if (message.IsRetracted) return "[retracted]";
+        if (!string.IsNullOrWhiteSpace(message.Text))
+            return message.Text!.Length > 60 ? message.Text[..60] + "…" : message.Text;
+        if (message.Attachments.Count > 0) return $"[{message.Attachments[0].Type.ToString().ToLowerInvariant()}]";
         return "[message]";
     }
 
     // ---- realtime handlers (background threads → InvokeAsync) ----
 
-    private void OnMessageSent(MessageSentPush push)
+    private void OnMessageSentPush(MessageSentPush push)
     {
-        if (push.ChatId != ChatId || push.AuthorId == _me) return;
+        if (push.ChatId != ChatId || push.AuthorId == currentUserId) return;
         _ = InvokeAsync(async () =>
         {
-            var msg = await MessagingApi.GetMessageByIdAsync(_me, push.MessageId);
-            if (msg is null || _messages.Any(m => m.MessageId == msg.MessageId)) return;
-            await Usernames.EnsureAsync([msg.AuthorId]);
-            _messages.Add(msg);
-            _typingUntil.Remove(msg.AuthorId);
-            try { await NotificationsApi.MarkChatAsReadAsync(_me, ChatId); } catch { /* best-effort */ }
+            var newMessage = await MessagingApi.GetMessageByIdAsync(currentUserId, push.MessageId);
+            if (newMessage is null || messages.Any(m => m.MessageId == newMessage.MessageId)) return;
+            await Usernames.EnsureAsync([newMessage.AuthorId]);
+            messages.Add(newMessage);
+            typingExpiryByUser.Remove(newMessage.AuthorId);
+            try { await NotificationsApi.MarkChatAsReadAsync(currentUserId, ChatId); } catch { /* best-effort */ }
             StateHasChanged();
         });
     }
 
-    private void OnMessageRetracted(MessageRetractedPush push)
+    private void OnMessageRetractedPush(MessageRetractedPush push)
     {
         if (push.ChatId != ChatId) return;
-        _ = InvokeAsync(() => ReplaceMessageAsync(push.MessageId));
+        _ = InvokeAsync(() => RefreshSingleMessageAsync(push.MessageId));
     }
 
-    private void OnReactionChanged(ReactionPush push)
+    private void OnReactionChangedPush(ReactionPush push)
     {
         if (push.ChatId != ChatId) return;
-        _ = InvokeAsync(() => ReplaceMessageAsync(push.MessageId));
+        _ = InvokeAsync(() => RefreshSingleMessageAsync(push.MessageId));
     }
 
-    private async Task ReplaceMessageAsync(Guid messageId)
+    private async Task RefreshSingleMessageAsync(Guid messageId)
     {
-        var fresh = await MessagingApi.GetMessageByIdAsync(_me, messageId);
-        var idx = _messages.FindIndex(m => m.MessageId == messageId);
-        if (fresh is not null && idx >= 0)
+        var freshMessage = await MessagingApi.GetMessageByIdAsync(currentUserId, messageId);
+        var messageIndex = messages.FindIndex(m => m.MessageId == messageId);
+        if (freshMessage is not null && messageIndex >= 0)
         {
-            _messages[idx] = fresh;
+            messages[messageIndex] = freshMessage;
             StateHasChanged();
         }
     }
 
-    private void OnUserTyping(UserTypingPush push)
+    private void OnUserTypingPush(UserTypingPush push)
     {
-        if (push.ChatId != ChatId || push.UserId == _me) return;
+        if (push.ChatId != ChatId || push.UserId == currentUserId) return;
         _ = InvokeAsync(() =>
         {
-            _typingUntil[push.UserId] = DateTime.UtcNow.AddSeconds(5);
+            typingExpiryByUser[push.UserId] = DateTime.UtcNow.AddSeconds(5);
             StateHasChanged();
         });
     }
 
-    private void OnPresenceChanged(PresencePush push)
+    private void OnPresenceChangedPush(PresencePush push)
     {
         // Presence pushes are broadcast to every user sharing any chat with the
         // subject, not just this chat's members — ignore anyone not in it, or the
         // online count would be inflated by unrelated users.
-        if (_chat is null || !_chat.Members.Any(m => m.UserId == push.UserId)) return;
+        if (openedChat is null || !openedChat.Members.Any(m => m.UserId == push.UserId)) return;
         _ = InvokeAsync(() =>
         {
-            if (push.IsOnline) _online.Add(push.UserId); else _online.Remove(push.UserId);
+            if (push.IsOnline) onlineMemberIds.Add(push.UserId); else onlineMemberIds.Remove(push.UserId);
             StateHasChanged();
         });
     }
 
     // ---- actions ----
 
-    private async Task OnTypedAsync()
+    private async Task OnComposerChangedAsync()
     {
         // Throttle like the Web BFF: at most one StartTyping per 2s (server TTL is 5s).
-        if (DateTime.UtcNow - _lastTypingSent < TimeSpan.FromSeconds(2)) return;
-        _lastTypingSent = DateTime.UtcNow;
-        try { await PresenceApi.StartTypingAsync(_me, ChatId); } catch { /* cosmetic */ }
+        if (DateTime.UtcNow - lastTypingSignalSentAt < TimeSpan.FromSeconds(2)) return;
+        lastTypingSignalSentAt = DateTime.UtcNow;
+        try { await PresenceApi.StartTypingAsync(currentUserId, ChatId); } catch { /* cosmetic */ }
     }
 
-    private Task OnKeyDown(KeyboardEventArgs e)
-        => e.Key == "Enter" ? SendAsync() : Task.CompletedTask;
+    private Task SendOnEnterAsync(KeyboardEventArgs args)
+        => args.Key is "Enter" or "NumpadEnter" ? SendMessageAsync() : Task.CompletedTask;
 
-    private async Task SendAsync()
+    private async Task SendMessageAsync()
     {
-        if ((string.IsNullOrWhiteSpace(_draft) && _attachments.Count == 0) || _chat is null) return;
-        _error = null;
-        _sending = true;
+        if ((string.IsNullOrWhiteSpace(messageDraft) && stagedAttachments.Count == 0) || openedChat is null) return;
+        actionError = null;
+        isSendingMessage = true;
         try
         {
             // BFF-style enrichment, done client-side by the SDK helpers.
-            var recipients = await ChatsApi.GetActiveRecipientsAsync(_me, ChatId, _me);
-            var isBroadcast = _chat.Type == ChatTypeContract.Broadcast;
-            var messageId = await MessagingApi.SendMessageAsync(
-                _me,
+            var recipientIds = await ChatsApi.GetActiveRecipientsAsync(currentUserId, ChatId, currentUserId);
+            var isBroadcastChat = openedChat.Type == ChatTypeContract.Broadcast;
+            var sentMessageId = await MessagingApi.SendMessageAsync(
+                currentUserId,
                 ChatId,
-                string.IsNullOrWhiteSpace(_draft) ? null : _draft.Trim(),
-                recipients,
-                isBroadcast,
-                attachments: _attachments.Count > 0 ? _attachments.ToList() : null,
-                replyToMessageId: _replyTo?.MessageId);
+                string.IsNullOrWhiteSpace(messageDraft) ? null : messageDraft.Trim(),
+                recipientIds,
+                isBroadcastChat,
+                attachments: stagedAttachments.Count > 0 ? stagedAttachments.ToList() : null,
+                replyToMessageId: messageBeingRepliedTo?.MessageId);
 
-            _draft = "";
-            _attachments.Clear();
-            _replyTo = null;
-            _showAttach = false;
+            messageDraft = "";
+            stagedAttachments.Clear();
+            messageBeingRepliedTo = null;
+            showAttachmentComposer = false;
 
-            var sent = await MessagingApi.GetMessageByIdAsync(_me, messageId);
-            if (sent is not null && !_messages.Any(m => m.MessageId == sent.MessageId))
-                _messages.Add(sent);
+            var sentMessage = await MessagingApi.GetMessageByIdAsync(currentUserId, sentMessageId);
+            if (sentMessage is not null && !messages.Any(m => m.MessageId == sentMessage.MessageId))
+                messages.Add(sentMessage);
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            actionError = ex.Message;
         }
         finally
         {
-            _sending = false;
+            isSendingMessage = false;
         }
 
         // Stop lingering as "typing…" for the recipient(s) now that the message landed,
         // rather than waiting out the server's 5s TTL.
-        try { await PresenceApi.StopTypingAsync(_me, ChatId); } catch { /* cosmetic */ }
+        try { await PresenceApi.StopTypingAsync(currentUserId, ChatId); } catch { /* cosmetic */ }
     }
 
-    private void ToggleReactPicker(Guid messageId)
-        => _reactPickerFor = _reactPickerFor == messageId ? null : messageId;
+    private void ToggleReactionPicker(Guid messageId)
+        => reactionPickerMessageId = reactionPickerMessageId == messageId ? null : messageId;
 
-    private async Task ToggleReactionAsync(MessageContract m, EmojiContract emoji)
+    private async Task ToggleReactionAsync(MessageContract message, EmojiContract emoji)
     {
         try
         {
-            var mine = m.Reactions.Any(r => r.UserId == _me && r.Emoji == emoji);
-            if (mine)
-                await MessagingApi.RemoveReactionAsync(_me, m.MessageId, emoji);
+            var alreadyReactedWithEmoji = message.Reactions.Any(r => r.UserId == currentUserId && r.Emoji == emoji);
+            if (alreadyReactedWithEmoji)
+                await MessagingApi.RemoveReactionAsync(currentUserId, message.MessageId, emoji);
             else
-                await MessagingApi.AddReactionAsync(_me, m.MessageId, emoji, _isPremium);
-            _reactPickerFor = null;
-            await ReplaceMessageAsync(m.MessageId);
+                await MessagingApi.AddReactionAsync(currentUserId, message.MessageId, emoji, currentUserIsPremium);
+            reactionPickerMessageId = null;
+            await RefreshSingleMessageAsync(message.MessageId);
         }
-        catch (Exception ex) { _error = ex.Message; }
+        catch (Exception ex) { actionError = ex.Message; }
     }
 
     // ---- Reply ----
 
-    private void SetReply(MessageContract m) => _replyTo = m;
-    private void CancelReply() => _replyTo = null;
+    private void StartReplyingTo(MessageContract message) => messageBeingRepliedTo = message;
+    private void CancelReply() => messageBeingRepliedTo = null;
 
-    private MessageContract? ReplyPreviewFor(MessageContract m)
-        => m.ReplyToMessageId is null
+    private MessageContract? FindRepliedToMessage(MessageContract message)
+        => message.ReplyToMessageId is null
             ? null
-            : _messages.FirstOrDefault(x => x.MessageId == m.ReplyToMessageId);
+            : messages.FirstOrDefault(m => m.MessageId == message.ReplyToMessageId);
 
     // ---- Retract / Hide ----
 
-    private async Task RetractAsync(MessageContract m)
+    private async Task RetractMessageAsync(MessageContract message)
     {
         try
         {
-            await MessagingApi.RetractMessageAsync(_me, m.MessageId, _isModerator);
-            await ReplaceMessageAsync(m.MessageId);
+            await MessagingApi.RetractMessageAsync(currentUserId, message.MessageId, currentUserIsModerator);
+            await RefreshSingleMessageAsync(message.MessageId);
         }
-        catch (Exception ex) { _error = ex.Message; }
+        catch (Exception ex) { actionError = ex.Message; }
     }
 
-    private async Task HideAsync(MessageContract m)
+    private async Task HideMessageAsync(MessageContract message)
     {
         try
         {
-            await MessagingApi.HideMessageAsync(_me, m.MessageId);
-            _messages.RemoveAll(x => x.MessageId == m.MessageId);
+            await MessagingApi.HideMessageAsync(currentUserId, message.MessageId);
+            messages.RemoveAll(m => m.MessageId == message.MessageId);
             StateHasChanged();
         }
-        catch (Exception ex) { _error = ex.Message; }
+        catch (Exception ex) { actionError = ex.Message; }
     }
 
     // ---- Forward ----
 
-    private async Task OpenForwardAsync(MessageContract m)
+    private async Task OpenForwardDialogAsync(MessageContract message)
     {
-        _forwardSource = m;
-        _forwardError = null;
-        _forwardTargets = null;
+        messageBeingForwarded = message;
+        forwardError = null;
+        forwardTargetChats = null;
         StateHasChanged();
         try
         {
-            var all = await ChatsApi.GetMyChatsAsync(_me);
-            _forwardTargets = all.Where(c => c.ChatId != ChatId).ToList();
+            var allChats = await ChatsApi.GetMyChatsAsync(currentUserId);
+            forwardTargetChats = allChats.Where(c => c.ChatId != ChatId).ToList();
         }
-        catch (Exception ex) { _forwardError = ex.Message; }
+        catch (Exception ex) { forwardError = ex.Message; }
     }
 
-    private void CloseForward()
+    private void OnForwardDialogVisibleChanged(bool visible)
     {
-        _forwardSource = null;
-        _forwardTargets = null;
-        _forwardError = null;
+        if (!visible) CloseForwardDialog();
     }
 
-    private async Task ForwardToAsync(Guid targetChatId)
+    private void CloseForwardDialog()
     {
-        if (_forwardSource is null) return;
-        _forwardError = null;
-        _forwarding = true;
+        messageBeingForwarded = null;
+        forwardTargetChats = null;
+        forwardError = null;
+    }
+
+    private async Task ForwardMessageToChatAsync(Guid targetChatId)
+    {
+        if (messageBeingForwarded is null) return;
+        forwardError = null;
+        isForwarding = true;
         try
         {
-            var recipients = await ChatsApi.GetActiveRecipientsAsync(_me, targetChatId, _me);
-            var type = await ChatsApi.GetChatTypeAsync(_me, targetChatId);
+            var recipientIds = await ChatsApi.GetActiveRecipientsAsync(currentUserId, targetChatId, currentUserId);
+            var targetChatType = await ChatsApi.GetChatTypeAsync(currentUserId, targetChatId);
 
             await MessagingApi.SendMessageAsync(
-                authorUserId: _me,
+                authorUserId: currentUserId,
                 chatId: targetChatId,
-                text: _forwardSource.Text,
-                recipients: recipients,
-                isBroadcast: type == ChatTypeContract.Broadcast,
-                attachments: _forwardSource.Attachments
+                text: messageBeingForwarded.Text,
+                recipients: recipientIds,
+                isBroadcast: targetChatType == ChatTypeContract.Broadcast,
+                attachments: messageBeingForwarded.Attachments
                     .Select(a => new SendMessageAttachmentContract(a.Type, a.Url, a.SizeBytes, a.FileName))
                     .ToList(),
-                forwardOriginalMessageId: _forwardSource.MessageId,
+                forwardOriginalMessageId: messageBeingForwarded.MessageId,
                 forwardOriginalChatId: ChatId);
 
-            CloseForward();
-            Nav.NavigateTo($"/chat/{targetChatId}");
+            CloseForwardDialog();
+            Navigation.NavigateTo($"/chat/{targetChatId}");
         }
-        catch (Exception ex) { _forwardError = ex.Message; }
-        finally { _forwarding = false; }
+        catch (Exception ex) { forwardError = ex.Message; }
+        finally { isForwarding = false; }
     }
 
     // ---- Attachments composer ----
 
     private void AddStagedAttachment()
     {
-        if (string.IsNullOrWhiteSpace(_attachDraft.Url)) { _error = "Attachment URL is required."; return; }
-        var size = _attachDraft.SizeBytes <= 0 ? 1 : _attachDraft.SizeBytes;
-        _attachments.Add(new SendMessageAttachmentContract(
-            _attachDraft.Type,
-            _attachDraft.Url.Trim(),
-            size,
-            string.IsNullOrWhiteSpace(_attachDraft.FileName) ? null : _attachDraft.FileName!.Trim()));
-        _attachDraft = new AttachmentDraft();
+        if (string.IsNullOrWhiteSpace(attachmentDraft.Url)) { actionError = "Attachment URL is required."; return; }
+        var sizeBytes = attachmentDraft.SizeBytes <= 0 ? 1 : attachmentDraft.SizeBytes;
+        stagedAttachments.Add(new SendMessageAttachmentContract(
+            attachmentDraft.Type,
+            attachmentDraft.Url.Trim(),
+            sizeBytes,
+            string.IsNullOrWhiteSpace(attachmentDraft.FileName) ? null : attachmentDraft.FileName!.Trim()));
+        attachmentDraft = new AttachmentDraft();
     }
 
     private void RemoveStagedAttachment(int index)
     {
-        if (index >= 0 && index < _attachments.Count) _attachments.RemoveAt(index);
+        if (index >= 0 && index < stagedAttachments.Count) stagedAttachments.RemoveAt(index);
     }
 
     // ---- Management panel ----
 
-    private void ToggleManage()
+    private void ToggleManagePanel()
     {
-        _showManage = !_showManage;
-        _actionError = null;
-        if (_showManage) _renameValue = _chat?.Name;
+        showManagePanel = !showManagePanel;
+        manageActionError = null;
+        if (showManagePanel) renameChatValue = openedChat?.Name;
     }
 
     private async Task ReloadChatDetailsAsync()
     {
         try
         {
-            _chat = await ChatsApi.GetChatByIdAsync(_me, ChatId);
-            if (_chat is not null)
+            openedChat = await ChatsApi.GetChatByIdAsync(currentUserId, ChatId);
+            if (openedChat is not null)
             {
-                _myRole = _chat.Members.FirstOrDefault(m => m.UserId == _me && m.Status == MemberStatusContract.Active)?.Role;
-                await Usernames.EnsureAsync(_chat.Members.Select(m => m.UserId));
+                currentUserRole = openedChat.Members
+                    .FirstOrDefault(m => m.UserId == currentUserId && m.Status == MemberStatusContract.Active)?.Role;
+                await Usernames.EnsureAsync(openedChat.Members.Select(m => m.UserId));
             }
         }
         catch { /* keep last good state */ }
         StateHasChanged();
     }
 
-    private async Task RenameAsync()
+    private async Task RenameChatAsync()
     {
-        if (string.IsNullOrWhiteSpace(_renameValue)) { _actionError = "Name is required."; return; }
-        _actionError = null;
-        _busyManage = true;
+        if (string.IsNullOrWhiteSpace(renameChatValue)) { manageActionError = "Name is required."; return; }
+        manageActionError = null;
+        isManageActionRunning = true;
         try
         {
-            await ChatsApi.RenameChatAsync(_me, ChatId, _renameValue.Trim());
+            await ChatsApi.RenameChatAsync(currentUserId, ChatId, renameChatValue.Trim());
             await ReloadChatDetailsAsync();
         }
-        catch (Exception ex) { _actionError = ex.Message; }
-        finally { _busyManage = false; }
+        catch (Exception ex) { manageActionError = ex.Message; }
+        finally { isManageActionRunning = false; }
     }
 
-    private async Task KickAsync(Guid targetUserId)
+    private async Task KickMemberAsync(Guid memberUserId)
     {
-        _actionError = null;
-        _busyManage = true;
+        manageActionError = null;
+        isManageActionRunning = true;
         try
         {
-            await ChatsApi.KickMemberAsync(_me, ChatId, targetUserId);
+            await ChatsApi.KickMemberAsync(currentUserId, ChatId, memberUserId);
             await ReloadChatDetailsAsync();
         }
-        catch (Exception ex) { _actionError = ex.Message; }
-        finally { _busyManage = false; }
+        catch (Exception ex) { manageActionError = ex.Message; }
+        finally { isManageActionRunning = false; }
     }
 
-    private async Task ChangeRoleAsync(Guid targetUserId, MemberRoleContract newRole)
+    private async Task ChangeMemberRoleAsync(Guid memberUserId, MemberRoleContract newRole)
     {
-        _actionError = null;
-        _busyManage = true;
+        manageActionError = null;
+        isManageActionRunning = true;
         try
         {
-            await ChatsApi.ChangeMemberRoleAsync(_me, ChatId, targetUserId, newRole);
+            await ChatsApi.ChangeMemberRoleAsync(currentUserId, ChatId, memberUserId, newRole);
             await ReloadChatDetailsAsync();
         }
-        catch (Exception ex) { _actionError = ex.Message; }
-        finally { _busyManage = false; }
+        catch (Exception ex) { manageActionError = ex.Message; }
+        finally { isManageActionRunning = false; }
     }
 
-    private async Task TransferAsync(Guid newOwnerUserId)
+    private async Task TransferOwnershipAsync(Guid newOwnerUserId)
     {
-        _actionError = null;
-        _busyManage = true;
+        manageActionError = null;
+        isManageActionRunning = true;
         try
         {
-            await ChatsApi.TransferOwnershipAsync(_me, ChatId, newOwnerUserId);
+            await ChatsApi.TransferOwnershipAsync(currentUserId, ChatId, newOwnerUserId);
             await ReloadChatDetailsAsync();
         }
-        catch (Exception ex) { _actionError = ex.Message; }
-        finally { _busyManage = false; }
+        catch (Exception ex) { manageActionError = ex.Message; }
+        finally { isManageActionRunning = false; }
     }
 
-    private async Task LeaveAsync()
+    private async Task LeaveChatAsync()
     {
-        _actionError = null;
-        _busyManage = true;
+        manageActionError = null;
+        isManageActionRunning = true;
         try
         {
-            await ChatsApi.LeaveChatAsync(_me, ChatId);
-            Nav.NavigateTo("/chats");
+            await ChatsApi.LeaveChatAsync(currentUserId, ChatId);
+            Navigation.NavigateTo("/chats");
         }
-        catch (Exception ex) { _actionError = ex.Message; _busyManage = false; }
+        catch (Exception ex) { manageActionError = ex.Message; isManageActionRunning = false; }
     }
 
-    private (string Label, MemberRoleContract Target)? RoleToggle(ChatMemberContract member)
+    private (string Label, MemberRoleContract TargetRole)? GetRoleToggle(ChatMemberContract member)
     {
-        if (_chat is null || member.Role == MemberRoleContract.Owner) return null;
+        if (openedChat is null || member.Role == MemberRoleContract.Owner) return null;
 
-        return _chat.Type switch
+        return openedChat.Type switch
         {
             ChatTypeContract.Group => member.Role == MemberRoleContract.Admin
                 ? ("Demote to member", MemberRoleContract.Member)
@@ -888,25 +900,25 @@ else
         };
     }
 
-    private async Task LoadOlderAsync()
+    private async Task LoadOlderMessagesAsync()
     {
-        var page = await MessagingApi.GetChatMessagesAsync(_me, ChatId, before: _older, pageSize: 50);
-        _messages.InsertRange(0, page.Items.Reverse());
-        _older = page.NextCursor;
+        var page = await MessagingApi.GetChatMessagesAsync(currentUserId, ChatId, before: olderMessagesCursor, pageSize: 50);
+        messages.InsertRange(0, page.Items.Reverse());
+        olderMessagesCursor = page.NextCursor;
         await Usernames.EnsureAsync(page.Items.Select(m => m.AuthorId));
     }
 
     public async ValueTask DisposeAsync()
     {
-        Realtime.MessageSent -= OnMessageSent;
-        Realtime.MessageRetracted -= OnMessageRetracted;
-        Realtime.ReactionAdded -= OnReactionChanged;
-        Realtime.ReactionRemoved -= OnReactionChanged;
-        Realtime.UserTyping -= OnUserTyping;
-        Realtime.PresenceChanged -= OnPresenceChanged;
-        _typingSweep?.Dispose();
+        Realtime.MessageSent -= OnMessageSentPush;
+        Realtime.MessageRetracted -= OnMessageRetractedPush;
+        Realtime.ReactionAdded -= OnReactionChangedPush;
+        Realtime.ReactionRemoved -= OnReactionChangedPush;
+        Realtime.UserTyping -= OnUserTypingPush;
+        Realtime.PresenceChanged -= OnPresenceChangedPush;
+        typingSweepTimer?.Dispose();
 
-        try { await PresenceApi.StopTypingAsync(_me, ChatId); } catch { /* best-effort on teardown */ }
+        try { await PresenceApi.StopTypingAsync(currentUserId, ChatId); } catch { /* best-effort on teardown */ }
 
         try
         {

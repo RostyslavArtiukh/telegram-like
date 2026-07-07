@@ -2,87 +2,87 @@
 @inject TelegramLikeSession Session
 @inject ITelegramLikeRealtimeClient Realtime
 @inject PresenceHeartbeat Heartbeat
-@inject NavigationManager Nav
+@inject NavigationManager Navigation
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-6" style="max-width: 420px">
-        <h1 class="h2 mb-4">Sign in</h1>
+<MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="mt-8">
+    <MudCard Elevation="4">
+        <MudCardContent>
+            <MudText Typo="Typo.h4" GutterBottom="true">Sign in</MudText>
 
-        @if (_justRegistered)
-        {
-            <div class="alert alert-success">Account created! Please sign in.</div>
-        }
+            @if (showAccountCreatedNotice)
+            {
+                <MudAlert Severity="Severity.Success" Class="mb-4">Account created! Please sign in.</MudAlert>
+            }
 
-        <div class="mb-3">
-            <label class="form-label">Email</label>
-            <input class="form-control" @bind="_email" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Password</label>
-            <input type="password" class="form-control" @bind="_password" @onkeydown="OnKeyDown" />
-        </div>
+            <MudTextField @bind-Value="emailAddress" Label="Email" Placeholder="you@example.com"
+                          Variant="Variant.Outlined" InputType="InputType.Email" Class="mb-3" Immediate="true" />
+            <MudTextField @bind-Value="password" Label="Password" Placeholder="Your password"
+                          Variant="Variant.Outlined" InputType="InputType.Password" Class="mb-3" Immediate="true"
+                          OnKeyDown="SubmitOnEnterAsync" />
 
-        @if (_error is not null)
-        {
-            <div class="alert alert-danger">@_error</div>
-        }
+            @if (errorMessage is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+            }
 
-        <button class="btn btn-primary w-100" @onclick="SignInAsync" disabled="@_busy">
-            @(_busy ? "Signing in…" : "Sign in")
-        </button>
+            <MudButton OnClick="SignInAsync" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                       Disabled="isSigningIn" StartIcon="@Icons.Material.Filled.Login">
+                @(isSigningIn ? "Signing in…" : "Sign in")
+            </MudButton>
 
-        <p class="mt-3 text-center">
-            No account? <a href="register">Register</a>
-        </p>
-    </div>
-</div>
+            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-4">
+                No account? <MudLink Href="register">Register</MudLink>
+            </MudText>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
 
 @code {
-    [SupplyParameterFromQuery] private string? Registered { get; set; }
+    [SupplyParameterFromQuery(Name = "registered")] private string? RegisteredFlag { get; set; }
 
-    private string _email = "";
-    private string _password = "";
-    private string? _error;
-    private bool _busy;
-    private bool _justRegistered;
+    private string emailAddress = "";
+    private string password = "";
+    private string? errorMessage;
+    private bool isSigningIn;
+    private bool showAccountCreatedNotice;
 
     protected override async Task OnInitializedAsync()
     {
-        _justRegistered = Registered == "true";
+        showAccountCreatedNotice = RegisteredFlag == "true";
 
         // Session token survives in the store (in-memory today, SecureStorage on
         // Android later) — skip the login form when it still exchanges for a JWT.
         if (await Session.GetAccessTokenAsync() is not null)
-            await EnterAsync();
+            await EnterAppAsync();
     }
 
-    private Task OnKeyDown(KeyboardEventArgs e)
-        => e.Key == "Enter" ? SignInAsync() : Task.CompletedTask;
+    private Task SubmitOnEnterAsync(KeyboardEventArgs args)
+        => args.Key is "Enter" or "NumpadEnter" ? SignInAsync() : Task.CompletedTask;
 
     private async Task SignInAsync()
     {
-        _error = null;
-        _busy = true;
+        errorMessage = null;
+        isSigningIn = true;
         try
         {
-            await Session.LoginAsync(_email.Trim(), _password);
-            await EnterAsync();
+            await Session.LoginAsync(emailAddress.Trim(), password);
+            await EnterAppAsync();
         }
         catch (InvalidOperationException ex)
         {
-            _error = ex.Message;
+            errorMessage = ex.Message;
         }
         catch (HttpRequestException)
         {
-            _error = $"Cannot reach the backend at {AppConfig.GatewayBaseUrl} — is the stack running?";
+            errorMessage = $"Cannot reach the backend at {AppConfig.GatewayBaseUrl} — is the stack running?";
         }
         finally
         {
-            _busy = false;
+            isSigningIn = false;
         }
     }
 
-    private async Task EnterAsync()
+    private async Task EnterAppAsync()
     {
         // Realtime is best-effort: the app still works over HTTP without pushes.
         try
@@ -93,6 +93,6 @@
         catch { /* reconnect logic retries when the hub comes back */ }
 
         Heartbeat.Start();
-        Nav.NavigateTo("/chats");
+        Navigation.NavigateTo("/chats");
     }
 }
