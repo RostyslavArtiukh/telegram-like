@@ -7,14 +7,14 @@ namespace TelegramLike.Chats.Infrastructure.Outbox;
 
 internal sealed class OutboxDomainEventDispatcher : IDomainEventDispatcher
 {
-    private readonly Dictionary<Type, IIntegrationEventMapper> _mappers;
+    private readonly Dictionary<Type, IIntegrationEventMapper> _mappersByEventType;
     private readonly IOutboxStore _outboxStore;
 
     public OutboxDomainEventDispatcher(
         IEnumerable<IIntegrationEventMapper> mappers,
         IOutboxStore outboxStore)
     {
-        _mappers = mappers.ToDictionary(m => m.DomainEventType);
+        _mappersByEventType = mappers.ToDictionary(m => m.DomainEventType);
         _outboxStore = outboxStore;
     }
 
@@ -27,7 +27,7 @@ internal sealed class OutboxDomainEventDispatcher : IDomainEventDispatcher
 
         foreach (var domainEvent in events)
         {
-            if (!_mappers.TryGetValue(domainEvent.GetType(), out var mapper))
+            if (!_mappersByEventType.TryGetValue(domainEvent.GetType(), out var mapper))
                 continue;
 
             var integrationEvent = mapper.Map(domainEvent);

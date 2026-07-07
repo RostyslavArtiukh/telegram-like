@@ -6,10 +6,10 @@ namespace TelegramLike.Messaging.Infrastructure.Persistence;
 
 internal sealed class MessageQueryService(IMongoDatabase database) : IMessageQueryService
 {
-    private readonly IMongoCollection<MessageDocument> _messages =
+    private readonly IMongoCollection<MessageDocument> _messagesCollection =
         database.GetCollection<MessageDocument>("messages");
 
-    private readonly IMongoCollection<HiddenMessageDocument> _hidden =
+    private readonly IMongoCollection<HiddenMessageDocument> _hiddenMessagesCollection =
         database.GetCollection<HiddenMessageDocument>("hidden_messages");
 
     public async Task<MessagePageDto> GetChatMessagesAsync(
@@ -24,7 +24,7 @@ internal sealed class MessageQueryService(IMongoDatabase database) : IMessageQue
         if (beforeSentAt.HasValue)
             filter &= filterBuilder.Lt(m => m.SentAt, beforeSentAt.Value);
 
-        var docs = await _messages
+        var docs = await _messagesCollection
             .Find(filter)
             .SortByDescending(m => m.SentAt)
             .Limit(pageSize + 1)
@@ -33,7 +33,7 @@ internal sealed class MessageQueryService(IMongoDatabase database) : IMessageQue
         var hasMore = docs.Count > pageSize;
         if (hasMore) docs.RemoveAt(docs.Count - 1);
 
-        var hiddenIds = await _hidden
+        var hiddenIds = await _hiddenMessagesCollection
             .Find(h => h.UserId == requesterId)
             .Project(h => h.MessageId)
             .ToListAsync(cancellationToken);
@@ -50,10 +50,10 @@ internal sealed class MessageQueryService(IMongoDatabase database) : IMessageQue
 
     public async Task<MessageDto?> GetMessageByIdAsync(Guid messageId, Guid requesterId, CancellationToken cancellationToken = default)
     {
-        var doc = await _messages.Find(m => m.Id == messageId).FirstOrDefaultAsync(cancellationToken);
+        var doc = await _messagesCollection.Find(m => m.Id == messageId).FirstOrDefaultAsync(cancellationToken);
         if (doc is null) return null;
 
-        var isHidden = await _hidden.Find(h => h.MessageId == messageId && h.UserId == requesterId).AnyAsync(cancellationToken);
+        var isHidden = await _hiddenMessagesCollection.Find(h => h.MessageId == messageId && h.UserId == requesterId).AnyAsync(cancellationToken);
         return isHidden ? null : MapMessage(doc);
     }
 

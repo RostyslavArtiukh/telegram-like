@@ -6,7 +6,7 @@ namespace TelegramLike.Presence.Infrastructure.Persistence;
 
 internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IChatMembershipReadModel
 {
-    private readonly IMongoCollection<ChatMembershipDocument> _memberships =
+    private readonly IMongoCollection<ChatMembershipDocument> _chatMembershipsCollection =
         database.GetCollection<ChatMembershipDocument>("chat_memberships");
 
     public async Task<bool> IsActiveMemberAsync(Guid chatId, Guid userId, CancellationToken cancellationToken = default)
@@ -16,7 +16,7 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
         var filter = Builders<ChatMembershipDocument>.Filter.And(
             Builders<ChatMembershipDocument>.Filter.Eq(d => d.Id, id),
             Builders<ChatMembershipDocument>.Filter.Ne(d => d.IsActive, false));
-        return await _memberships.Find(filter).Limit(1).AnyAsync(cancellationToken);
+        return await _chatMembershipsCollection.Find(filter).Limit(1).AnyAsync(cancellationToken);
     }
 
     public Task UpsertActiveAsync(Guid chatId, Guid userId, DateTime occurredAt, CancellationToken cancellationToken = default)
@@ -52,7 +52,7 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
         var pipeline = Builders<ChatMembershipDocument>.Update.Pipeline(
             PipelineDefinition<ChatMembershipDocument, ChatMembershipDocument>.Create(set));
 
-        return _memberships.UpdateOneAsync(
+        return _chatMembershipsCollection.UpdateOneAsync(
             Builders<ChatMembershipDocument>.Filter.Eq(d => d.Id, id),
             pipeline,
             new UpdateOptions { IsUpsert = true },

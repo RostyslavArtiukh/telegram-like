@@ -18,7 +18,7 @@ internal sealed class AccessTokenIssuer : IAccessTokenIssuer
     private readonly string _audience;
     private readonly int _lifetimeSeconds;
     private readonly SigningCredentials _credentials;
-    private readonly JwtSecurityTokenHandler _handler = new();
+    private readonly JwtSecurityTokenHandler _jwtTokenHandler = new();
 
     public AccessTokenIssuer(string secret, string issuer, string audience, int lifetimeSeconds)
     {
@@ -45,6 +45,6 @@ internal sealed class AccessTokenIssuer : IAccessTokenIssuer
             expires: now.AddSeconds(_lifetimeSeconds),
             signingCredentials: _credentials);
 
-        return new AccessToken(_handler.WriteToken(token), _lifetimeSeconds);
+        return new AccessToken(_jwtTokenHandler.WriteToken(token), _lifetimeSeconds);
     }
 }

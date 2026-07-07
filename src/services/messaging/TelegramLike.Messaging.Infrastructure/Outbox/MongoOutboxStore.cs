@@ -4,7 +4,7 @@ namespace TelegramLike.Messaging.Infrastructure.Outbox;
 
 internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
 {
-    private readonly IMongoCollection<OutboxDocument> _outbox =
+    private readonly IMongoCollection<OutboxDocument> _outboxCollection =
         database.GetCollection<OutboxDocument>("outbox");
 
     public async Task AddAsync(
@@ -15,7 +15,7 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
         var docs = messages.Select(OutboxDocument.FromMessage).ToList();
         if (docs.Count == 0) return;
 
-        await _outbox.InsertManyAsync(session, docs, cancellationToken: cancellationToken);
+        await _outboxCollection.InsertManyAsync(session, docs, cancellationToken: cancellationToken);
     }
 
     // Lease held while a replica publishes a claimed row. Must comfortably exceed a
@@ -51,7 +51,7 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
         var claimed = new List<OutboxDocument>(batchSize);
         for (var i = 0; i < batchSize; i++)
         {
-            var doc = await _outbox.FindOneAndUpdateAsync(filter, claim, opts, cancellationToken);
+            var doc = await _outboxCollection.FindOneAndUpdateAsync(filter, claim, opts, cancellationToken);
             if (doc is null) break;
             claimed.Add(doc);
         }
@@ -60,7 +60,7 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
     }
 
     public Task MarkSentAsync(Guid id, CancellationToken cancellationToken = default) =>
-        _outbox.UpdateOneAsync(
+        _outboxCollection.UpdateOneAsync(
             Builders<OutboxDocument>.Filter.Eq(d => d.Id, id),
             Builders<OutboxDocument>.Update.Set(d => d.SentAt, DateTime.UtcNow),
             cancellationToken: cancellationToken);
@@ -81,12 +81,12 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
             ReturnDocument = ReturnDocument.After
         };
 
-        var updated = await _outbox.FindOneAndUpdateAsync(filter, update, options, cancellationToken);
+        var updated = await _outboxCollection.FindOneAndUpdateAsync(filter, update, options, cancellationToken);
         if (updated is null) return;
 
         if (updated.Retries >= maxRetries && updated.DeadLetteredAt is null)
         {
-            await _outbox.UpdateOneAsync(
+            await _outboxCollection.UpdateOneAsync(
                 filter,
                 Builders<OutboxDocument>.Update.Set(d => d.DeadLetteredAt, DateTime.UtcNow),
                 cancellationToken: cancellationToken);
@@ -97,7 +97,7 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
         int batchSize,
         CancellationToken cancellationToken = default)
     {
-        var docs = await _outbox
+        var docs = await _outboxCollection
             .Find(d => d.DeadLetteredAt != null)
             .SortBy(d => d.DeadLetteredAt)
             .Limit(batchSize)

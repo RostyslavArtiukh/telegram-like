@@ -11,19 +11,19 @@ namespace TelegramLike.Presence.Infrastructure.Caching;
 internal sealed class RedisTypingIndicatorService(IConnectionMultiplexer redis, TimeSpan typingTtl)
     : ITypingIndicatorService
 {
-    private readonly IDatabase _db = redis.GetDatabase();
+    private readonly IDatabase _redisDatabase = redis.GetDatabase();
 
     public async Task StartTypingAsync(Guid chatId, Guid userId, CancellationToken cancellationToken = default)
     {
         var key = Key(chatId);
         var expiresAt = DateTimeOffset.UtcNow.Add(typingTtl).ToUnixTimeMilliseconds();
-        await _db.SortedSetAddAsync(key, userId.ToString(), expiresAt);
+        await _redisDatabase.SortedSetAddAsync(key, userId.ToString(), expiresAt);
         // Let the whole set self-clean once no one refreshes it; each start extends it.
-        await _db.KeyExpireAsync(key, typingTtl + TimeSpan.FromSeconds(1));
+        await _redisDatabase.KeyExpireAsync(key, typingTtl + TimeSpan.FromSeconds(1));
     }
 
     public Task StopTypingAsync(Guid chatId, Guid userId, CancellationToken cancellationToken = default)
-        => _db.SortedSetRemoveAsync(Key(chatId), userId.ToString());
+        => _redisDatabase.SortedSetRemoveAsync(Key(chatId), userId.ToString());
 
     public async Task<IReadOnlyList<Guid>> GetTypingUserIdsAsync(Guid chatId, CancellationToken cancellationToken = default)
     {
@@ -31,8 +31,8 @@ internal sealed class RedisTypingIndicatorService(IConnectionMultiplexer redis, 
         var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
         // Drop anyone whose typing window already lapsed, then read the survivors.
-        await _db.SortedSetRemoveRangeByScoreAsync(key, double.NegativeInfinity, nowMs);
-        var members = await _db.SortedSetRangeByRankAsync(key);
+        await _redisDatabase.SortedSetRemoveRangeByScoreAsync(key, double.NegativeInfinity, nowMs);
+        var members = await _redisDatabase.SortedSetRangeByRankAsync(key);
 
         var userIds = new List<Guid>(members.Length);
         foreach (var member in members)

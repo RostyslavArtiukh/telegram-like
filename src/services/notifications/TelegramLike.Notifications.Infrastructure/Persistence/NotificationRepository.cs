@@ -7,24 +7,24 @@ namespace TelegramLike.Notifications.Infrastructure.Persistence;
 
 internal sealed class NotificationRepository(IMongoDatabase database) : INotificationRepository
 {
-    private readonly IMongoCollection<NotificationDocument> _notifications =
+    private readonly IMongoCollection<NotificationDocument> _notificationsCollection =
         database.GetCollection<NotificationDocument>("notifications");
 
     public async Task<Notification?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var doc = await _notifications.Find(n => n.Id == id).FirstOrDefaultAsync(cancellationToken);
+        var doc = await _notificationsCollection.Find(n => n.Id == id).FirstOrDefaultAsync(cancellationToken);
         return doc?.ToDomain();
     }
 
     public Task AddAsync(Notification notification, CancellationToken cancellationToken = default)
-        => _notifications.InsertOneAsync(NotificationDocument.FromDomain(notification), cancellationToken: cancellationToken);
+        => _notificationsCollection.InsertOneAsync(NotificationDocument.FromDomain(notification), cancellationToken: cancellationToken);
 
     public Task AddManyAsync(IReadOnlyCollection<Notification> notifications, CancellationToken cancellationToken = default)
     {
         if (notifications.Count == 0) return Task.CompletedTask;
 
         var docs = notifications.Select(NotificationDocument.FromDomain).ToList();
-        return _notifications.InsertManyAsync(docs, cancellationToken: cancellationToken);
+        return _notificationsCollection.InsertManyAsync(docs, cancellationToken: cancellationToken);
     }
 
     public async Task<int> AddManyIgnoringDuplicatesAsync(
@@ -36,7 +36,7 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
         var docs = notifications.Select(NotificationDocument.FromDomain).ToList();
         try
         {
-            await _notifications.InsertManyAsync(
+            await _notificationsCollection.InsertManyAsync(
                 docs,
                 new InsertManyOptions { IsOrdered = false },
                 cancellationToken);
@@ -55,7 +55,7 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
     }
 
     public Task UpdateAsync(Notification notification, CancellationToken cancellationToken = default)
-        => _notifications.ReplaceOneAsync(
+        => _notificationsCollection.ReplaceOneAsync(
             Builders<NotificationDocument>.Filter.Eq(n => n.Id, notification.Id),
             NotificationDocument.FromDomain(notification),
             new ReplaceOptions { IsUpsert = false },
@@ -71,7 +71,7 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
             .Set(n => n.Status, NotificationStatus.Read)
             .Set(n => n.ReadAt, readAt);
 
-        var result = await _notifications.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
+        var result = await _notificationsCollection.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
         return result.ModifiedCount;
     }
 
@@ -86,7 +86,7 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
             .Set(n => n.Status, NotificationStatus.Read)
             .Set(n => n.ReadAt, readAt);
 
-        var result = await _notifications.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
+        var result = await _notificationsCollection.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
         return result.ModifiedCount;
     }
 }

@@ -20,19 +20,19 @@ public interface IChatMembershipTracker
 
 internal sealed class ChatMembershipTracker : IChatMembershipTracker
 {
-    private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, byte>> _chats = new();
+    private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, byte>> _membersByChat = new();
 
-    public bool IsKnownChat(Guid chatId) => _chats.ContainsKey(chatId);
+    public bool IsKnownChat(Guid chatId) => _membersByChat.ContainsKey(chatId);
 
     public bool IsMember(Guid chatId, Guid userId)
-        => _chats.TryGetValue(chatId, out var members) && members.ContainsKey(userId);
+        => _membersByChat.TryGetValue(chatId, out var members) && members.ContainsKey(userId);
 
     public void Join(Guid chatId, Guid userId)
-        => _chats.GetOrAdd(chatId, _ => new ConcurrentDictionary<Guid, byte>()).TryAdd(userId, 0);
+        => _membersByChat.GetOrAdd(chatId, _ => new ConcurrentDictionary<Guid, byte>()).TryAdd(userId, 0);
 
     public void Leave(Guid chatId, Guid userId)
     {
-        if (_chats.TryGetValue(chatId, out var members))
+        if (_membersByChat.TryGetValue(chatId, out var members))
             members.TryRemove(userId, out _);
     }
 }

@@ -5,7 +5,7 @@ namespace TelegramLike.Messaging.Infrastructure.Persistence;
 
 internal sealed class MessageReadReceiptRepository(IMongoDatabase database) : IMessageReadReceiptRepository
 {
-    private readonly IMongoCollection<MessageReadReceiptDocument> _receipts =
+    private readonly IMongoCollection<MessageReadReceiptDocument> _readReceiptsCollection =
         database.GetCollection<MessageReadReceiptDocument>("message_read_receipts");
 
     public async Task<bool> MarkAsReadAsync(Guid messageId, Guid memberId, DateTime readAt, CancellationToken cancellationToken = default)
@@ -20,7 +20,7 @@ internal sealed class MessageReadReceiptRepository(IMongoDatabase database) : IM
 
         try
         {
-            await _receipts.InsertOneAsync(doc, cancellationToken: cancellationToken);
+            await _readReceiptsCollection.InsertOneAsync(doc, cancellationToken: cancellationToken);
             return true;
         }
         catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
@@ -32,5 +32,5 @@ internal sealed class MessageReadReceiptRepository(IMongoDatabase database) : IM
     }
 
     public Task<bool> HasReceiptAsync(Guid messageId, Guid memberId, CancellationToken cancellationToken = default)
-        => _receipts.Find(r => r.MessageId == messageId && r.MemberId == memberId).AnyAsync(cancellationToken);
+        => _readReceiptsCollection.Find(r => r.MessageId == messageId && r.MemberId == memberId).AnyAsync(cancellationToken);
 }

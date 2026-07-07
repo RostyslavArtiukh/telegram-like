@@ -11,12 +11,12 @@ internal sealed class MessageRepository(
     IMongoDatabase database,
     IDomainEventDispatcher dispatcher) : IMessageRepository
 {
-    private readonly IMongoCollection<MessageDocument> _messages =
+    private readonly IMongoCollection<MessageDocument> _messagesCollection =
         database.GetCollection<MessageDocument>("messages");
 
     public async Task<Message?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var doc = await _messages.Find(m => m.Id == id).FirstOrDefaultAsync(cancellationToken);
+        var doc = await _messagesCollection.Find(m => m.Id == id).FirstOrDefaultAsync(cancellationToken);
         return doc?.ToDomain();
     }
 
@@ -27,7 +27,7 @@ internal sealed class MessageRepository(
             using var session = await mongoClient.StartSessionAsync(cancellationToken: cancellationToken);
             await session.WithTransactionAsync(async (s, token) =>
             {
-                await _messages.InsertOneAsync(s, MessageDocument.FromDomain(message), cancellationToken: token);
+                await _messagesCollection.InsertOneAsync(s, MessageDocument.FromDomain(message), cancellationToken: token);
                 await dispatcher.DispatchAsync(message.DomainEvents, s, token);
                 return true;
             }, cancellationToken: cancellationToken);
@@ -66,7 +66,7 @@ internal sealed class MessageRepository(
         using var session = await mongoClient.StartSessionAsync(cancellationToken: cancellationToken);
         await session.WithTransactionAsync(async (s, token) =>
         {
-            var result = await _messages.ReplaceOneAsync(
+            var result = await _messagesCollection.ReplaceOneAsync(
                 s,
                 Builders<MessageDocument>.Filter.And(
                     Builders<MessageDocument>.Filter.Eq(m => m.Id, message.Id),
@@ -87,7 +87,7 @@ internal sealed class MessageRepository(
     }
 
     public Task IncrementBroadcastReadCountAsync(Guid messageId, CancellationToken cancellationToken = default)
-        => _messages.UpdateOneAsync(
+        => _messagesCollection.UpdateOneAsync(
             Builders<MessageDocument>.Filter.Eq(m => m.Id, messageId),
             Builders<MessageDocument>.Update.Inc(m => m.BroadcastReadCount, 1),
             cancellationToken: cancellationToken);

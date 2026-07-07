@@ -6,17 +6,17 @@ namespace TelegramLike.Presence.Infrastructure.Persistence;
 
 internal sealed class UserPresenceRepository(IMongoDatabase database) : IUserPresenceRepository
 {
-    private readonly IMongoCollection<UserPresenceDocument> _presence =
+    private readonly IMongoCollection<UserPresenceDocument> _userPresenceCollection =
         database.GetCollection<UserPresenceDocument>("user_presence");
 
     public async Task<UserPresence?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var doc = await _presence.Find(p => p.Id == userId).FirstOrDefaultAsync(cancellationToken);
+        var doc = await _userPresenceCollection.Find(p => p.Id == userId).FirstOrDefaultAsync(cancellationToken);
         return doc?.ToDomain();
     }
 
     public Task UpsertAsync(UserPresence presence, CancellationToken cancellationToken = default)
-        => _presence.ReplaceOneAsync(
+        => _userPresenceCollection.ReplaceOneAsync(
             Builders<UserPresenceDocument>.Filter.Eq(p => p.Id, presence.Id),
             UserPresenceDocument.FromDomain(presence),
             new ReplaceOptions { IsUpsert = true },

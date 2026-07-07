@@ -11,21 +11,21 @@ internal sealed class ChatRepository(
     IMongoDatabase database,
     IDomainEventDispatcher dispatcher) : IChatRepository
 {
-    private readonly IMongoCollection<ChatDocument> _chats = database.GetCollection<ChatDocument>("chats");
-    private readonly IMongoCollection<ChatMemberDocument> _members = database.GetCollection<ChatMemberDocument>("chat_members");
+    private readonly IMongoCollection<ChatDocument> _chatsCollection = database.GetCollection<ChatDocument>("chats");
+    private readonly IMongoCollection<ChatMemberDocument> _chatMembersCollection = database.GetCollection<ChatMemberDocument>("chat_members");
 
     public async Task<Chat?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var chatDoc = await _chats.Find(c => c.Id == id).FirstOrDefaultAsync(cancellationToken);
+        var chatDoc = await _chatsCollection.Find(c => c.Id == id).FirstOrDefaultAsync(cancellationToken);
         if (chatDoc is null) return null;
 
-        var memberDocs = await _members.Find(m => m.ChatId == id).ToListAsync(cancellationToken);
+        var memberDocs = await _chatMembersCollection.Find(m => m.ChatId == id).ToListAsync(cancellationToken);
         return Reconstitute(chatDoc, memberDocs);
     }
 
     public async Task<DirectChat?> FindDirectBetweenAsync(Guid userA, Guid userB, CancellationToken cancellationToken = default)
     {
-        var memberDocs = await _members
+        var memberDocs = await _chatMembersCollection
             .Find(m => m.UserId == userA || m.UserId == userB)
             .ToListAsync(cancellationToken);
 
@@ -37,7 +37,7 @@ internal sealed class ChatRepository(
 
         if (candidateChatIds.Count == 0) return null;
 
-        var chatDoc = await _chats
+        var chatDoc = await _chatsCollection
             .Find(c => candidateChatIds.Contains(c.Id) && c.Type == ChatType.Direct && c.DeletedAt == null)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -54,11 +54,11 @@ internal sealed class ChatRepository(
             using var session = await mongoClient.StartSessionAsync(cancellationToken: cancellationToken);
             await session.WithTransactionAsync(async (s, token) =>
             {
-                await _chats.InsertOneAsync(s, ToChatDocument(chat), cancellationToken: token);
+                await _chatsCollection.InsertOneAsync(s, ToChatDocument(chat), cancellationToken: token);
 
                 var memberDocs = chat.Members.Select(m => ChatMemberDocument.FromDomain(m, chat.Id)).ToList();
                 if (memberDocs.Count > 0)
-                    await _members.InsertManyAsync(s, memberDocs, cancellationToken: token);
+                    await _chatMembersCollection.InsertManyAsync(s, memberDocs, cancellationToken: token);
 
                 await dispatcher.DispatchAsync(chat.DomainEvents, s, token);
                 return true;
@@ -89,7 +89,7 @@ internal sealed class ChatRepository(
         using var session = await mongoClient.StartSessionAsync(cancellationToken: cancellationToken);
         await session.WithTransactionAsync(async (s, token) =>
         {
-            await _chats.ReplaceOneAsync(
+            await _chatsCollection.ReplaceOneAsync(
                 s,
                 Builders<ChatDocument>.Filter.Eq(c => c.Id, chat.Id),
                 ToChatDocument(chat),
@@ -105,7 +105,7 @@ internal sealed class ChatRepository(
                 }).ToList();
 
             if (memberOps.Count > 0)
-                await _members.BulkWriteAsync(s, memberOps, cancellationToken: token);
+                await _chatMembersCollection.BulkWriteAsync(s, memberOps, cancellationToken: token);
 
             await dispatcher.DispatchAsync(chat.DomainEvents, s, token);
             return true;

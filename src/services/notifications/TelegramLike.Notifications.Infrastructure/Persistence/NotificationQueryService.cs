@@ -6,7 +6,7 @@ namespace TelegramLike.Notifications.Infrastructure.Persistence;
 
 internal sealed class NotificationQueryService(IMongoDatabase database) : INotificationQueryService
 {
-    private readonly IMongoCollection<NotificationDocument> _notifications =
+    private readonly IMongoCollection<NotificationDocument> _notificationsCollection =
         database.GetCollection<NotificationDocument>("notifications");
 
     public async Task<NotificationFeedDto> GetFeedAsync(
@@ -25,7 +25,7 @@ internal sealed class NotificationQueryService(IMongoDatabase database) : INotif
         if (beforeCreatedAt.HasValue)
             filter &= filterBuilder.Lt(n => n.CreatedAt, beforeCreatedAt.Value);
 
-        var docs = await _notifications
+        var docs = await _notificationsCollection
             .Find(filter)
             .SortByDescending(n => n.CreatedAt)
             .Limit(pageSize + 1)
@@ -48,7 +48,7 @@ internal sealed class NotificationQueryService(IMongoDatabase database) : INotif
             Builders<NotificationDocument>.Filter.Eq(n => n.RecipientId, recipientId),
             Builders<NotificationDocument>.Filter.Ne(n => n.Status, NotificationStatus.Read));
 
-        return _notifications.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
+        return _notificationsCollection.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
     }
 
     private static NotificationDto Map(NotificationDocument doc) => new(
