@@ -12,23 +12,23 @@ public interface IMessagingApi
         Guid? replyToMessageId = null,
         Guid? forwardOriginalMessageId = null,
         Guid? forwardOriginalChatId = null,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
-    Task<ChatMessage?> GetMessageByIdAsync(Guid userId, Guid messageId, CancellationToken ct = default);
+    Task<ChatMessage?> GetMessageByIdAsync(Guid userId, Guid messageId, CancellationToken cancellationToken = default);
 
     Task<ChatMessagePage> GetChatMessagesAsync(
         Guid userId,
         Guid chatId,
         DateTime? before = null,
         int pageSize = 50,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
-    Task AddReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, bool actorIsPremium, CancellationToken ct = default);
-    Task RemoveReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, CancellationToken ct = default);
+    Task AddReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, bool actorIsPremium, CancellationToken cancellationToken = default);
+    Task RemoveReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, CancellationToken cancellationToken = default);
 
-    Task RetractMessageAsync(Guid actorUserId, Guid messageId, bool actorIsModerator, CancellationToken ct = default);
+    Task RetractMessageAsync(Guid actorUserId, Guid messageId, bool actorIsModerator, CancellationToken cancellationToken = default);
 
-    Task MarkAsReadAsync(Guid userId, Guid messageId, bool isBroadcast, CancellationToken ct = default);
+    Task MarkAsReadAsync(Guid userId, Guid messageId, bool isBroadcast, CancellationToken cancellationToken = default);
 
-    Task HideMessageAsync(Guid userId, Guid messageId, CancellationToken ct = default);
+    Task HideMessageAsync(Guid userId, Guid messageId, CancellationToken cancellationToken = default);
 }

@@ -10,24 +10,24 @@ internal sealed class ChatQueryService(IMongoDatabase database) : IChatQueryServ
     private readonly IMongoCollection<ChatDocument> _chats = database.GetCollection<ChatDocument>("chats");
     private readonly IMongoCollection<ChatMemberDocument> _members = database.GetCollection<ChatMemberDocument>("chat_members");
 
-    public async Task<IReadOnlyList<ChatSummaryDto>> GetMyChatsAsync(Guid userId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ChatSummaryDto>> GetMyChatsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var myMemberships = await _members
             .Find(m => m.UserId == userId && m.Status == MemberStatus.Active)
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         if (myMemberships.Count == 0) return [];
 
         var chatIds = myMemberships.Select(m => m.ChatId).ToHashSet();
         var chats = await _chats
             .Find(c => chatIds.Contains(c.Id) && c.DeletedAt == null)
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         var activeCounts = await _members
             .Aggregate()
             .Match(m => chatIds.Contains(m.ChatId) && m.Status == MemberStatus.Active)
             .Group(m => m.ChatId, g => new { ChatId = g.Key, Count = g.Count() })
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
         var countMap = activeCounts.ToDictionary(x => x.ChatId, x => x.Count);
 
         return chats.Select(c =>
@@ -38,12 +38,12 @@ internal sealed class ChatQueryService(IMongoDatabase database) : IChatQueryServ
         }).ToList();
     }
 
-    public async Task<ChatDetailsDto?> GetChatByIdAsync(Guid chatId, CancellationToken ct = default)
+    public async Task<ChatDetailsDto?> GetChatByIdAsync(Guid chatId, CancellationToken cancellationToken = default)
     {
-        var chat = await _chats.Find(c => c.Id == chatId).FirstOrDefaultAsync(ct);
+        var chat = await _chats.Find(c => c.Id == chatId).FirstOrDefaultAsync(cancellationToken);
         if (chat is null) return null;
 
-        var members = await _members.Find(m => m.ChatId == chatId).ToListAsync(ct);
+        var members = await _members.Find(m => m.ChatId == chatId).ToListAsync(cancellationToken);
 
         return new ChatDetailsDto(
             chat.Id,
@@ -55,17 +55,17 @@ internal sealed class ChatQueryService(IMongoDatabase database) : IChatQueryServ
             members.Select(MapMember).ToList());
     }
 
-    public async Task<IReadOnlyList<ChatMemberDto>> GetChatMembersAsync(Guid chatId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ChatMemberDto>> GetChatMembersAsync(Guid chatId, CancellationToken cancellationToken = default)
     {
-        var members = await _members.Find(m => m.ChatId == chatId).ToListAsync(ct);
+        var members = await _members.Find(m => m.ChatId == chatId).ToListAsync(cancellationToken);
         return members.Select(MapMember).ToList();
     }
 
-    public Task<bool> IsActiveMemberAsync(Guid chatId, Guid userId, CancellationToken ct = default)
+    public Task<bool> IsActiveMemberAsync(Guid chatId, Guid userId, CancellationToken cancellationToken = default)
         => _members
             .Find(m => m.ChatId == chatId && m.UserId == userId && m.Status == MemberStatus.Active)
             .Limit(1)
-            .AnyAsync(ct);
+            .AnyAsync(cancellationToken);
 
     private static ChatMemberDto MapMember(ChatMemberDocument m)
         => new(m.UserId, m.Role, m.Status, m.JoinedAt, m.LeftAt);

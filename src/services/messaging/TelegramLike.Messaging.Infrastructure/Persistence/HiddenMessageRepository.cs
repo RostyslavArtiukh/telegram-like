@@ -8,7 +8,7 @@ internal sealed class HiddenMessageRepository(IMongoDatabase database) : IHidden
     private readonly IMongoCollection<HiddenMessageDocument> _hidden =
         database.GetCollection<HiddenMessageDocument>("hidden_messages");
 
-    public async Task HideAsync(Guid messageId, Guid userId, CancellationToken ct = default)
+    public async Task HideAsync(Guid messageId, Guid userId, CancellationToken cancellationToken = default)
     {
         var filter = Builders<HiddenMessageDocument>.Filter.And(
             Builders<HiddenMessageDocument>.Filter.Eq(h => h.MessageId, messageId),
@@ -19,9 +19,9 @@ internal sealed class HiddenMessageRepository(IMongoDatabase database) : IHidden
             .SetOnInsert(h => h.MessageId, messageId)
             .SetOnInsert(h => h.UserId, userId);
 
-        await _hidden.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+        await _hidden.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, cancellationToken);
     }
 
-    public Task<bool> IsHiddenAsync(Guid messageId, Guid userId, CancellationToken ct = default)
-        => _hidden.Find(h => h.MessageId == messageId && h.UserId == userId).AnyAsync(ct);
+    public Task<bool> IsHiddenAsync(Guid messageId, Guid userId, CancellationToken cancellationToken = default)
+        => _hidden.Find(h => h.MessageId == messageId && h.UserId == userId).AnyAsync(cancellationToken);
 }

@@ -7,11 +7,11 @@ internal sealed class RedisPresenceCache(IConnectionMultiplexer redis, TimeSpan 
 {
     private readonly IDatabase _db = redis.GetDatabase();
 
-    public async Task<bool> IsOnlineAsync(Guid userId, CancellationToken ct = default)
+    public async Task<bool> IsOnlineAsync(Guid userId, CancellationToken cancellationToken = default)
         => await _db.KeyExistsAsync(Key(userId));
 
     public async Task<IReadOnlyDictionary<Guid, bool>> AreOnlineAsync(
-        IReadOnlyCollection<Guid> userIds, CancellationToken ct = default)
+        IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default)
     {
         if (userIds.Count == 0) return new Dictionary<Guid, bool>();
 
@@ -28,10 +28,10 @@ internal sealed class RedisPresenceCache(IConnectionMultiplexer redis, TimeSpan 
         return result;
     }
 
-    public Task TouchAsync(Guid userId, CancellationToken ct = default)
+    public Task TouchAsync(Guid userId, CancellationToken cancellationToken = default)
         => _db.StringSetAsync(Key(userId), "online", heartbeatTtl);
 
-    public Task ClearAsync(Guid userId, CancellationToken ct = default)
+    public Task ClearAsync(Guid userId, CancellationToken cancellationToken = default)
         => _db.KeyDeleteAsync(Key(userId));
 
     private static string Key(Guid userId) => $"presence:{userId}";

@@ -27,7 +27,7 @@ internal sealed class UserIndexInitializer(
     // uniqueness must be enforced by the database. The case-insensitive collation
     // (locale=en, strength=2) also makes "Alice" and "alice" collide, matching the
     // already-lowercased Email value object.
-    public static async Task EnsureIndexesAsync(IMongoDatabase database, CancellationToken ct = default)
+    public static async Task EnsureIndexesAsync(IMongoDatabase database, CancellationToken cancellationToken = default)
     {
         var collection = database.GetCollection<BsonDocument>("users");
         var collation = new Collation("en", strength: CollationStrength.Secondary);
@@ -40,6 +40,6 @@ internal sealed class UserIndexInitializer(
             new CreateIndexModel<BsonDocument>(
                 Builders<BsonDocument>.IndexKeys.Ascending("Username"),
                 new CreateIndexOptions { Name = "uniq_username", Unique = true, Collation = collation }),
-        ], ct);
+        ], cancellationToken);
     }
 }

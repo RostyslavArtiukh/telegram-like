@@ -10,12 +10,12 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
     public async Task AddAsync(
         IEnumerable<OutboxMessage> messages,
         IClientSessionHandle session,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var docs = messages.Select(OutboxDocument.FromMessage).ToList();
         if (docs.Count == 0) return;
 
-        await _outbox.InsertManyAsync(session, docs, cancellationToken: ct);
+        await _outbox.InsertManyAsync(session, docs, cancellationToken: cancellationToken);
     }
 
     // Lease held while a replica publishes a claimed row. Must comfortably exceed a
@@ -25,7 +25,7 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
 
     public async Task<IReadOnlyList<OutboxMessage>> GetPendingAsync(
         int batchSize,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
         var claimUntil = now.Add(ClaimLease);
@@ -51,7 +51,7 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
         var claimed = new List<OutboxDocument>(batchSize);
         for (var i = 0; i < batchSize; i++)
         {
-            var doc = await _outbox.FindOneAndUpdateAsync(filter, claim, opts, ct);
+            var doc = await _outbox.FindOneAndUpdateAsync(filter, claim, opts, cancellationToken);
             if (doc is null) break;
             claimed.Add(doc);
         }
@@ -59,17 +59,17 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
         return claimed.Select(d => d.ToMessage()).ToList();
     }
 
-    public Task MarkSentAsync(Guid id, CancellationToken ct = default) =>
+    public Task MarkSentAsync(Guid id, CancellationToken cancellationToken = default) =>
         _outbox.UpdateOneAsync(
             Builders<OutboxDocument>.Filter.Eq(d => d.Id, id),
             Builders<OutboxDocument>.Update.Set(d => d.SentAt, DateTime.UtcNow),
-            cancellationToken: ct);
+            cancellationToken: cancellationToken);
 
     public async Task RecordFailureAsync(
         Guid id,
         string error,
         int maxRetries,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var filter = Builders<OutboxDocument>.Filter.Eq(d => d.Id, id);
         var update = Builders<OutboxDocument>.Update
@@ -81,7 +81,7 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
             ReturnDocument = ReturnDocument.After
         };
 
-        var updated = await _outbox.FindOneAndUpdateAsync(filter, update, options, ct);
+        var updated = await _outbox.FindOneAndUpdateAsync(filter, update, options, cancellationToken);
         if (updated is null) return;
 
         if (updated.Retries >= maxRetries && updated.DeadLetteredAt is null)
@@ -89,19 +89,19 @@ internal sealed class MongoOutboxStore(IMongoDatabase database) : IOutboxStore
             await _outbox.UpdateOneAsync(
                 filter,
                 Builders<OutboxDocument>.Update.Set(d => d.DeadLetteredAt, DateTime.UtcNow),
-                cancellationToken: ct);
+                cancellationToken: cancellationToken);
         }
     }
 
     public async Task<IReadOnlyList<OutboxMessage>> GetDeadLetteredAsync(
         int batchSize,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var docs = await _outbox
             .Find(d => d.DeadLetteredAt != null)
             .SortBy(d => d.DeadLetteredAt)
             .Limit(batchSize)
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         return docs.Select(d => d.ToMessage()).ToList();
     }

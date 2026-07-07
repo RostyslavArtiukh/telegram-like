@@ -51,22 +51,22 @@ internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
 
     public bool IsConnected => _connection.State == HubConnectionState.Connected;
 
-    public Task ConnectAsync(CancellationToken ct = default) => EnsureConnectedAsync(ct);
+    public Task ConnectAsync(CancellationToken cancellationToken = default) => EnsureConnectedAsync(cancellationToken);
 
-    public Task DisconnectAsync(CancellationToken ct = default) => _connection.StopAsync(ct);
+    public Task DisconnectAsync(CancellationToken cancellationToken = default) => _connection.StopAsync(cancellationToken);
 
-    public async Task JoinChatAsync(Guid chatId, CancellationToken ct = default)
+    public async Task JoinChatAsync(Guid chatId, CancellationToken cancellationToken = default)
     {
         // Record intent BEFORE touching the wire: if the hub is down or mid-connect,
         // the join is flushed once a connection is (re)established. This also means a
         // chat opened before the hub connected is not silently missed.
         lock (_joinedLock) _joinedChats.Add(chatId);
 
-        await EnsureConnectedAsync(ct);
+        await EnsureConnectedAsync(cancellationToken);
         try
         {
             if (_connection.State == HubConnectionState.Connected)
-                await _connection.InvokeAsync("JoinChat", chatId, ct);
+                await _connection.InvokeAsync("JoinChat", chatId, cancellationToken);
         }
         catch
         {
@@ -74,13 +74,13 @@ internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
         }
     }
 
-    public async Task LeaveChatAsync(Guid chatId, CancellationToken ct = default)
+    public async Task LeaveChatAsync(Guid chatId, CancellationToken cancellationToken = default)
     {
         lock (_joinedLock) _joinedChats.Remove(chatId);
         try
         {
             if (_connection.State == HubConnectionState.Connected)
-                await _connection.InvokeAsync("LeaveChat", chatId, ct);
+                await _connection.InvokeAsync("LeaveChat", chatId, cancellationToken);
         }
         catch
         {
@@ -95,19 +95,19 @@ internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
     /// chat) retries. WithAutomaticReconnect only revives an already-established
     /// connection, so this action-driven retry is what covers a failed initial connect.
     /// </summary>
-    private async Task EnsureConnectedAsync(CancellationToken ct = default)
+    private async Task EnsureConnectedAsync(CancellationToken cancellationToken = default)
     {
         if (_connection.State == HubConnectionState.Connected) return;
 
-        await _connectGate.WaitAsync(ct);
+        await _connectGate.WaitAsync(cancellationToken);
         try
         {
             // Only Disconnected can be started; Connecting/Reconnecting will resolve
             // on their own (and Reconnected flushes joins).
             if (_connection.State != HubConnectionState.Disconnected) return;
 
-            await _connection.StartAsync(ct);
-            await FlushJoinsAsync(ct);
+            await _connection.StartAsync(cancellationToken);
+            await FlushJoinsAsync(cancellationToken);
         }
         catch
         {
@@ -119,7 +119,7 @@ internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
         }
     }
 
-    private async Task FlushJoinsAsync(CancellationToken ct = default)
+    private async Task FlushJoinsAsync(CancellationToken cancellationToken = default)
     {
         Guid[] chats;
         lock (_joinedLock) chats = [.. _joinedChats];
@@ -127,9 +127,9 @@ internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
         {
             try
             {
-                await _connection.InvokeAsync("JoinChat", chatId, ct);
+                await _connection.InvokeAsync("JoinChat", chatId, cancellationToken);
             }
-            catch when (!ct.IsCancellationRequested)
+            catch when (!cancellationToken.IsCancellationRequested)
             {
                 // One chat failing to re-join must not abort re-joining the rest — this
                 // runs from Reconnected too, where an unguarded throw would silently drop

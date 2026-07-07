@@ -7,7 +7,7 @@ public interface INotificationQueryService
         DateTime? beforeCreatedAt,
         int pageSize,
         bool unreadOnly,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
-    Task<long> GetUnreadCountAsync(Guid recipientId, CancellationToken ct = default);
+    Task<long> GetUnreadCountAsync(Guid recipientId, CancellationToken cancellationToken = default);
 }

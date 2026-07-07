@@ -7,9 +7,9 @@ namespace TelegramLike.Client.Identity;
 /// </summary>
 public interface IIdentityAuthApi
 {
-    Task<Guid> RegisterAsync(string email, string username, string displayName, string password, CancellationToken ct = default);
-    Task<string> LoginAsync(string email, string password, CancellationToken ct = default);
-    Task<SessionExchangeResult?> ExchangeAsync(string sessionToken, CancellationToken ct = default);
+    Task<Guid> RegisterAsync(string email, string username, string displayName, string password, CancellationToken cancellationToken = default);
+    Task<string> LoginAsync(string email, string password, CancellationToken cancellationToken = default);
+    Task<SessionExchangeResult?> ExchangeAsync(string sessionToken, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -17,9 +17,9 @@ public interface IIdentityAuthApi
 /// </summary>
 public interface IIdentityUsersApi
 {
-    Task<IdentityUser?> GetUserByIdAsync(Guid userId, CancellationToken ct = default);
-    Task<IReadOnlyDictionary<Guid, string>> GetUsernamesByIdsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken ct = default);
-    Task<Guid?> GetUserIdByUsernameAsync(string username, CancellationToken ct = default);
+    Task<IdentityUser?> GetUserByIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<Guid, string>> GetUsernamesByIdsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
+    Task<Guid?> GetUserIdByUsernameAsync(string username, CancellationToken cancellationToken = default);
 }
 
 public sealed record IdentityUser(

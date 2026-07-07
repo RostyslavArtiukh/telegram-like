@@ -26,22 +26,22 @@ public sealed class NotificationFeedController : ApiControllerBase
         [FromQuery] DateTime? before,
         [FromQuery] int? pageSize,
         [FromQuery] bool? unreadOnly,
-        CancellationToken ct)
+        CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
 
         var result = await _mediator.Send(
-            new GetNotificationFeedQuery(userId, before, pageSize ?? 20, unreadOnly ?? false), ct);
+            new GetNotificationFeedQuery(userId, before, pageSize ?? 20, unreadOnly ?? false), cancellationToken);
 
         return Ok(result.ToContract());
     }
 
     [HttpGet("unread-count")]
-    public async Task<IActionResult> GetUnreadCount(CancellationToken ct)
+    public async Task<IActionResult> GetUnreadCount(CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
 
-        var count = await _mediator.Send(new GetUnreadCountQuery(userId), ct);
+        var count = await _mediator.Send(new GetUnreadCountQuery(userId), cancellationToken);
         return Ok(new UnreadCountResponse(count));
     }
 }

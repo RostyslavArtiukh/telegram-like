@@ -14,23 +14,23 @@ internal sealed class MessageRepository(
     private readonly IMongoCollection<MessageDocument> _messages =
         database.GetCollection<MessageDocument>("messages");
 
-    public async Task<Message?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<Message?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var doc = await _messages.Find(m => m.Id == id).FirstOrDefaultAsync(ct);
+        var doc = await _messages.Find(m => m.Id == id).FirstOrDefaultAsync(cancellationToken);
         return doc?.ToDomain();
     }
 
-    public async Task AddAsync(Message message, CancellationToken ct = default)
+    public async Task AddAsync(Message message, CancellationToken cancellationToken = default)
     {
         try
         {
-            using var session = await mongoClient.StartSessionAsync(cancellationToken: ct);
+            using var session = await mongoClient.StartSessionAsync(cancellationToken: cancellationToken);
             await session.WithTransactionAsync(async (s, token) =>
             {
                 await _messages.InsertOneAsync(s, MessageDocument.FromDomain(message), cancellationToken: token);
                 await dispatcher.DispatchAsync(message.DomainEvents, s, token);
                 return true;
-            }, cancellationToken: ct);
+            }, cancellationToken: cancellationToken);
         }
         catch (Exception ex) when (IsDuplicateKey(ex))
         {
@@ -53,7 +53,7 @@ internal sealed class MessageRepository(
         _ => false
     };
 
-    public async Task UpdateAsync(Message message, CancellationToken ct = default)
+    public async Task UpdateAsync(Message message, CancellationToken cancellationToken = default)
     {
         // Optimistic concurrency: guard the whole-document write on the version the
         // aggregate was loaded at, and bump it. If another writer already advanced the
@@ -63,7 +63,7 @@ internal sealed class MessageRepository(
         var doc = MessageDocument.FromDomain(message);
         doc.Version = expectedVersion + 1;
 
-        using var session = await mongoClient.StartSessionAsync(cancellationToken: ct);
+        using var session = await mongoClient.StartSessionAsync(cancellationToken: cancellationToken);
         await session.WithTransactionAsync(async (s, token) =>
         {
             var result = await _messages.ReplaceOneAsync(
@@ -81,14 +81,14 @@ internal sealed class MessageRepository(
 
             await dispatcher.DispatchAsync(message.DomainEvents, s, token);
             return true;
-        }, cancellationToken: ct);
+        }, cancellationToken: cancellationToken);
 
         message.ClearDomainEvents();
     }
 
-    public Task IncrementBroadcastReadCountAsync(Guid messageId, CancellationToken ct = default)
+    public Task IncrementBroadcastReadCountAsync(Guid messageId, CancellationToken cancellationToken = default)
         => _messages.UpdateOneAsync(
             Builders<MessageDocument>.Filter.Eq(m => m.Id, messageId),
             Builders<MessageDocument>.Update.Inc(m => m.BroadcastReadCount, 1),
-            cancellationToken: ct);
+            cancellationToken: cancellationToken);
 }

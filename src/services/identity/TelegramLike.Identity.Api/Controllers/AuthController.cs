@@ -24,26 +24,26 @@ public sealed class AuthController : ApiControllerBase
     public AuthController(IMediator mediator) => _mediator = mediator;
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest body, CancellationToken ct)
+    public async Task<IActionResult> Register([FromBody] RegisterRequest body, CancellationToken cancellationToken)
     {
         var id = await _mediator.Send(
-            new RegisterUserCommand(body.Email, body.Username, body.DisplayName, body.Password, body.UserId), ct);
+            new RegisterUserCommand(body.Email, body.Username, body.DisplayName, body.Password, body.UserId), cancellationToken);
         return Ok(new { userId = id });
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequest body, CancellationToken ct)
+    public async Task<IActionResult> Login([FromBody] LoginRequest body, CancellationToken cancellationToken)
     {
-        var token = await _mediator.Send(new LoginUserCommand(body.Email, body.Password), ct);
+        var token = await _mediator.Send(new LoginUserCommand(body.Email, body.Password), cancellationToken);
         return Ok(new { sessionToken = token });
     }
 
     // Exchange an opaque session token for a short-lived access JWT + identity claims.
     // Possession of a valid session token is the credential, so this stays public.
     [HttpPost("token")]
-    public async Task<IActionResult> Token([FromBody] TokenRequest body, CancellationToken ct)
+    public async Task<IActionResult> Token([FromBody] TokenRequest body, CancellationToken cancellationToken)
     {
-        var dto = await _mediator.Send(new ExchangeSessionQuery(body.SessionToken), ct);
+        var dto = await _mediator.Send(new ExchangeSessionQuery(body.SessionToken), cancellationToken);
         return dto is null ? Unauthorized() : Ok(dto);
     }
 }

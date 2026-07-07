@@ -13,7 +13,7 @@ internal sealed class RedisTypingIndicatorService(IConnectionMultiplexer redis, 
 {
     private readonly IDatabase _db = redis.GetDatabase();
 
-    public async Task StartTypingAsync(Guid chatId, Guid userId, CancellationToken ct = default)
+    public async Task StartTypingAsync(Guid chatId, Guid userId, CancellationToken cancellationToken = default)
     {
         var key = Key(chatId);
         var expiresAt = DateTimeOffset.UtcNow.Add(typingTtl).ToUnixTimeMilliseconds();
@@ -22,10 +22,10 @@ internal sealed class RedisTypingIndicatorService(IConnectionMultiplexer redis, 
         await _db.KeyExpireAsync(key, typingTtl + TimeSpan.FromSeconds(1));
     }
 
-    public Task StopTypingAsync(Guid chatId, Guid userId, CancellationToken ct = default)
+    public Task StopTypingAsync(Guid chatId, Guid userId, CancellationToken cancellationToken = default)
         => _db.SortedSetRemoveAsync(Key(chatId), userId.ToString());
 
-    public async Task<IReadOnlyList<Guid>> GetTypingUserIdsAsync(Guid chatId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Guid>> GetTypingUserIdsAsync(Guid chatId, CancellationToken cancellationToken = default)
     {
         var key = Key(chatId);
         var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();

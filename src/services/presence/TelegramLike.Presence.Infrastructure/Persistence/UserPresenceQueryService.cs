@@ -8,20 +8,20 @@ internal sealed class UserPresenceQueryService(IMongoDatabase database) : IUserP
     private readonly IMongoCollection<UserPresenceDocument> _presence =
         database.GetCollection<UserPresenceDocument>("user_presence");
 
-    public async Task<UserPresenceDto?> GetByUserIdAsync(Guid userId, CancellationToken ct = default)
+    public async Task<UserPresenceDto?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var doc = await _presence.Find(p => p.Id == userId).FirstOrDefaultAsync(ct);
+        var doc = await _presence.Find(p => p.Id == userId).FirstOrDefaultAsync(cancellationToken);
         return doc is null ? null : Map(doc);
     }
 
     public async Task<IReadOnlyList<UserPresenceDto>> GetManyAsync(
-        IReadOnlyCollection<Guid> userIds, CancellationToken ct = default)
+        IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default)
     {
         if (userIds.Count == 0) return [];
 
         var docs = await _presence
             .Find(Builders<UserPresenceDocument>.Filter.In(p => p.Id, userIds))
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         return docs.Select(Map).ToList();
     }

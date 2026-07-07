@@ -22,10 +22,10 @@ public sealed class MessageReactionsController : ApiControllerBase
 
     [HttpPost("{messageId:guid}/reactions")]
     public async Task<IActionResult> Add(
-        Guid messageId, [FromBody] AddReactionRequest body, CancellationToken ct)
+        Guid messageId, [FromBody] AddReactionRequest body, CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new AddReactionCommand(messageId, userId, body.Emoji, body.ActorIsPremium), ct);
+        await _mediator.Send(new AddReactionCommand(messageId, userId, body.Emoji, body.ActorIsPremium), cancellationToken);
         return NoContent();
     }
 
@@ -33,13 +33,13 @@ public sealed class MessageReactionsController : ApiControllerBase
     // case-insensitively. Kept off the JSON enum converter path on purpose — it is a route
     // value, and an unknown value returns the same 400 "Unknown emoji." the minimal API did.
     [HttpDelete("{messageId:guid}/reactions/{emoji}")]
-    public async Task<IActionResult> Remove(Guid messageId, string emoji, CancellationToken ct)
+    public async Task<IActionResult> Remove(Guid messageId, string emoji, CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
         if (!Enum.TryParse<Emoji>(emoji, ignoreCase: true, out var parsed))
             return Problem("Unknown emoji.", statusCode: StatusCodes.Status400BadRequest);
 
-        await _mediator.Send(new RemoveReactionCommand(messageId, userId, parsed), ct);
+        await _mediator.Send(new RemoveReactionCommand(messageId, userId, parsed), cancellationToken);
         return NoContent();
     }
 }

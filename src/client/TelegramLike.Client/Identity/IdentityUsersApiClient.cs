@@ -7,42 +7,42 @@ namespace TelegramLike.Client.Identity;
 
 internal sealed class IdentityUsersApiClient(HttpClient http, IAccessTokenProvider tokenProvider) : IIdentityUsersApi
 {
-    public async Task<IdentityUser?> GetUserByIdAsync(Guid userId, CancellationToken ct = default)
+    public async Task<IdentityUser?> GetUserByIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        using var request = await NewRequestAsync(HttpMethod.Get, $"/users/{userId}", ct);
-        using var resp = await http.SendAsync(request, ct);
+        using var request = await NewRequestAsync(HttpMethod.Get, $"/users/{userId}", cancellationToken);
+        using var resp = await http.SendAsync(request, cancellationToken);
         if (resp.StatusCode == HttpStatusCode.NotFound) return null;
         resp.EnsureSuccessStatusCode();
-        return await resp.Content.ReadFromJsonAsync<IdentityUser>(ct);
+        return await resp.Content.ReadFromJsonAsync<IdentityUser>(cancellationToken);
     }
 
     public async Task<IReadOnlyDictionary<Guid, string>> GetUsernamesByIdsAsync(
-        IReadOnlyCollection<Guid> userIds, CancellationToken ct = default)
+        IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default)
     {
         if (userIds.Count == 0) return new Dictionary<Guid, string>();
 
-        using var request = await NewRequestAsync(HttpMethod.Post, "/users/by-ids", ct);
+        using var request = await NewRequestAsync(HttpMethod.Post, "/users/by-ids", cancellationToken);
         request.Content = JsonContent.Create(userIds);
-        using var resp = await http.SendAsync(request, ct);
+        using var resp = await http.SendAsync(request, cancellationToken);
         resp.EnsureSuccessStatusCode();
-        return await resp.Content.ReadFromJsonAsync<Dictionary<Guid, string>>(ct) ?? new Dictionary<Guid, string>();
+        return await resp.Content.ReadFromJsonAsync<Dictionary<Guid, string>>(cancellationToken) ?? new Dictionary<Guid, string>();
     }
 
-    public async Task<Guid?> GetUserIdByUsernameAsync(string username, CancellationToken ct = default)
+    public async Task<Guid?> GetUserIdByUsernameAsync(string username, CancellationToken cancellationToken = default)
     {
         using var request = await NewRequestAsync(
-            HttpMethod.Get, $"/users/by-username?u={Uri.EscapeDataString(username)}", ct);
-        using var resp = await http.SendAsync(request, ct);
+            HttpMethod.Get, $"/users/by-username?u={Uri.EscapeDataString(username)}", cancellationToken);
+        using var resp = await http.SendAsync(request, cancellationToken);
         if (resp.StatusCode == HttpStatusCode.NotFound) return null;
         resp.EnsureSuccessStatusCode();
-        var payload = await resp.Content.ReadFromJsonAsync<UserIdResponse>(ct);
+        var payload = await resp.Content.ReadFromJsonAsync<UserIdResponse>(cancellationToken);
         return payload?.UserId;
     }
 
-    private async Task<HttpRequestMessage> NewRequestAsync(HttpMethod method, string url, CancellationToken ct)
+    private async Task<HttpRequestMessage> NewRequestAsync(HttpMethod method, string url, CancellationToken cancellationToken)
     {
         var request = new HttpRequestMessage(method, url);
-        var token = await tokenProvider.GetAccessTokenAsync(ct);
+        var token = await tokenProvider.GetAccessTokenAsync(cancellationToken);
         if (token is not null)
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return request;

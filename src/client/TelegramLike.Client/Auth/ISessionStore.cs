@@ -6,18 +6,18 @@ namespace TelegramLike.Client.Auth;
 /// </summary>
 public interface ISessionStore
 {
-    Task<string?> GetSessionTokenAsync(CancellationToken ct = default);
-    Task SetSessionTokenAsync(string? sessionToken, CancellationToken ct = default);
+    Task<string?> GetSessionTokenAsync(CancellationToken cancellationToken = default);
+    Task SetSessionTokenAsync(string? sessionToken, CancellationToken cancellationToken = default);
 }
 
 public sealed class InMemorySessionStore : ISessionStore
 {
     private string? _sessionToken;
 
-    public Task<string?> GetSessionTokenAsync(CancellationToken ct = default)
+    public Task<string?> GetSessionTokenAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(_sessionToken);
 
-    public Task SetSessionTokenAsync(string? sessionToken, CancellationToken ct = default)
+    public Task SetSessionTokenAsync(string? sessionToken, CancellationToken cancellationToken = default)
     {
         _sessionToken = sessionToken;
         return Task.CompletedTask;

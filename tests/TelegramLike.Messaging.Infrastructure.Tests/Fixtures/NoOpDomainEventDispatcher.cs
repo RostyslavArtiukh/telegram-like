@@ -9,6 +9,6 @@ namespace TelegramLike.Messaging.Infrastructure.Tests.Fixtures;
 // transaction happy without needing an outbox collection/consumer.
 internal sealed class NoOpDomainEventDispatcher : IDomainEventDispatcher
 {
-    public Task DispatchAsync(IEnumerable<IDomainEvent> events, IClientSessionHandle session, CancellationToken ct = default)
+    public Task DispatchAsync(IEnumerable<IDomainEvent> events, IClientSessionHandle session, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 }

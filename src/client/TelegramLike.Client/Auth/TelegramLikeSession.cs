@@ -33,51 +33,51 @@ public sealed class TelegramLikeSession(IIdentityAuthApi identityAuth, ISessionS
 
     private sealed record UserIdentity(Guid UserId, string Username);
 
-    public async Task<bool> IsAuthenticatedAsync(CancellationToken ct = default)
-        => await store.GetSessionTokenAsync(ct) is not null;
+    public async Task<bool> IsAuthenticatedAsync(CancellationToken cancellationToken = default)
+        => await store.GetSessionTokenAsync(cancellationToken) is not null;
 
     public async Task RegisterAsync(
-        string email, string username, string displayName, string password, CancellationToken ct = default)
-        => await identityAuth.RegisterAsync(email, username, displayName, password, ct);
+        string email, string username, string displayName, string password, CancellationToken cancellationToken = default)
+        => await identityAuth.RegisterAsync(email, username, displayName, password, cancellationToken);
 
-    public async Task LoginAsync(string email, string password, CancellationToken ct = default)
+    public async Task LoginAsync(string email, string password, CancellationToken cancellationToken = default)
     {
-        var sessionToken = await identityAuth.LoginAsync(email, password, ct);
-        await store.SetSessionTokenAsync(sessionToken, ct);
+        var sessionToken = await identityAuth.LoginAsync(email, password, cancellationToken);
+        await store.SetSessionTokenAsync(sessionToken, cancellationToken);
         InvalidateAccessToken();
 
         // Exchange eagerly so a bad session fails at login, and UserId is known right away.
-        if (await GetAccessTokenAsync(ct) is null)
+        if (await GetAccessTokenAsync(cancellationToken) is null)
             throw new InvalidOperationException("Login succeeded but the token exchange failed.");
     }
 
-    public async Task LogoutAsync(CancellationToken ct = default)
+    public async Task LogoutAsync(CancellationToken cancellationToken = default)
     {
-        await store.SetSessionTokenAsync(null, ct);
+        await store.SetSessionTokenAsync(null, cancellationToken);
         InvalidateAccessToken();
         _identity = null;
     }
 
-    public async Task<string?> GetAccessTokenAsync(CancellationToken ct = default)
+    public async Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
     {
         // Fast path outside the lock; the margin mirrors the Web BFF's refresh-before-expiry.
         if (_accessToken is not null && DateTimeOffset.UtcNow.UtcTicks < Volatile.Read(ref _expiresAtUtcTicks))
             return _accessToken;
 
-        await _gate.WaitAsync(ct);
+        await _gate.WaitAsync(cancellationToken);
         try
         {
             if (_accessToken is not null && DateTimeOffset.UtcNow.UtcTicks < Volatile.Read(ref _expiresAtUtcTicks))
                 return _accessToken;
 
-            var sessionToken = await store.GetSessionTokenAsync(ct);
+            var sessionToken = await store.GetSessionTokenAsync(cancellationToken);
             if (sessionToken is null) return null;
 
-            var exchange = await identityAuth.ExchangeAsync(sessionToken, ct);
+            var exchange = await identityAuth.ExchangeAsync(sessionToken, cancellationToken);
             if (exchange is null)
             {
                 // Session expired or revoked server-side — drop it so the app re-prompts login.
-                await store.SetSessionTokenAsync(null, ct);
+                await store.SetSessionTokenAsync(null, cancellationToken);
                 return null;
             }
 

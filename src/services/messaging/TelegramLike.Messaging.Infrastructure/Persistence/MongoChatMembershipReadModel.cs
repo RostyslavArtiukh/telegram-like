@@ -15,39 +15,39 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
             Builders<ChatMembershipDocument>.Filter.Eq(d => d.ChatId, chatId),
             Builders<ChatMembershipDocument>.Filter.Ne(d => d.IsActive, false));
 
-    public async Task<bool> IsActiveMemberAsync(Guid chatId, Guid userId, CancellationToken ct = default)
+    public async Task<bool> IsActiveMemberAsync(Guid chatId, Guid userId, CancellationToken cancellationToken = default)
     {
         var id = ChatMembershipDocument.MakeId(chatId, userId);
         var filter = Builders<ChatMembershipDocument>.Filter.And(
             Builders<ChatMembershipDocument>.Filter.Eq(d => d.Id, id),
             Builders<ChatMembershipDocument>.Filter.Ne(d => d.IsActive, false));
-        return await _memberships.Find(filter).Limit(1).AnyAsync(ct);
+        return await _memberships.Find(filter).Limit(1).AnyAsync(cancellationToken);
     }
 
-    public async Task<bool> IsModeratorAsync(Guid chatId, Guid userId, CancellationToken ct = default)
+    public async Task<bool> IsModeratorAsync(Guid chatId, Guid userId, CancellationToken cancellationToken = default)
     {
         var id = ChatMembershipDocument.MakeId(chatId, userId);
         var filter = Builders<ChatMembershipDocument>.Filter.And(
             Builders<ChatMembershipDocument>.Filter.Eq(d => d.Id, id),
             Builders<ChatMembershipDocument>.Filter.Ne(d => d.IsActive, false),
             Builders<ChatMembershipDocument>.Filter.In(d => d.Role, ["Owner", "Admin"]));
-        return await _memberships.Find(filter).Limit(1).AnyAsync(ct);
+        return await _memberships.Find(filter).Limit(1).AnyAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Guid>> GetActiveMemberIdsAsync(Guid chatId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Guid>> GetActiveMemberIdsAsync(Guid chatId, CancellationToken cancellationToken = default)
         => await _memberships
             .Find(ActiveOf(chatId))
             .Project(d => d.UserId)
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
-    public Task UpsertActiveAsync(Guid chatId, Guid userId, string? role, DateTime occurredAt, CancellationToken ct = default)
-        => ApplyAsync(chatId, userId, isActive: true, role, occurredAt, ct);
+    public Task UpsertActiveAsync(Guid chatId, Guid userId, string? role, DateTime occurredAt, CancellationToken cancellationToken = default)
+        => ApplyAsync(chatId, userId, isActive: true, role, occurredAt, cancellationToken);
 
-    public Task DeactivateAsync(Guid chatId, Guid userId, DateTime occurredAt, CancellationToken ct = default)
-        => ApplyAsync(chatId, userId, isActive: false, role: null, occurredAt, ct);
+    public Task DeactivateAsync(Guid chatId, Guid userId, DateTime occurredAt, CancellationToken cancellationToken = default)
+        => ApplyAsync(chatId, userId, isActive: false, role: null, occurredAt, cancellationToken);
 
-    public Task SetRoleAsync(Guid chatId, Guid userId, string role, DateTime occurredAt, CancellationToken ct = default)
-        => ApplyAsync(chatId, userId, isActive: null, role, occurredAt, ct);
+    public Task SetRoleAsync(Guid chatId, Guid userId, string role, DateTime occurredAt, CancellationToken cancellationToken = default)
+        => ApplyAsync(chatId, userId, isActive: null, role, occurredAt, cancellationToken);
 
     // Last-writer-wins by occurredAt via a conditional pipeline update: each supplied
     // field is applied only when occurredAt is newer than the stored LastEventAt
@@ -55,7 +55,7 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
     // isActive/role are null when the event doesn't touch that field (leave keeps role,
     // role-change keeps active state). One atomic upsert, so concurrent/redelivered
     // events can't interleave into a wrong final state.
-    private Task ApplyAsync(Guid chatId, Guid userId, bool? isActive, string? role, DateTime occurredAt, CancellationToken ct)
+    private Task ApplyAsync(Guid chatId, Guid userId, bool? isActive, string? role, DateTime occurredAt, CancellationToken cancellationToken)
     {
         var id = ChatMembershipDocument.MakeId(chatId, userId);
         var occurred = new BsonDateTime(occurredAt);
@@ -92,6 +92,6 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
             Builders<ChatMembershipDocument>.Filter.Eq(d => d.Id, id),
             pipeline,
             new UpdateOptions { IsUpsert = true },
-            ct);
+            cancellationToken);
     }
 }

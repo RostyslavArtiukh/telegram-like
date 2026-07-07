@@ -4,8 +4,8 @@ namespace TelegramLike.Chats.Application.Common.Interfaces;
 
 public interface IChatQueryService
 {
-    Task<IReadOnlyList<ChatSummaryDto>> GetMyChatsAsync(Guid userId, CancellationToken ct = default);
-    Task<ChatDetailsDto?> GetChatByIdAsync(Guid chatId, CancellationToken ct = default);
-    Task<IReadOnlyList<ChatMemberDto>> GetChatMembersAsync(Guid chatId, CancellationToken ct = default);
-    Task<bool> IsActiveMemberAsync(Guid chatId, Guid userId, CancellationToken ct = default);
+    Task<IReadOnlyList<ChatSummaryDto>> GetMyChatsAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<ChatDetailsDto?> GetChatByIdAsync(Guid chatId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ChatMemberDto>> GetChatMembersAsync(Guid chatId, CancellationToken cancellationToken = default);
+    Task<bool> IsActiveMemberAsync(Guid chatId, Guid userId, CancellationToken cancellationToken = default);
 }

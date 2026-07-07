@@ -12,10 +12,10 @@ public sealed class SecureSessionStore : ISessionStore
 {
     private const string Key = "telegramlike_session_token";
 
-    public async Task<string?> GetSessionTokenAsync(CancellationToken ct = default)
+    public async Task<string?> GetSessionTokenAsync(CancellationToken cancellationToken = default)
         => await SecureStorage.Default.GetAsync(Key);
 
-    public Task SetSessionTokenAsync(string? sessionToken, CancellationToken ct = default)
+    public Task SetSessionTokenAsync(string? sessionToken, CancellationToken cancellationToken = default)
     {
         if (sessionToken is null)
         {

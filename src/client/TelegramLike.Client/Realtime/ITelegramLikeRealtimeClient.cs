@@ -26,9 +26,9 @@ public interface ITelegramLikeRealtimeClient : IAsyncDisposable
 
     bool IsConnected { get; }
 
-    Task ConnectAsync(CancellationToken ct = default);
-    Task DisconnectAsync(CancellationToken ct = default);
+    Task ConnectAsync(CancellationToken cancellationToken = default);
+    Task DisconnectAsync(CancellationToken cancellationToken = default);
 
-    Task JoinChatAsync(Guid chatId, CancellationToken ct = default);
-    Task LeaveChatAsync(Guid chatId, CancellationToken ct = default);
+    Task JoinChatAsync(Guid chatId, CancellationToken cancellationToken = default);
+    Task LeaveChatAsync(Guid chatId, CancellationToken cancellationToken = default);
 }

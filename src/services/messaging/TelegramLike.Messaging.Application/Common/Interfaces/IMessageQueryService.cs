@@ -9,7 +9,7 @@ public interface IMessageQueryService
         Guid requesterId,
         DateTime? beforeSentAt,
         int pageSize,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
-    Task<MessageDto?> GetMessageByIdAsync(Guid messageId, Guid requesterId, CancellationToken ct = default);
+    Task<MessageDto?> GetMessageByIdAsync(Guid messageId, Guid requesterId, CancellationToken cancellationToken = default);
 }

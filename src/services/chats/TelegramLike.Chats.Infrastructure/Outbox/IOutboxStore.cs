@@ -7,21 +7,21 @@ internal interface IOutboxStore
     Task AddAsync(
         IEnumerable<OutboxMessage> messages,
         IClientSessionHandle session,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<OutboxMessage>> GetPendingAsync(
         int batchSize,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
-    Task MarkSentAsync(Guid id, CancellationToken ct = default);
+    Task MarkSentAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task RecordFailureAsync(
         Guid id,
         string error,
         int maxRetries,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<OutboxMessage>> GetDeadLetteredAsync(
         int batchSize,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }

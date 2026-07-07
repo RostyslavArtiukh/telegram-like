@@ -26,25 +26,25 @@ public sealed class TypingController : ApiControllerBase
     public TypingController(IMediator mediator) => _mediator = mediator;
 
     [HttpPost("{chatId:guid}/start")]
-    public async Task<IActionResult> StartTyping(Guid chatId, CancellationToken ct)
+    public async Task<IActionResult> StartTyping(Guid chatId, CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new StartTypingCommand(chatId, userId), ct);
+        await _mediator.Send(new StartTypingCommand(chatId, userId), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("{chatId:guid}/stop")]
-    public async Task<IActionResult> StopTyping(Guid chatId, CancellationToken ct)
+    public async Task<IActionResult> StopTyping(Guid chatId, CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new StopTypingCommand(chatId, userId), ct);
+        await _mediator.Send(new StopTypingCommand(chatId, userId), cancellationToken);
         return NoContent();
     }
 
     [HttpGet("{chatId:guid}")]
-    public async Task<IActionResult> GetTypingUsers(Guid chatId, CancellationToken ct)
+    public async Task<IActionResult> GetTypingUsers(Guid chatId, CancellationToken cancellationToken)
     {
-        var dto = await _mediator.Send(new GetTypingUsersQuery(chatId), ct);
+        var dto = await _mediator.Send(new GetTypingUsersQuery(chatId), cancellationToken);
         return Ok(dto);
     }
 }

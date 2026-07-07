@@ -12,55 +12,55 @@ internal sealed class NotificationsApiClient(HttpClient http, IAccessTokenProvid
         DateTime? beforeCreatedAt = null,
         int pageSize = 20,
         bool unreadOnly = false,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var query = new List<string> { $"pageSize={pageSize}", $"unreadOnly={unreadOnly.ToString().ToLowerInvariant()}" };
         if (beforeCreatedAt.HasValue)
             query.Add($"before={Uri.EscapeDataString(beforeCreatedAt.Value.ToString("o"))}");
 
-        using var request = await NewRequestAsync(HttpMethod.Get, "/notifications/?" + string.Join("&", query), ct);
-        using var response = await http.SendAsync(request, ct);
+        using var request = await NewRequestAsync(HttpMethod.Get, "/notifications/?" + string.Join("&", query), cancellationToken);
+        using var response = await http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadFromJsonAsync<NotificationFeedApiDto>(ct)
+        return await response.Content.ReadFromJsonAsync<NotificationFeedApiDto>(cancellationToken)
                ?? new NotificationFeedApiDto([], null);
     }
 
-    public async Task<long> GetUnreadCountAsync(Guid userId, CancellationToken ct = default)
+    public async Task<long> GetUnreadCountAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        using var request = await NewRequestAsync(HttpMethod.Get, "/notifications/unread-count", ct);
-        using var response = await http.SendAsync(request, ct);
+        using var request = await NewRequestAsync(HttpMethod.Get, "/notifications/unread-count", cancellationToken);
+        using var response = await http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        var payload = await response.Content.ReadFromJsonAsync<UnreadCountResponse>(ct);
+        var payload = await response.Content.ReadFromJsonAsync<UnreadCountResponse>(cancellationToken);
         return payload?.Count ?? 0;
     }
 
-    public async Task MarkAsReadAsync(Guid userId, Guid notificationId, CancellationToken ct = default)
+    public async Task MarkAsReadAsync(Guid userId, Guid notificationId, CancellationToken cancellationToken = default)
     {
-        using var request = await NewRequestAsync(HttpMethod.Post, $"/notifications/{notificationId}/read", ct);
-        using var response = await http.SendAsync(request, ct);
+        using var request = await NewRequestAsync(HttpMethod.Post, $"/notifications/{notificationId}/read", cancellationToken);
+        using var response = await http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task MarkAllAsReadAsync(Guid userId, CancellationToken ct = default)
+    public async Task MarkAllAsReadAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        using var request = await NewRequestAsync(HttpMethod.Post, "/notifications/read-all", ct);
-        using var response = await http.SendAsync(request, ct);
+        using var request = await NewRequestAsync(HttpMethod.Post, "/notifications/read-all", cancellationToken);
+        using var response = await http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task MarkChatAsReadAsync(Guid userId, Guid chatId, CancellationToken ct = default)
+    public async Task MarkChatAsReadAsync(Guid userId, Guid chatId, CancellationToken cancellationToken = default)
     {
-        using var request = await NewRequestAsync(HttpMethod.Post, $"/notifications/chats/{chatId}/read", ct);
-        using var response = await http.SendAsync(request, ct);
+        using var request = await NewRequestAsync(HttpMethod.Post, $"/notifications/chats/{chatId}/read", cancellationToken);
+        using var response = await http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
 
-    private async Task<HttpRequestMessage> NewRequestAsync(HttpMethod method, string url, CancellationToken ct)
+    private async Task<HttpRequestMessage> NewRequestAsync(HttpMethod method, string url, CancellationToken cancellationToken)
     {
         var request = new HttpRequestMessage(method, url);
-        var token = await tokenProvider.GetAccessTokenAsync(ct);
+        var token = await tokenProvider.GetAccessTokenAsync(cancellationToken);
         if (token is not null)
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return request;

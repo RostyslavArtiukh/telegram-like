@@ -26,13 +26,13 @@ internal sealed class MessageIndexInitializer(
     // receipt" and both upsert-insert, producing duplicate receipts (and, for broadcast,
     // a double-counted read). The unique index makes the second insert a duplicate-key
     // no-op — the project's mandated partial-unique-index rule, previously missing here.
-    public static Task EnsureIndexesAsync(IMongoDatabase database, CancellationToken ct = default)
+    public static Task EnsureIndexesAsync(IMongoDatabase database, CancellationToken cancellationToken = default)
     {
         var receipts = database.GetCollection<BsonDocument>("message_read_receipts");
         var receiptIndex = new CreateIndexModel<BsonDocument>(
             Builders<BsonDocument>.IndexKeys.Ascending("MessageId").Ascending("MemberId"),
             new CreateIndexOptions { Name = "uniq_message_member", Unique = true });
 
-        return receipts.Indexes.CreateOneAsync(receiptIndex, cancellationToken: ct);
+        return receipts.Indexes.CreateOneAsync(receiptIndex, cancellationToken: cancellationToken);
     }
 }

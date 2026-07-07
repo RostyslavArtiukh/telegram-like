@@ -23,29 +23,29 @@ public sealed class NotificationReadController : ApiControllerBase
     public NotificationReadController(IMediator mediator) => _mediator = mediator;
 
     [HttpPost("{id:guid}/read")]
-    public async Task<IActionResult> MarkAsRead(Guid id, CancellationToken ct)
+    public async Task<IActionResult> MarkAsRead(Guid id, CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
 
-        await _mediator.Send(new MarkNotificationAsReadCommand(id, userId), ct);
+        await _mediator.Send(new MarkNotificationAsReadCommand(id, userId), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("read-all")]
-    public async Task<IActionResult> MarkAllAsRead(CancellationToken ct)
+    public async Task<IActionResult> MarkAllAsRead(CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
 
-        await _mediator.Send(new MarkAllNotificationsAsReadCommand(userId), ct);
+        await _mediator.Send(new MarkAllNotificationsAsReadCommand(userId), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("chats/{chatId:guid}/read")]
-    public async Task<IActionResult> MarkChatAsRead(Guid chatId, CancellationToken ct)
+    public async Task<IActionResult> MarkChatAsRead(Guid chatId, CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
 
-        await _mediator.Send(new MarkChatNotificationsAsReadCommand(userId, chatId), ct);
+        await _mediator.Send(new MarkChatNotificationsAsReadCommand(userId, chatId), cancellationToken);
         return NoContent();
     }
 }

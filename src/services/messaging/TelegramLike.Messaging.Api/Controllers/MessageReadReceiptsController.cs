@@ -21,10 +21,10 @@ public sealed class MessageReadReceiptsController : ApiControllerBase
 
     [HttpPost("{messageId:guid}/read")]
     public async Task<IActionResult> MarkAsRead(
-        Guid messageId, [FromBody] MarkAsReadRequest body, CancellationToken ct)
+        Guid messageId, [FromBody] MarkAsReadRequest body, CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new MarkMessageAsReadCommand(messageId, userId, body.IsBroadcast), ct);
+        await _mediator.Send(new MarkMessageAsReadCommand(messageId, userId, body.IsBroadcast), cancellationToken);
         return NoContent();
     }
 }

@@ -20,7 +20,7 @@ public sealed class ServiceTokenProvider(
     IIdentityAuthApi identityAuth,
     IMemoryCache cache) : IAccessTokenProvider
 {
-    public async Task<string?> GetAccessTokenAsync(CancellationToken ct = default)
+    public async Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
     {
         var sessionToken = await currentUser.GetSessionTokenAsync();
         if (string.IsNullOrEmpty(sessionToken)) return null;
@@ -29,7 +29,7 @@ public sealed class ServiceTokenProvider(
         if (cache.TryGetValue<string>(cacheKey, out var cached) && cached is not null)
             return cached;
 
-        var exchange = await identityAuth.ExchangeAsync(sessionToken, ct);
+        var exchange = await identityAuth.ExchangeAsync(sessionToken, cancellationToken);
         if (exchange is null) return null;
 
         // Refresh slightly before the token actually expires to avoid edge-of-expiry 401s.

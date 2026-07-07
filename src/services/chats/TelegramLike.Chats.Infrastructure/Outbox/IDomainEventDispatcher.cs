@@ -8,5 +8,5 @@ internal interface IDomainEventDispatcher
     Task DispatchAsync(
         IEnumerable<IDomainEvent> events,
         IClientSessionHandle session,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 }

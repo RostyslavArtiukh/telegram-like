@@ -9,27 +9,27 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
     private readonly IMongoCollection<ChatMembershipDocument> _memberships =
         database.GetCollection<ChatMembershipDocument>("chat_memberships");
 
-    public async Task<bool> IsActiveMemberAsync(Guid chatId, Guid userId, CancellationToken ct = default)
+    public async Task<bool> IsActiveMemberAsync(Guid chatId, Guid userId, CancellationToken cancellationToken = default)
     {
         var id = ChatMembershipDocument.MakeId(chatId, userId);
         // `IsActive != false` counts a missing field (legacy docs) as active.
         var filter = Builders<ChatMembershipDocument>.Filter.And(
             Builders<ChatMembershipDocument>.Filter.Eq(d => d.Id, id),
             Builders<ChatMembershipDocument>.Filter.Ne(d => d.IsActive, false));
-        return await _memberships.Find(filter).Limit(1).AnyAsync(ct);
+        return await _memberships.Find(filter).Limit(1).AnyAsync(cancellationToken);
     }
 
-    public Task UpsertActiveAsync(Guid chatId, Guid userId, DateTime occurredAt, CancellationToken ct = default)
-        => ApplyAsync(chatId, userId, isActive: true, occurredAt, ct);
+    public Task UpsertActiveAsync(Guid chatId, Guid userId, DateTime occurredAt, CancellationToken cancellationToken = default)
+        => ApplyAsync(chatId, userId, isActive: true, occurredAt, cancellationToken);
 
-    public Task DeactivateAsync(Guid chatId, Guid userId, DateTime occurredAt, CancellationToken ct = default)
-        => ApplyAsync(chatId, userId, isActive: false, occurredAt, ct);
+    public Task DeactivateAsync(Guid chatId, Guid userId, DateTime occurredAt, CancellationToken cancellationToken = default)
+        => ApplyAsync(chatId, userId, isActive: false, occurredAt, cancellationToken);
 
     // Last-writer-wins by occurredAt via a conditional pipeline update: the new state
     // is applied only when occurredAt is newer than the stored LastEventAt (missing =>
     // epoch). A stale event is a no-op, never a resurrect/delete. One atomic upsert,
     // so concurrent/redelivered events can't interleave into a wrong final state.
-    private Task ApplyAsync(Guid chatId, Guid userId, bool isActive, DateTime occurredAt, CancellationToken ct)
+    private Task ApplyAsync(Guid chatId, Guid userId, bool isActive, DateTime occurredAt, CancellationToken cancellationToken)
     {
         var id = ChatMembershipDocument.MakeId(chatId, userId);
         var occurred = new BsonDateTime(occurredAt);
@@ -56,6 +56,6 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
             Builders<ChatMembershipDocument>.Filter.Eq(d => d.Id, id),
             pipeline,
             new UpdateOptions { IsUpsert = true },
-            ct);
+            cancellationToken);
     }
 }

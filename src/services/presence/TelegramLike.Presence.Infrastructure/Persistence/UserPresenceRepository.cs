@@ -9,16 +9,16 @@ internal sealed class UserPresenceRepository(IMongoDatabase database) : IUserPre
     private readonly IMongoCollection<UserPresenceDocument> _presence =
         database.GetCollection<UserPresenceDocument>("user_presence");
 
-    public async Task<UserPresence?> GetByUserIdAsync(Guid userId, CancellationToken ct = default)
+    public async Task<UserPresence?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var doc = await _presence.Find(p => p.Id == userId).FirstOrDefaultAsync(ct);
+        var doc = await _presence.Find(p => p.Id == userId).FirstOrDefaultAsync(cancellationToken);
         return doc?.ToDomain();
     }
 
-    public Task UpsertAsync(UserPresence presence, CancellationToken ct = default)
+    public Task UpsertAsync(UserPresence presence, CancellationToken cancellationToken = default)
         => _presence.ReplaceOneAsync(
             Builders<UserPresenceDocument>.Filter.Eq(p => p.Id, presence.Id),
             UserPresenceDocument.FromDomain(presence),
             new ReplaceOptions { IsUpsert = true },
-            ct);
+            cancellationToken);
 }

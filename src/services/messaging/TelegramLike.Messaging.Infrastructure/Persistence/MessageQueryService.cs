@@ -17,7 +17,7 @@ internal sealed class MessageQueryService(IMongoDatabase database) : IMessageQue
         Guid requesterId,
         DateTime? beforeSentAt,
         int pageSize,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var filterBuilder = Builders<MessageDocument>.Filter;
         var filter = filterBuilder.Eq(m => m.ChatId, chatId);
@@ -28,7 +28,7 @@ internal sealed class MessageQueryService(IMongoDatabase database) : IMessageQue
             .Find(filter)
             .SortByDescending(m => m.SentAt)
             .Limit(pageSize + 1)
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         var hasMore = docs.Count > pageSize;
         if (hasMore) docs.RemoveAt(docs.Count - 1);
@@ -36,7 +36,7 @@ internal sealed class MessageQueryService(IMongoDatabase database) : IMessageQue
         var hiddenIds = await _hidden
             .Find(h => h.UserId == requesterId)
             .Project(h => h.MessageId)
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
         var hiddenSet = hiddenIds.ToHashSet();
 
         var items = docs
@@ -48,12 +48,12 @@ internal sealed class MessageQueryService(IMongoDatabase database) : IMessageQue
         return new MessagePageDto(items, nextCursor);
     }
 
-    public async Task<MessageDto?> GetMessageByIdAsync(Guid messageId, Guid requesterId, CancellationToken ct = default)
+    public async Task<MessageDto?> GetMessageByIdAsync(Guid messageId, Guid requesterId, CancellationToken cancellationToken = default)
     {
-        var doc = await _messages.Find(m => m.Id == messageId).FirstOrDefaultAsync(ct);
+        var doc = await _messages.Find(m => m.Id == messageId).FirstOrDefaultAsync(cancellationToken);
         if (doc is null) return null;
 
-        var isHidden = await _hidden.Find(h => h.MessageId == messageId && h.UserId == requesterId).AnyAsync(ct);
+        var isHidden = await _hidden.Find(h => h.MessageId == messageId && h.UserId == requesterId).AnyAsync(cancellationToken);
         return isHidden ? null : MapMessage(doc);
     }
 

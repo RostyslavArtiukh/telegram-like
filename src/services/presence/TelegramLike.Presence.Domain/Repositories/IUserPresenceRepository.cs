@@ -4,7 +4,7 @@ namespace TelegramLike.Presence.Domain.Repositories;
 
 public interface IUserPresenceRepository
 {
-    Task<UserPresence?> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
+    Task<UserPresence?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
-    Task UpsertAsync(UserPresence presence, CancellationToken ct = default);
+    Task UpsertAsync(UserPresence presence, CancellationToken cancellationToken = default);
 }

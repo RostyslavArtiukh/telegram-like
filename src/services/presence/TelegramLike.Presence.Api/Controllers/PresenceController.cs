@@ -23,32 +23,32 @@ public sealed class PresenceController : ApiControllerBase
     public PresenceController(IMediator mediator) => _mediator = mediator;
 
     [HttpPost("heartbeat")]
-    public async Task<IActionResult> Heartbeat(CancellationToken ct)
+    public async Task<IActionResult> Heartbeat(CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new HeartbeatCommand(userId), ct);
+        await _mediator.Send(new HeartbeatCommand(userId), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("offline")]
-    public async Task<IActionResult> GoOffline(CancellationToken ct)
+    public async Task<IActionResult> GoOffline(CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new GoOfflineCommand(userId), ct);
+        await _mediator.Send(new GoOfflineCommand(userId), cancellationToken);
         return NoContent();
     }
 
     [HttpGet("{userId:guid}")]
-    public async Task<IActionResult> GetUserPresence(Guid userId, CancellationToken ct)
+    public async Task<IActionResult> GetUserPresence(Guid userId, CancellationToken cancellationToken)
     {
-        var dto = await _mediator.Send(new GetUserPresenceQuery(userId), ct);
+        var dto = await _mediator.Send(new GetUserPresenceQuery(userId), cancellationToken);
         return dto is null ? NotFound() : Ok(dto);
     }
 
     [HttpPost("batch")]
-    public async Task<IActionResult> GetBatchPresence([FromBody] Guid[] userIds, CancellationToken ct)
+    public async Task<IActionResult> GetBatchPresence([FromBody] Guid[] userIds, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetBatchPresenceQuery(userIds), ct);
+        var result = await _mediator.Send(new GetBatchPresenceQuery(userIds), cancellationToken);
         return Ok(result);
     }
 }

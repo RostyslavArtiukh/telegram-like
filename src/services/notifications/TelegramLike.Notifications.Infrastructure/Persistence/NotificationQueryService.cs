@@ -14,7 +14,7 @@ internal sealed class NotificationQueryService(IMongoDatabase database) : INotif
         DateTime? beforeCreatedAt,
         int pageSize,
         bool unreadOnly,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var filterBuilder = Builders<NotificationDocument>.Filter;
         var filter = filterBuilder.Eq(n => n.RecipientId, recipientId);
@@ -29,7 +29,7 @@ internal sealed class NotificationQueryService(IMongoDatabase database) : INotif
             .Find(filter)
             .SortByDescending(n => n.CreatedAt)
             .Limit(pageSize + 1)
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         DateTime? nextCursor = null;
         if (docs.Count > pageSize)
@@ -42,13 +42,13 @@ internal sealed class NotificationQueryService(IMongoDatabase database) : INotif
         return new NotificationFeedDto(items, nextCursor);
     }
 
-    public Task<long> GetUnreadCountAsync(Guid recipientId, CancellationToken ct = default)
+    public Task<long> GetUnreadCountAsync(Guid recipientId, CancellationToken cancellationToken = default)
     {
         var filter = Builders<NotificationDocument>.Filter.And(
             Builders<NotificationDocument>.Filter.Eq(n => n.RecipientId, recipientId),
             Builders<NotificationDocument>.Filter.Ne(n => n.Status, NotificationStatus.Read));
 
-        return _notifications.CountDocumentsAsync(filter, cancellationToken: ct);
+        return _notifications.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
     }
 
     private static NotificationDto Map(NotificationDocument doc) => new(

@@ -25,7 +25,7 @@ internal sealed class NotificationIndexInitializer(
     // duplicate Notification rows when RabbitMQ redelivers an integration event.
     // Partial filter excludes legacy docs (created before this index existed) that
     // have no SourceEventId field, so the migration is non-breaking.
-    public static Task EnsureIndexesAsync(IMongoDatabase database, CancellationToken ct = default)
+    public static Task EnsureIndexesAsync(IMongoDatabase database, CancellationToken cancellationToken = default)
     {
         var collection = database.GetCollection<BsonDocument>("notifications");
 
@@ -50,6 +50,6 @@ internal sealed class NotificationIndexInitializer(
             Builders<BsonDocument>.IndexKeys.Ascending("RecipientId").Ascending("Status"),
             new CreateIndexOptions { Name = "recipient_status" });
 
-        return collection.Indexes.CreateManyAsync([uniqueSourceEvent, feed, unread], ct);
+        return collection.Indexes.CreateManyAsync([uniqueSourceEvent, feed, unread], cancellationToken);
     }
 }

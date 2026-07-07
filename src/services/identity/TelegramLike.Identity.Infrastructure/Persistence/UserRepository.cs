@@ -10,52 +10,52 @@ internal sealed class UserRepository(IMongoDatabase database) : IUserRepository
     private readonly IMongoCollection<UserDocument> _collection =
         database.GetCollection<UserDocument>("users");
 
-    public async Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var doc = await _collection
             .Find(u => u.Id == id)
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(cancellationToken);
         return doc?.ToDomain();
     }
 
-    public async Task<User?> GetByEmailAsync(Email email, CancellationToken ct = default)
+    public async Task<User?> GetByEmailAsync(Email email, CancellationToken cancellationToken = default)
     {
         var doc = await _collection
             .Find(u => u.Email == email.Value)
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(cancellationToken);
         return doc?.ToDomain();
     }
 
-    public async Task<User?> GetByUsernameAsync(Username username, CancellationToken ct = default)
+    public async Task<User?> GetByUsernameAsync(Username username, CancellationToken cancellationToken = default)
     {
         var doc = await _collection
             .Find(u => u.Username == username.Value)
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(cancellationToken);
         return doc?.ToDomain();
     }
 
-    public async Task<bool> ExistsByEmailAsync(Email email, CancellationToken ct = default) =>
-        await _collection.Find(u => u.Email == email.Value).AnyAsync(ct);
+    public async Task<bool> ExistsByEmailAsync(Email email, CancellationToken cancellationToken = default) =>
+        await _collection.Find(u => u.Email == email.Value).AnyAsync(cancellationToken);
 
-    public async Task<bool> ExistsByUsernameAsync(Username username, CancellationToken ct = default) =>
-        await _collection.Find(u => u.Username == username.Value).AnyAsync(ct);
+    public async Task<bool> ExistsByUsernameAsync(Username username, CancellationToken cancellationToken = default) =>
+        await _collection.Find(u => u.Username == username.Value).AnyAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<User>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct = default)
+    public async Task<IReadOnlyList<User>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default)
     {
         if (ids.Count == 0) return [];
 
         var docs = await _collection
             .Find(Builders<UserDocument>.Filter.In(u => u.Id, ids))
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         return docs.Select(d => d.ToDomain()).ToList();
     }
 
-    public async Task AddAsync(User user, CancellationToken ct = default)
+    public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
         try
         {
-            await _collection.InsertOneAsync(UserDocument.FromDomain(user), cancellationToken: ct);
+            await _collection.InsertOneAsync(UserDocument.FromDomain(user), cancellationToken: cancellationToken);
         }
         catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
         {
@@ -66,7 +66,7 @@ internal sealed class UserRepository(IMongoDatabase database) : IUserRepository
         }
     }
 
-    public async Task UpdateAsync(User user, CancellationToken ct = default) =>
+    public async Task UpdateAsync(User user, CancellationToken cancellationToken = default) =>
         await _collection.ReplaceOneAsync(u => u.Id == user.Id, UserDocument.FromDomain(user),
-            new ReplaceOptions { IsUpsert = false }, ct);
+            new ReplaceOptions { IsUpsert = false }, cancellationToken);
 }

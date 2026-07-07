@@ -11,5 +11,5 @@ namespace TelegramLike.Client.Auth;
 /// </summary>
 public interface IAccessTokenProvider
 {
-    Task<string?> GetAccessTokenAsync(CancellationToken ct = default);
+    Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default);
 }

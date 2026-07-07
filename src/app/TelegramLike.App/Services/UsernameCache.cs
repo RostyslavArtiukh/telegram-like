@@ -14,12 +14,12 @@ public sealed class UsernameCache(IIdentityUsersApi users)
     public string Get(Guid userId)
         => _names.TryGetValue(userId, out var name) ? name : userId.ToString()[..8];
 
-    public async Task EnsureAsync(IEnumerable<Guid> userIds, CancellationToken ct = default)
+    public async Task EnsureAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default)
     {
         var missing = userIds.Distinct().Where(id => !_names.ContainsKey(id)).ToList();
         if (missing.Count == 0) return;
 
-        var map = await users.GetUsernamesByIdsAsync(missing, ct);
+        var map = await users.GetUsernamesByIdsAsync(missing, cancellationToken);
         foreach (var (id, name) in map)
             _names[id] = name;
     }

@@ -9,7 +9,7 @@ namespace TelegramLike.Client.Identity;
 internal sealed class IdentityAuthApiClient(HttpClient http) : IIdentityAuthApi
 {
     public async Task<Guid> RegisterAsync(
-        string email, string username, string displayName, string password, CancellationToken ct = default)
+        string email, string username, string displayName, string password, CancellationToken cancellationToken = default)
     {
         // Client-generated id doubles as the idempotency key: the Idempotency-Key header
         // lets the resilience pipeline retry this POST, and Identity returns the same id
@@ -21,35 +21,35 @@ internal sealed class IdentityAuthApiClient(HttpClient http) : IIdentityAuthApi
         };
         request.Headers.Add("Idempotency-Key", userId.ToString());
 
-        using var resp = await http.SendAsync(request, ct);
-        await EnsureOkAsync(resp, ct);
+        using var resp = await http.SendAsync(request, cancellationToken);
+        await EnsureOkAsync(resp, cancellationToken);
         return userId;
     }
 
-    public async Task<string> LoginAsync(string email, string password, CancellationToken ct = default)
+    public async Task<string> LoginAsync(string email, string password, CancellationToken cancellationToken = default)
     {
-        using var resp = await http.PostAsJsonAsync("/auth/login", new { email, password }, ct);
-        await EnsureOkAsync(resp, ct);
-        var payload = await resp.Content.ReadFromJsonAsync<LoginResponse>(ct);
+        using var resp = await http.PostAsJsonAsync("/auth/login", new { email, password }, cancellationToken);
+        await EnsureOkAsync(resp, cancellationToken);
+        var payload = await resp.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken);
         return payload?.SessionToken ?? throw new InvalidOperationException("Identity returned no session token.");
     }
 
-    public async Task<SessionExchangeResult?> ExchangeAsync(string sessionToken, CancellationToken ct = default)
+    public async Task<SessionExchangeResult?> ExchangeAsync(string sessionToken, CancellationToken cancellationToken = default)
     {
-        using var resp = await http.PostAsJsonAsync("/auth/token", new { sessionToken }, ct);
+        using var resp = await http.PostAsJsonAsync("/auth/token", new { sessionToken }, cancellationToken);
         if (resp.StatusCode == HttpStatusCode.Unauthorized) return null;
         resp.EnsureSuccessStatusCode();
-        return await resp.Content.ReadFromJsonAsync<SessionExchangeResult>(ct);
+        return await resp.Content.ReadFromJsonAsync<SessionExchangeResult>(cancellationToken);
     }
 
     // Identity returns { "error": "..." } with 400 for validation/business failures;
     // surface that message so UI layers can show it.
-    private static async Task EnsureOkAsync(HttpResponseMessage resp, CancellationToken ct)
+    private static async Task EnsureOkAsync(HttpResponseMessage resp, CancellationToken cancellationToken)
     {
         if (resp.IsSuccessStatusCode) return;
         if (resp.StatusCode == HttpStatusCode.BadRequest)
         {
-            var err = await resp.Content.ReadFromJsonAsync<ErrorResponse>(ct);
+            var err = await resp.Content.ReadFromJsonAsync<ErrorResponse>(cancellationToken);
             throw new InvalidOperationException(err?.Error ?? "Request failed.");
         }
         resp.EnsureSuccessStatusCode();

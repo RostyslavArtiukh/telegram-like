@@ -49,13 +49,13 @@ internal sealed class OutboxPublisherHostedService(
         }
     }
 
-    private async Task PublishPendingAsync(CancellationToken ct)
+    private async Task PublishPendingAsync(CancellationToken cancellationToken)
     {
         using var scope = scopeFactory.CreateScope();
         var store = scope.ServiceProvider.GetRequiredService<IOutboxStore>();
         var publishEndpoint = scope.ServiceProvider.GetRequiredService<IPublishEndpoint>();
 
-        var pending = await store.GetPendingAsync(_options.BatchSize, ct);
+        var pending = await store.GetPendingAsync(_options.BatchSize, cancellationToken);
         if (pending.Count == 0) return;
 
         foreach (var message in pending)
@@ -70,8 +70,8 @@ internal sealed class OutboxPublisherHostedService(
                               ?? throw new InvalidOperationException(
                                   $"Failed to deserialize outbox payload for event {message.Id}.");
 
-                await publishEndpoint.Publish(payload, type, ct);
-                await store.MarkSentAsync(message.Id, ct);
+                await publishEndpoint.Publish(payload, type, cancellationToken);
+                await store.MarkSentAsync(message.Id, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -96,7 +96,7 @@ internal sealed class OutboxPublisherHostedService(
                         _options.MaxRetries);
                 }
 
-                await store.RecordFailureAsync(message.Id, ex.Message, _options.MaxRetries, ct);
+                await store.RecordFailureAsync(message.Id, ex.Message, _options.MaxRetries, cancellationToken);
             }
         }
     }

@@ -14,20 +14,20 @@ internal sealed class ChatRepository(
     private readonly IMongoCollection<ChatDocument> _chats = database.GetCollection<ChatDocument>("chats");
     private readonly IMongoCollection<ChatMemberDocument> _members = database.GetCollection<ChatMemberDocument>("chat_members");
 
-    public async Task<Chat?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<Chat?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var chatDoc = await _chats.Find(c => c.Id == id).FirstOrDefaultAsync(ct);
+        var chatDoc = await _chats.Find(c => c.Id == id).FirstOrDefaultAsync(cancellationToken);
         if (chatDoc is null) return null;
 
-        var memberDocs = await _members.Find(m => m.ChatId == id).ToListAsync(ct);
+        var memberDocs = await _members.Find(m => m.ChatId == id).ToListAsync(cancellationToken);
         return Reconstitute(chatDoc, memberDocs);
     }
 
-    public async Task<DirectChat?> FindDirectBetweenAsync(Guid userA, Guid userB, CancellationToken ct = default)
+    public async Task<DirectChat?> FindDirectBetweenAsync(Guid userA, Guid userB, CancellationToken cancellationToken = default)
     {
         var memberDocs = await _members
             .Find(m => m.UserId == userA || m.UserId == userB)
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         var candidateChatIds = memberDocs
             .GroupBy(m => m.ChatId)
@@ -39,7 +39,7 @@ internal sealed class ChatRepository(
 
         var chatDoc = await _chats
             .Find(c => candidateChatIds.Contains(c.Id) && c.Type == ChatType.Direct && c.DeletedAt == null)
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (chatDoc is null) return null;
 
@@ -47,11 +47,11 @@ internal sealed class ChatRepository(
         return (DirectChat?)Reconstitute(chatDoc, allMembers);
     }
 
-    public async Task AddAsync(Chat chat, CancellationToken ct = default)
+    public async Task AddAsync(Chat chat, CancellationToken cancellationToken = default)
     {
         try
         {
-            using var session = await mongoClient.StartSessionAsync(cancellationToken: ct);
+            using var session = await mongoClient.StartSessionAsync(cancellationToken: cancellationToken);
             await session.WithTransactionAsync(async (s, token) =>
             {
                 await _chats.InsertOneAsync(s, ToChatDocument(chat), cancellationToken: token);
@@ -62,7 +62,7 @@ internal sealed class ChatRepository(
 
                 await dispatcher.DispatchAsync(chat.DomainEvents, s, token);
                 return true;
-            }, cancellationToken: ct);
+            }, cancellationToken: cancellationToken);
         }
         catch (Exception ex) when (IsDuplicateKey(ex))
         {
@@ -84,9 +84,9 @@ internal sealed class ChatRepository(
         _ => false
     };
 
-    public async Task UpdateAsync(Chat chat, CancellationToken ct = default)
+    public async Task UpdateAsync(Chat chat, CancellationToken cancellationToken = default)
     {
-        using var session = await mongoClient.StartSessionAsync(cancellationToken: ct);
+        using var session = await mongoClient.StartSessionAsync(cancellationToken: cancellationToken);
         await session.WithTransactionAsync(async (s, token) =>
         {
             await _chats.ReplaceOneAsync(
@@ -109,7 +109,7 @@ internal sealed class ChatRepository(
 
             await dispatcher.DispatchAsync(chat.DomainEvents, s, token);
             return true;
-        }, cancellationToken: ct);
+        }, cancellationToken: cancellationToken);
 
         chat.ClearDomainEvents();
     }

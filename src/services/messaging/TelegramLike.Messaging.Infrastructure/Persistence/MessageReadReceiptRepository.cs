@@ -8,7 +8,7 @@ internal sealed class MessageReadReceiptRepository(IMongoDatabase database) : IM
     private readonly IMongoCollection<MessageReadReceiptDocument> _receipts =
         database.GetCollection<MessageReadReceiptDocument>("message_read_receipts");
 
-    public async Task<bool> MarkAsReadAsync(Guid messageId, Guid memberId, DateTime readAt, CancellationToken ct = default)
+    public async Task<bool> MarkAsReadAsync(Guid messageId, Guid memberId, DateTime readAt, CancellationToken cancellationToken = default)
     {
         var doc = new MessageReadReceiptDocument
         {
@@ -20,7 +20,7 @@ internal sealed class MessageReadReceiptRepository(IMongoDatabase database) : IM
 
         try
         {
-            await _receipts.InsertOneAsync(doc, cancellationToken: ct);
+            await _receipts.InsertOneAsync(doc, cancellationToken: cancellationToken);
             return true;
         }
         catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
@@ -31,6 +31,6 @@ internal sealed class MessageReadReceiptRepository(IMongoDatabase database) : IM
         }
     }
 
-    public Task<bool> HasReceiptAsync(Guid messageId, Guid memberId, CancellationToken ct = default)
-        => _receipts.Find(r => r.MessageId == messageId && r.MemberId == memberId).AnyAsync(ct);
+    public Task<bool> HasReceiptAsync(Guid messageId, Guid memberId, CancellationToken cancellationToken = default)
+        => _receipts.Find(r => r.MessageId == messageId && r.MemberId == memberId).AnyAsync(cancellationToken);
 }

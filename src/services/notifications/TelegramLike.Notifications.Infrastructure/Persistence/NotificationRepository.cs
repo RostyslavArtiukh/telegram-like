@@ -10,26 +10,26 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
     private readonly IMongoCollection<NotificationDocument> _notifications =
         database.GetCollection<NotificationDocument>("notifications");
 
-    public async Task<Notification?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<Notification?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var doc = await _notifications.Find(n => n.Id == id).FirstOrDefaultAsync(ct);
+        var doc = await _notifications.Find(n => n.Id == id).FirstOrDefaultAsync(cancellationToken);
         return doc?.ToDomain();
     }
 
-    public Task AddAsync(Notification notification, CancellationToken ct = default)
-        => _notifications.InsertOneAsync(NotificationDocument.FromDomain(notification), cancellationToken: ct);
+    public Task AddAsync(Notification notification, CancellationToken cancellationToken = default)
+        => _notifications.InsertOneAsync(NotificationDocument.FromDomain(notification), cancellationToken: cancellationToken);
 
-    public Task AddManyAsync(IReadOnlyCollection<Notification> notifications, CancellationToken ct = default)
+    public Task AddManyAsync(IReadOnlyCollection<Notification> notifications, CancellationToken cancellationToken = default)
     {
         if (notifications.Count == 0) return Task.CompletedTask;
 
         var docs = notifications.Select(NotificationDocument.FromDomain).ToList();
-        return _notifications.InsertManyAsync(docs, cancellationToken: ct);
+        return _notifications.InsertManyAsync(docs, cancellationToken: cancellationToken);
     }
 
     public async Task<int> AddManyIgnoringDuplicatesAsync(
         IReadOnlyCollection<Notification> notifications,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         if (notifications.Count == 0) return 0;
 
@@ -39,7 +39,7 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
             await _notifications.InsertManyAsync(
                 docs,
                 new InsertManyOptions { IsOrdered = false },
-                ct);
+                cancellationToken);
             return docs.Count;
         }
         catch (MongoBulkWriteException<NotificationDocument> ex)
@@ -54,14 +54,14 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
         }
     }
 
-    public Task UpdateAsync(Notification notification, CancellationToken ct = default)
+    public Task UpdateAsync(Notification notification, CancellationToken cancellationToken = default)
         => _notifications.ReplaceOneAsync(
             Builders<NotificationDocument>.Filter.Eq(n => n.Id, notification.Id),
             NotificationDocument.FromDomain(notification),
             new ReplaceOptions { IsUpsert = false },
-            ct);
+            cancellationToken);
 
-    public async Task<long> MarkAllAsReadAsync(Guid recipientId, DateTime readAt, CancellationToken ct = default)
+    public async Task<long> MarkAllAsReadAsync(Guid recipientId, DateTime readAt, CancellationToken cancellationToken = default)
     {
         var filter = Builders<NotificationDocument>.Filter.And(
             Builders<NotificationDocument>.Filter.Eq(n => n.RecipientId, recipientId),
@@ -71,11 +71,11 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
             .Set(n => n.Status, NotificationStatus.Read)
             .Set(n => n.ReadAt, readAt);
 
-        var result = await _notifications.UpdateManyAsync(filter, update, cancellationToken: ct);
+        var result = await _notifications.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
         return result.ModifiedCount;
     }
 
-    public async Task<long> MarkAllForChatAsReadAsync(Guid recipientId, Guid chatId, DateTime readAt, CancellationToken ct = default)
+    public async Task<long> MarkAllForChatAsReadAsync(Guid recipientId, Guid chatId, DateTime readAt, CancellationToken cancellationToken = default)
     {
         var filter = Builders<NotificationDocument>.Filter.And(
             Builders<NotificationDocument>.Filter.Eq(n => n.RecipientId, recipientId),
@@ -86,7 +86,7 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
             .Set(n => n.Status, NotificationStatus.Read)
             .Set(n => n.ReadAt, readAt);
 
-        var result = await _notifications.UpdateManyAsync(filter, update, cancellationToken: ct);
+        var result = await _notifications.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
         return result.ModifiedCount;
     }
 }

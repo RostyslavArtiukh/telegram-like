@@ -17,14 +17,14 @@ internal sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider t
         Guid? replyToMessageId = null,
         Guid? forwardOriginalMessageId = null,
         Guid? forwardOriginalChatId = null,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         // Client-generated id doubles as the idempotency key. The Idempotency-Key header
         // signals the resilience pipeline that this POST is safe to retry; the Messaging
         // service dedupes on the same id, so a retried send never duplicates the message.
         var messageId = Guid.NewGuid();
 
-        using var request = await NewRequestAsync(HttpMethod.Post, "/messages/", ct);
+        using var request = await NewRequestAsync(HttpMethod.Post, "/messages/", cancellationToken);
         request.Headers.Add("Idempotency-Key", messageId.ToString());
         request.Content = JsonContent.Create(new
         {
@@ -39,18 +39,18 @@ internal sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider t
             forwardOriginalChatId
         });
 
-        using var response = await http.SendAsync(request, ct);
+        using var response = await http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
         return messageId;
     }
 
-    public async Task<ChatMessage?> GetMessageByIdAsync(Guid userId, Guid messageId, CancellationToken ct = default)
+    public async Task<ChatMessage?> GetMessageByIdAsync(Guid userId, Guid messageId, CancellationToken cancellationToken = default)
     {
-        using var request = await NewRequestAsync(HttpMethod.Get, $"/messages/{messageId}", ct);
-        using var response = await http.SendAsync(request, ct);
+        using var request = await NewRequestAsync(HttpMethod.Get, $"/messages/{messageId}", cancellationToken);
+        using var response = await http.SendAsync(request, cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotFound) return null;
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ChatMessage>(ct);
+        return await response.Content.ReadFromJsonAsync<ChatMessage>(cancellationToken);
     }
 
     public async Task<ChatMessagePage> GetChatMessagesAsync(
@@ -58,50 +58,50 @@ internal sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider t
         Guid chatId,
         DateTime? before = null,
         int pageSize = 50,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var query = new List<string> { $"pageSize={pageSize}" };
         if (before.HasValue)
             query.Add($"before={Uri.EscapeDataString(before.Value.ToString("o"))}");
 
         using var request = await NewRequestAsync(HttpMethod.Get,
-            $"/chats/{chatId}/messages?{string.Join("&", query)}", ct);
-        using var response = await http.SendAsync(request, ct);
+            $"/chats/{chatId}/messages?{string.Join("&", query)}", cancellationToken);
+        using var response = await http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ChatMessagePage>(ct)
+        return await response.Content.ReadFromJsonAsync<ChatMessagePage>(cancellationToken)
                ?? new ChatMessagePage([], null);
     }
 
-    public Task AddReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, bool actorIsPremium, CancellationToken ct = default)
+    public Task AddReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, bool actorIsPremium, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Post, $"/messages/{messageId}/reactions",
-            JsonContent.Create(new { emoji = emoji.ToString(), actorIsPremium }), ct);
+            JsonContent.Create(new { emoji = emoji.ToString(), actorIsPremium }), cancellationToken);
 
-    public Task RemoveReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, CancellationToken ct = default)
-        => SendVoid(HttpMethod.Delete, $"/messages/{messageId}/reactions/{emoji}", content: null, ct);
+    public Task RemoveReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, CancellationToken cancellationToken = default)
+        => SendVoid(HttpMethod.Delete, $"/messages/{messageId}/reactions/{emoji}", content: null, cancellationToken);
 
-    public Task RetractMessageAsync(Guid actorUserId, Guid messageId, bool actorIsModerator, CancellationToken ct = default)
+    public Task RetractMessageAsync(Guid actorUserId, Guid messageId, bool actorIsModerator, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Post, $"/messages/{messageId}/retract",
-            JsonContent.Create(new { actorIsModerator }), ct);
+            JsonContent.Create(new { actorIsModerator }), cancellationToken);
 
-    public Task MarkAsReadAsync(Guid userId, Guid messageId, bool isBroadcast, CancellationToken ct = default)
+    public Task MarkAsReadAsync(Guid userId, Guid messageId, bool isBroadcast, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Post, $"/messages/{messageId}/read",
-            JsonContent.Create(new { isBroadcast }), ct);
+            JsonContent.Create(new { isBroadcast }), cancellationToken);
 
-    public Task HideMessageAsync(Guid userId, Guid messageId, CancellationToken ct = default)
-        => SendVoid(HttpMethod.Post, $"/messages/{messageId}/hide", content: null, ct);
+    public Task HideMessageAsync(Guid userId, Guid messageId, CancellationToken cancellationToken = default)
+        => SendVoid(HttpMethod.Post, $"/messages/{messageId}/hide", content: null, cancellationToken);
 
-    private async Task SendVoid(HttpMethod method, string url, HttpContent? content, CancellationToken ct)
+    private async Task SendVoid(HttpMethod method, string url, HttpContent? content, CancellationToken cancellationToken)
     {
-        using var request = await NewRequestAsync(method, url, ct);
+        using var request = await NewRequestAsync(method, url, cancellationToken);
         if (content is not null) request.Content = content;
-        using var response = await http.SendAsync(request, ct);
+        using var response = await http.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
 
-    private async Task<HttpRequestMessage> NewRequestAsync(HttpMethod method, string url, CancellationToken ct)
+    private async Task<HttpRequestMessage> NewRequestAsync(HttpMethod method, string url, CancellationToken cancellationToken)
     {
         var request = new HttpRequestMessage(method, url);
-        var token = await tokenProvider.GetAccessTokenAsync(ct);
+        var token = await tokenProvider.GetAccessTokenAsync(cancellationToken);
         if (token is not null)
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return request;

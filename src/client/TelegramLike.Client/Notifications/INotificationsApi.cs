@@ -9,13 +9,13 @@ public interface INotificationsApi
         DateTime? beforeCreatedAt = null,
         int pageSize = 20,
         bool unreadOnly = false,
-        CancellationToken ct = default);
+        CancellationToken cancellationToken = default);
 
-    Task<long> GetUnreadCountAsync(Guid userId, CancellationToken ct = default);
+    Task<long> GetUnreadCountAsync(Guid userId, CancellationToken cancellationToken = default);
 
-    Task MarkAsReadAsync(Guid userId, Guid notificationId, CancellationToken ct = default);
+    Task MarkAsReadAsync(Guid userId, Guid notificationId, CancellationToken cancellationToken = default);
 
-    Task MarkAllAsReadAsync(Guid userId, CancellationToken ct = default);
+    Task MarkAllAsReadAsync(Guid userId, CancellationToken cancellationToken = default);
 
-    Task MarkChatAsReadAsync(Guid userId, Guid chatId, CancellationToken ct = default);
+    Task MarkChatAsReadAsync(Guid userId, Guid chatId, CancellationToken cancellationToken = default);
 }

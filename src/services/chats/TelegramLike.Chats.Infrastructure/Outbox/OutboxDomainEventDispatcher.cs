@@ -21,7 +21,7 @@ internal sealed class OutboxDomainEventDispatcher : IDomainEventDispatcher
     public async Task DispatchAsync(
         IEnumerable<IDomainEvent> events,
         IClientSessionHandle session,
-        CancellationToken ct = default)
+        CancellationToken cancellationToken = default)
     {
         var messages = new List<OutboxMessage>();
 
@@ -41,7 +41,7 @@ internal sealed class OutboxDomainEventDispatcher : IDomainEventDispatcher
         }
 
         if (messages.Count > 0)
-            await _outboxStore.AddAsync(messages, session, ct);
+            await _outboxStore.AddAsync(messages, session, cancellationToken);
     }
 
     // Store a version-agnostic "Namespace.Type, Assembly" name instead of the fully
