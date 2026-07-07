@@ -131,7 +131,7 @@
 </MudGrid>
 
 @code {
-    private IReadOnlyList<ChatSummaryContract>? myChats;
+    private IReadOnlyList<ChatSummary>? myChats;
     private string newGroupName = "";
     private string newBroadcastName = "";
     private string? groupCreationError;
@@ -231,19 +231,19 @@
         finally { isSubmitting = false; }
     }
 
-    private static Color ChatTypeColor(ChatTypeContract chatType) => chatType switch
+    private static Color ChatTypeColor(ChatType chatType) => chatType switch
     {
-        ChatTypeContract.Direct => Color.Default,
-        ChatTypeContract.Group => Color.Primary,
-        ChatTypeContract.Broadcast => Color.Info,
+        ChatType.Direct => Color.Default,
+        ChatType.Group => Color.Primary,
+        ChatType.Broadcast => Color.Info,
         _ => Color.Default
     };
 
-    private static string ChatTypeIcon(ChatTypeContract chatType) => chatType switch
+    private static string ChatTypeIcon(ChatType chatType) => chatType switch
     {
-        ChatTypeContract.Direct => Icons.Material.Filled.Person,
-        ChatTypeContract.Group => Icons.Material.Filled.Group,
-        ChatTypeContract.Broadcast => Icons.Material.Filled.Campaign,
+        ChatType.Direct => Icons.Material.Filled.Person,
+        ChatType.Group => Icons.Material.Filled.Group,
+        ChatType.Broadcast => Icons.Material.Filled.Campaign,
         _ => Icons.Material.Filled.Chat
     };
 }

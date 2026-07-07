@@ -7,29 +7,29 @@ namespace TelegramLike.Client.Chats;
 
 internal sealed class ChatsApiClient(HttpClient http, IAccessTokenProvider tokenProvider) : IChatsApi
 {
-    public async Task<IReadOnlyList<ChatSummaryContract>> GetMyChatsAsync(Guid userId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ChatSummary>> GetMyChatsAsync(Guid userId, CancellationToken ct = default)
     {
         using var request = await NewRequestAsync(HttpMethod.Get, "/chats/my", ct);
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<ChatSummaryContract>>(ct) ?? [];
+        return await response.Content.ReadFromJsonAsync<List<ChatSummary>>(ct) ?? [];
     }
 
-    public async Task<ChatDetailsContract?> GetChatByIdAsync(Guid actingUserId, Guid chatId, CancellationToken ct = default)
+    public async Task<ChatDetails?> GetChatByIdAsync(Guid actingUserId, Guid chatId, CancellationToken ct = default)
     {
         using var request = await NewRequestAsync(HttpMethod.Get, $"/chats/{chatId}", ct);
         using var response = await http.SendAsync(request, ct);
         if (response.StatusCode == HttpStatusCode.NotFound) return null;
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ChatDetailsContract>(ct);
+        return await response.Content.ReadFromJsonAsync<ChatDetails>(ct);
     }
 
-    public async Task<IReadOnlyList<ChatMemberContract>> GetChatMembersAsync(Guid actingUserId, Guid chatId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ChatMember>> GetChatMembersAsync(Guid actingUserId, Guid chatId, CancellationToken ct = default)
     {
         using var request = await NewRequestAsync(HttpMethod.Get, $"/chats/{chatId}/members", ct);
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<ChatMemberContract>>(ct) ?? [];
+        return await response.Content.ReadFromJsonAsync<List<ChatMember>>(ct) ?? [];
     }
 
     // Each create generates the chat id up front as the idempotency key (body +
@@ -72,7 +72,7 @@ internal sealed class ChatsApiClient(HttpClient http, IAccessTokenProvider token
     public Task KickMemberAsync(Guid actorUserId, Guid chatId, Guid targetUserId, CancellationToken ct = default)
         => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{targetUserId}/kick", content: null, ct);
 
-    public Task ChangeMemberRoleAsync(Guid actorUserId, Guid chatId, Guid targetUserId, MemberRoleContract newRole, CancellationToken ct = default)
+    public Task ChangeMemberRoleAsync(Guid actorUserId, Guid chatId, Guid targetUserId, MemberRole newRole, CancellationToken ct = default)
         => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{targetUserId}/role",
             JsonContent.Create(new { newRole = newRole.ToString() }), ct);
 
@@ -89,12 +89,12 @@ internal sealed class ChatsApiClient(HttpClient http, IAccessTokenProvider token
     {
         var members = await GetChatMembersAsync(actingUserId, chatId, ct);
         return members
-            .Where(m => m.Status == MemberStatusContract.Active && m.UserId != excludeUserId)
+            .Where(m => m.Status == MemberStatus.Active && m.UserId != excludeUserId)
             .Select(m => m.UserId)
             .ToList();
     }
 
-    public async Task<ChatTypeContract?> GetChatTypeAsync(Guid actingUserId, Guid chatId, CancellationToken ct = default)
+    public async Task<ChatType?> GetChatTypeAsync(Guid actingUserId, Guid chatId, CancellationToken ct = default)
     {
         var details = await GetChatByIdAsync(actingUserId, chatId, ct);
         return details?.Type;
@@ -104,7 +104,7 @@ internal sealed class ChatsApiClient(HttpClient http, IAccessTokenProvider token
     {
         var members = await GetChatMembersAsync(actingUserId, chatId, ct);
         var me = members.FirstOrDefault(m => m.UserId == userId);
-        return me is { Status: MemberStatusContract.Active, Role: MemberRoleContract.Owner or MemberRoleContract.Admin };
+        return me is { Status: MemberStatus.Active, Role: MemberRole.Owner or MemberRole.Admin };
     }
 
     private async Task<Guid> SendCreate(HttpRequestMessage request, CancellationToken ct)

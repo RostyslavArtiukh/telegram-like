@@ -13,7 +13,7 @@ internal sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider t
         string? text,
         IReadOnlyList<Guid> recipients,
         bool isBroadcast,
-        IReadOnlyList<SendMessageAttachmentContract>? attachments = null,
+        IReadOnlyList<OutgoingAttachment>? attachments = null,
         Guid? replyToMessageId = null,
         Guid? forwardOriginalMessageId = null,
         Guid? forwardOriginalChatId = null,
@@ -44,16 +44,16 @@ internal sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider t
         return messageId;
     }
 
-    public async Task<MessageContract?> GetMessageByIdAsync(Guid userId, Guid messageId, CancellationToken ct = default)
+    public async Task<ChatMessage?> GetMessageByIdAsync(Guid userId, Guid messageId, CancellationToken ct = default)
     {
         using var request = await NewRequestAsync(HttpMethod.Get, $"/messages/{messageId}", ct);
         using var response = await http.SendAsync(request, ct);
         if (response.StatusCode == HttpStatusCode.NotFound) return null;
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<MessageContract>(ct);
+        return await response.Content.ReadFromJsonAsync<ChatMessage>(ct);
     }
 
-    public async Task<MessagePageContract> GetChatMessagesAsync(
+    public async Task<ChatMessagePage> GetChatMessagesAsync(
         Guid userId,
         Guid chatId,
         DateTime? before = null,
@@ -68,15 +68,15 @@ internal sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider t
             $"/chats/{chatId}/messages?{string.Join("&", query)}", ct);
         using var response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<MessagePageContract>(ct)
-               ?? new MessagePageContract([], null);
+        return await response.Content.ReadFromJsonAsync<ChatMessagePage>(ct)
+               ?? new ChatMessagePage([], null);
     }
 
-    public Task AddReactionAsync(Guid userId, Guid messageId, EmojiContract emoji, bool actorIsPremium, CancellationToken ct = default)
+    public Task AddReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, bool actorIsPremium, CancellationToken ct = default)
         => SendVoid(HttpMethod.Post, $"/messages/{messageId}/reactions",
             JsonContent.Create(new { emoji = emoji.ToString(), actorIsPremium }), ct);
 
-    public Task RemoveReactionAsync(Guid userId, Guid messageId, EmojiContract emoji, CancellationToken ct = default)
+    public Task RemoveReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, CancellationToken ct = default)
         => SendVoid(HttpMethod.Delete, $"/messages/{messageId}/reactions/{emoji}", content: null, ct);
 
     public Task RetractMessageAsync(Guid actorUserId, Guid messageId, bool actorIsModerator, CancellationToken ct = default)

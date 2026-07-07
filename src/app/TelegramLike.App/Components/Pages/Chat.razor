@@ -25,7 +25,7 @@ else
         <div>
             <MudText Typo="Typo.h5">@GetChatTitle()</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                @if (openedChat.Type == ChatTypeContract.Direct)
+                @if (openedChat.Type == ChatType.Direct)
                 {
                     var otherMember = GetOtherDirectMember();
                     if (otherMember is not null && onlineMemberIds.Contains(otherMember.UserId))
@@ -39,7 +39,7 @@ else
                 }
                 else
                 {
-                    <text>@openedChat.Type · @openedChat.Members.Count(m => m.Status == MemberStatusContract.Active) active</text>
+                    <text>@openedChat.Type · @openedChat.Members.Count(m => m.Status == MemberStatus.Active) active</text>
                     if (onlineMemberIds.Count > 0)
                     {
                         <span> · @onlineMemberIds.Count online</span>
@@ -71,7 +71,7 @@ else
                     <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@manageActionError</MudAlert>
                 }
 
-                @if (openedChat.Type != ChatTypeContract.Direct && currentUserIsModerator)
+                @if (openedChat.Type != ChatType.Direct && currentUserIsModerator)
                 {
                     <div class="d-flex align-center mb-3" style="gap:8px;max-width:420px">
                         <MudTextField @bind-Value="renameChatValue" Label="Rename" Placeholder="@openedChat.Name"
@@ -87,33 +87,33 @@ else
                     {
                         var roleToggle = GetRoleToggle(member);
                         var canKickMember = currentUserIsModerator
-                            && openedChat.Type != ChatTypeContract.Direct
-                            && member.Status == MemberStatusContract.Active
+                            && openedChat.Type != ChatType.Direct
+                            && member.Status == MemberStatus.Active
                             && member.UserId != currentUserId
-                            && member.Role != MemberRoleContract.Owner;
-                        var canTransferOwnership = currentUserRole == MemberRoleContract.Owner
-                            && openedChat.Type != ChatTypeContract.Direct
-                            && member.Status == MemberStatusContract.Active
+                            && member.Role != MemberRole.Owner;
+                        var canTransferOwnership = currentUserRole == MemberRole.Owner
+                            && openedChat.Type != ChatType.Direct
+                            && member.Status == MemberStatus.Active
                             && member.UserId != currentUserId
-                            && member.Role != MemberRoleContract.Owner;
+                            && member.Role != MemberRole.Owner;
 
                         <MudListItem T="string">
                             <div class="d-flex align-center justify-space-between" style="width:100%">
                                 <div class="d-flex align-center" style="gap:6px">
                                     <MudText Typo="Typo.body2"
-                                             Style="@(member.Status != MemberStatusContract.Active ? "opacity:.6" : "")">
+                                             Style="@(member.Status != MemberStatus.Active ? "opacity:.6" : "")">
                                         @Usernames.Get(member.UserId)
                                         @if (member.UserId == currentUserId) { <span>(you)</span> }
                                     </MudText>
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@member.Role</MudChip>
-                                    @if (member.Status != MemberStatusContract.Active)
+                                    @if (member.Status != MemberStatus.Active)
                                     {
                                         <MudChip T="string" Size="Size.Small" Color="Color.Default">@member.Status</MudChip>
                                     }
                                 </div>
                                 <div class="d-flex align-center" style="gap:6px">
                                     @if (roleToggle is not null && currentUserIsModerator
-                                        && member.Status == MemberStatusContract.Active && member.UserId != currentUserId)
+                                        && member.Status == MemberStatus.Active && member.UserId != currentUserId)
                                     {
                                         <MudButton Size="Size.Small" Variant="Variant.Outlined"
                                                    OnClick="() => ChangeMemberRoleAsync(member.UserId, roleToggle.Value.TargetRole)"
@@ -137,7 +137,7 @@ else
                     }
                 </MudList>
 
-                @if (openedChat.Type != ChatTypeContract.Direct)
+                @if (openedChat.Type != ChatType.Direct)
                 {
                     <MudButton OnClick="LeaveChatAsync" Variant="Variant.Outlined" Color="Color.Error"
                                Size="Size.Small" Disabled="isManageActionRunning"
@@ -190,7 +190,7 @@ else
                         }
                         @foreach (var attachment in message.Attachments)
                         {
-                            @if (attachment.Type == AttachmentTypeContract.Image)
+                            @if (attachment.Type == AttachmentType.Image)
                             {
                                 <MudImage Src="@attachment.Url" Alt="@(attachment.FileName ?? "image")"
                                           Fluid="true" Class="rounded mt-1" Style="max-height:220px" />
@@ -217,7 +217,7 @@ else
                                 }
                             </div>
                         }
-                        @if (openedChat.Type == ChatTypeContract.Broadcast && sentByCurrentUser && message.BroadcastReadCount is > 0)
+                        @if (openedChat.Type == ChatType.Broadcast && sentByCurrentUser && message.BroadcastReadCount is > 0)
                         {
                             <MudText Typo="Typo.caption" Style="opacity:.8" Class="mt-1">👁 @message.BroadcastReadCount read</MudText>
                         }
@@ -249,7 +249,7 @@ else
                         @if (reactionPickerMessageId == message.MessageId)
                         {
                             <div class="d-flex flex-wrap mt-1" style="gap:4px">
-                                @foreach (var emoji in Enum.GetValues<EmojiContract>())
+                                @foreach (var emoji in Enum.GetValues<ReactionEmoji>())
                                 {
                                     <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="pa-1"
                                                aria-label="@emoji.ToString()"
@@ -310,9 +310,9 @@ else
         <MudCard Elevation="1" Class="mt-2">
             <MudCardContent>
                 <div class="d-flex flex-wrap align-end" style="gap:12px">
-                    <MudSelect T="AttachmentTypeContract" @bind-Value="attachmentDraft.Type" Label="Type"
+                    <MudSelect T="AttachmentType" @bind-Value="attachmentDraft.Type" Label="Type"
                                Variant="Variant.Outlined" Dense="true" Style="min-width:120px">
-                        @foreach (var attachmentType in Enum.GetValues<AttachmentTypeContract>())
+                        @foreach (var attachmentType in Enum.GetValues<AttachmentType>())
                         {
                             <MudSelectItem Value="attachmentType">@attachmentType</MudSelectItem>
                         }
@@ -377,8 +377,8 @@ else
     [Parameter] public Guid ChatId { get; set; }
 
     private Guid currentUserId;
-    private ChatDetailsContract? openedChat;
-    private readonly List<MessageContract> messages = [];
+    private ChatDetails? openedChat;
+    private readonly List<ChatMessage> messages = [];
     private DateTime? olderMessagesCursor;
     private string messageDraft = "";
     private string? actionError;
@@ -393,20 +393,20 @@ else
     // What the current user is allowed to do in this chat.
     private bool currentUserIsModerator;
     private bool currentUserIsPremium;
-    private MemberRoleContract? currentUserRole;
+    private MemberRole? currentUserRole;
 
     // Reply.
-    private MessageContract? messageBeingRepliedTo;
+    private ChatMessage? messageBeingRepliedTo;
 
     // Forward dialog.
-    private MessageContract? messageBeingForwarded;
-    private IReadOnlyList<ChatSummaryContract>? forwardTargetChats;
+    private ChatMessage? messageBeingForwarded;
+    private IReadOnlyList<ChatSummary>? forwardTargetChats;
     private bool isForwarding;
     private string? forwardError;
 
     // Attachment composer.
     private bool showAttachmentComposer;
-    private readonly List<SendMessageAttachmentContract> stagedAttachments = new();
+    private readonly List<OutgoingAttachment> stagedAttachments = new();
     private AttachmentDraft attachmentDraft = new();
 
     // Management panel.
@@ -477,7 +477,7 @@ else
         catch { /* online indicator just stays empty */ }
 
         currentUserRole = openedChat.Members
-            .FirstOrDefault(m => m.UserId == currentUserId && m.Status == MemberStatusContract.Active)?.Role;
+            .FirstOrDefault(m => m.UserId == currentUserId && m.Status == MemberStatus.Active)?.Role;
         try { currentUserIsModerator = await ChatsApi.IsModeratorAsync(currentUserId, ChatId, currentUserId); }
         catch { currentUserIsModerator = false; }
 
@@ -510,13 +510,13 @@ else
         }), null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
     }
 
-    private ChatMemberContract? GetOtherDirectMember() =>
+    private ChatMember? GetOtherDirectMember() =>
         openedChat?.Members.FirstOrDefault(m => m.UserId != currentUserId);
 
     private string GetChatTitle()
     {
         if (openedChat is null) return "Chat";
-        if (openedChat.Type == ChatTypeContract.Direct)
+        if (openedChat.Type == ChatType.Direct)
         {
             var otherMember = GetOtherDirectMember();
             return otherMember is not null ? Usernames.Get(otherMember.UserId) : "Direct chat";
@@ -527,20 +527,20 @@ else
     private string BuildTypingNames()
         => string.Join(", ", typingExpiryByUser.Keys.Where(id => id != currentUserId).Select(Usernames.Get));
 
-    private static string GetReactionGlyph(EmojiContract emoji) => emoji switch
+    private static string GetReactionGlyph(ReactionEmoji emoji) => emoji switch
     {
-        EmojiContract.Like => "👍",
-        EmojiContract.Heart => "❤️",
-        EmojiContract.Laugh => "😂",
-        EmojiContract.Wow => "😮",
-        EmojiContract.Sad => "😢",
-        EmojiContract.Angry => "😠",
-        EmojiContract.Fire => "🔥",
-        EmojiContract.Dislike => "👎",
+        ReactionEmoji.Like => "👍",
+        ReactionEmoji.Heart => "❤️",
+        ReactionEmoji.Laugh => "😂",
+        ReactionEmoji.Wow => "😮",
+        ReactionEmoji.Sad => "😢",
+        ReactionEmoji.Angry => "😠",
+        ReactionEmoji.Fire => "🔥",
+        ReactionEmoji.Dislike => "👎",
         _ => emoji.ToString()
     };
 
-    private string BuildShortMessagePreview(MessageContract message)
+    private string BuildShortMessagePreview(ChatMessage message)
     {
         if (message.IsRetracted) return "[retracted]";
         if (!string.IsNullOrWhiteSpace(message.Text))
@@ -634,7 +634,7 @@ else
         {
             // BFF-style enrichment, done client-side by the SDK helpers.
             var recipientIds = await ChatsApi.GetActiveRecipientsAsync(currentUserId, ChatId, currentUserId);
-            var isBroadcastChat = openedChat.Type == ChatTypeContract.Broadcast;
+            var isBroadcastChat = openedChat.Type == ChatType.Broadcast;
             var sentMessageId = await MessagingApi.SendMessageAsync(
                 currentUserId,
                 ChatId,
@@ -670,7 +670,7 @@ else
     private void ToggleReactionPicker(Guid messageId)
         => reactionPickerMessageId = reactionPickerMessageId == messageId ? null : messageId;
 
-    private async Task ToggleReactionAsync(MessageContract message, EmojiContract emoji)
+    private async Task ToggleReactionAsync(ChatMessage message, ReactionEmoji emoji)
     {
         try
         {
@@ -687,17 +687,17 @@ else
 
     // ---- Reply ----
 
-    private void StartReplyingTo(MessageContract message) => messageBeingRepliedTo = message;
+    private void StartReplyingTo(ChatMessage message) => messageBeingRepliedTo = message;
     private void CancelReply() => messageBeingRepliedTo = null;
 
-    private MessageContract? FindRepliedToMessage(MessageContract message)
+    private ChatMessage? FindRepliedToMessage(ChatMessage message)
         => message.ReplyToMessageId is null
             ? null
             : messages.FirstOrDefault(m => m.MessageId == message.ReplyToMessageId);
 
     // ---- Retract / Hide ----
 
-    private async Task RetractMessageAsync(MessageContract message)
+    private async Task RetractMessageAsync(ChatMessage message)
     {
         try
         {
@@ -707,7 +707,7 @@ else
         catch (Exception ex) { actionError = ex.Message; }
     }
 
-    private async Task HideMessageAsync(MessageContract message)
+    private async Task HideMessageAsync(ChatMessage message)
     {
         try
         {
@@ -720,7 +720,7 @@ else
 
     // ---- Forward ----
 
-    private async Task OpenForwardDialogAsync(MessageContract message)
+    private async Task OpenForwardDialogAsync(ChatMessage message)
     {
         messageBeingForwarded = message;
         forwardError = null;
@@ -761,9 +761,9 @@ else
                 chatId: targetChatId,
                 text: messageBeingForwarded.Text,
                 recipients: recipientIds,
-                isBroadcast: targetChatType == ChatTypeContract.Broadcast,
+                isBroadcast: targetChatType == ChatType.Broadcast,
                 attachments: messageBeingForwarded.Attachments
-                    .Select(a => new SendMessageAttachmentContract(a.Type, a.Url, a.SizeBytes, a.FileName))
+                    .Select(a => new OutgoingAttachment(a.Type, a.Url, a.SizeBytes, a.FileName))
                     .ToList(),
                 forwardOriginalMessageId: messageBeingForwarded.MessageId,
                 forwardOriginalChatId: ChatId);
@@ -781,7 +781,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(attachmentDraft.Url)) { actionError = "Attachment URL is required."; return; }
         var sizeBytes = attachmentDraft.SizeBytes <= 0 ? 1 : attachmentDraft.SizeBytes;
-        stagedAttachments.Add(new SendMessageAttachmentContract(
+        stagedAttachments.Add(new OutgoingAttachment(
             attachmentDraft.Type,
             attachmentDraft.Url.Trim(),
             sizeBytes,
@@ -811,7 +811,7 @@ else
             if (openedChat is not null)
             {
                 currentUserRole = openedChat.Members
-                    .FirstOrDefault(m => m.UserId == currentUserId && m.Status == MemberStatusContract.Active)?.Role;
+                    .FirstOrDefault(m => m.UserId == currentUserId && m.Status == MemberStatus.Active)?.Role;
                 await Usernames.EnsureAsync(openedChat.Members.Select(m => m.UserId));
             }
         }
@@ -846,7 +846,7 @@ else
         finally { isManageActionRunning = false; }
     }
 
-    private async Task ChangeMemberRoleAsync(Guid memberUserId, MemberRoleContract newRole)
+    private async Task ChangeMemberRoleAsync(Guid memberUserId, MemberRole newRole)
     {
         manageActionError = null;
         isManageActionRunning = true;
@@ -884,18 +884,18 @@ else
         catch (Exception ex) { manageActionError = ex.Message; isManageActionRunning = false; }
     }
 
-    private (string Label, MemberRoleContract TargetRole)? GetRoleToggle(ChatMemberContract member)
+    private (string Label, MemberRole TargetRole)? GetRoleToggle(ChatMember member)
     {
-        if (openedChat is null || member.Role == MemberRoleContract.Owner) return null;
+        if (openedChat is null || member.Role == MemberRole.Owner) return null;
 
         return openedChat.Type switch
         {
-            ChatTypeContract.Group => member.Role == MemberRoleContract.Admin
-                ? ("Demote to member", MemberRoleContract.Member)
-                : ("Promote to admin", MemberRoleContract.Admin),
-            ChatTypeContract.Broadcast => member.Role == MemberRoleContract.Admin
-                ? ("Demote to viewer", MemberRoleContract.Viewer)
-                : ("Promote to admin", MemberRoleContract.Admin),
+            ChatType.Group => member.Role == MemberRole.Admin
+                ? ("Demote to member", MemberRole.Member)
+                : ("Promote to admin", MemberRole.Admin),
+            ChatType.Broadcast => member.Role == MemberRole.Admin
+                ? ("Demote to viewer", MemberRole.Viewer)
+                : ("Promote to admin", MemberRole.Admin),
             _ => null
         };
     }
@@ -930,7 +930,7 @@ else
 
     private sealed class AttachmentDraft
     {
-        public AttachmentTypeContract Type { get; set; } = AttachmentTypeContract.Image;
+        public AttachmentType Type { get; set; } = AttachmentType.Image;
         public string Url { get; set; } = "";
         public string? FileName { get; set; }
         public long SizeBytes { get; set; } = 1;

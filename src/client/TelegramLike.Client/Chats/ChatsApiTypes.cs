@@ -6,33 +6,33 @@ namespace TelegramLike.Client.Chats;
 // does not have to reference Chats.Domain. JSON arrives as strings thanks to
 // JsonStringEnumConverter on Chats.Api.
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum ChatTypeContract { Direct, Group, Broadcast }
+public enum ChatType { Direct, Group, Broadcast }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum MemberRoleContract { Owner, Admin, Member, Viewer }
+public enum MemberRole { Owner, Admin, Member, Viewer }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum MemberStatusContract { Active, Left, Kicked, Banned }
+public enum MemberStatus { Active, Left, Kicked, Banned }
 
-public sealed record ChatSummaryContract(
+public sealed record ChatSummary(
     Guid ChatId,
-    ChatTypeContract Type,
+    ChatType Type,
     string? Name,
-    MemberRoleContract MyRole,
+    MemberRole MyRole,
     int ActiveMemberCount);
 
-public sealed record ChatMemberContract(
+public sealed record ChatMember(
     Guid UserId,
-    MemberRoleContract Role,
-    MemberStatusContract Status,
+    MemberRole Role,
+    MemberStatus Status,
     DateTime JoinedAt,
     DateTime? LeftAt);
 
-public sealed record ChatDetailsContract(
+public sealed record ChatDetails(
     Guid ChatId,
-    ChatTypeContract Type,
+    ChatType Type,
     string? Name,
     Guid CreatedBy,
     DateTime CreatedAt,
     bool IsDeleted,
-    IReadOnlyList<ChatMemberContract> Members);
+    IReadOnlyList<ChatMember> Members);
