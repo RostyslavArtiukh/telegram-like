@@ -41,7 +41,7 @@ else
     <MudList T="string" Class="pa-0" aria-live="polite">
         @foreach (var notification in notificationFeed.Items)
         {
-            var isUnread = notification.Status != NotificationStatusContract.Read;
+            var isUnread = notification.Status != NotificationStatus.Read;
             <MudListItem T="string">
                 <div class="d-flex align-center justify-space-between" style="width:100%">
                     <div>
@@ -159,10 +159,10 @@ else
 
     private static string DescribeNotification(NotificationApiDto notification) => notification.Type switch
     {
-        NotificationTypeContract.NewMessage => "New message in a chat",
-        NotificationTypeContract.MentionInGroup => "You were mentioned",
-        NotificationTypeContract.MemberJoined => "Someone joined the chat",
-        NotificationTypeContract.MemberKicked => "A member was removed",
+        NotificationType.NewMessage => "New message in a chat",
+        NotificationType.MentionInGroup => "You were mentioned",
+        NotificationType.MemberJoined => "Someone joined the chat",
+        NotificationType.MemberKicked => "A member was removed",
         _ => notification.Type.ToString()
     };
 }

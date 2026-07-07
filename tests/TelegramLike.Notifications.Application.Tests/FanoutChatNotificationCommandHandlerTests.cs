@@ -7,6 +7,9 @@ using TelegramLike.Notifications.Application.Commands.FanoutChatNotification;
 using TelegramLike.Notifications.Domain.Aggregates;
 using TelegramLike.Notifications.Domain.Repositories;
 using TelegramLike.Notifications.Domain.ValueObjects;
+// Contracts and Domain both expose NotificationType now; these tests build the command
+// with the domain enum, so alias it to keep the reference unambiguous.
+using DomainNotificationType = TelegramLike.Notifications.Domain.ValueObjects.NotificationType;
 
 namespace TelegramLike.Notifications.Application.Tests;
 
@@ -40,7 +43,7 @@ public class FanoutChatNotificationCommandHandlerTests
             new FanoutChatNotificationCommand(
                 ChatId: chatId,
                 ActorId: actor,
-                Type: NotificationType.NewMessage,
+                Type: DomainNotificationType.NewMessage,
                 Recipients: new[] { member1, member2 },
                 SourceEventId: Guid.NewGuid(),
                 MessageId: Guid.NewGuid()),
@@ -65,7 +68,7 @@ public class FanoutChatNotificationCommandHandlerTests
             new FanoutChatNotificationCommand(
                 ChatId: Guid.NewGuid(),
                 ActorId: actor,
-                Type: NotificationType.NewMessage,
+                Type: DomainNotificationType.NewMessage,
                 Recipients: new[] { other, actor },
                 SourceEventId: Guid.NewGuid(),
                 MessageId: Guid.NewGuid()),
@@ -81,7 +84,7 @@ public class FanoutChatNotificationCommandHandlerTests
             new FanoutChatNotificationCommand(
                 ChatId: Guid.NewGuid(),
                 ActorId: Guid.NewGuid(),
-                Type: NotificationType.NewMessage,
+                Type: DomainNotificationType.NewMessage,
                 Recipients: [],
                 SourceEventId: Guid.NewGuid(),
                 MessageId: Guid.NewGuid()),
@@ -98,7 +101,7 @@ public class FanoutChatNotificationCommandHandlerTests
             new FanoutChatNotificationCommand(
                 ChatId: Guid.NewGuid(),
                 ActorId: Guid.NewGuid(),
-                Type: NotificationType.NewMessage,
+                Type: DomainNotificationType.NewMessage,
                 Recipients: new[] { Guid.NewGuid() },
                 SourceEventId: Guid.NewGuid(),
                 MessageId: null),
@@ -116,7 +119,7 @@ public class FanoutChatNotificationCommandHandlerTests
             new FanoutChatNotificationCommand(
                 ChatId: Guid.NewGuid(),
                 ActorId: Guid.NewGuid(),
-                Type: NotificationType.MemberJoined,
+                Type: DomainNotificationType.MemberJoined,
                 Recipients: new[] { Guid.NewGuid() },
                 SourceEventId: Guid.NewGuid()),
             CancellationToken.None);
@@ -139,7 +142,7 @@ public class FanoutChatNotificationCommandHandlerTests
             new FanoutChatNotificationCommand(
                 ChatId: Guid.NewGuid(),
                 ActorId: Guid.NewGuid(),
-                Type: NotificationType.NewMessage,
+                Type: DomainNotificationType.NewMessage,
                 Recipients: new[] { Guid.NewGuid() },
                 SourceEventId: Guid.NewGuid(),
                 MessageId: Guid.NewGuid()),

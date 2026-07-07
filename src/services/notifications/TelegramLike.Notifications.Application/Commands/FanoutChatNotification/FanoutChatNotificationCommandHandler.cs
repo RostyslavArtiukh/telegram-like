@@ -5,6 +5,9 @@ using TelegramLike.Contracts.Notifications;
 using TelegramLike.Notifications.Domain.Aggregates;
 using TelegramLike.Notifications.Domain.Repositories;
 using TelegramLike.Notifications.Domain.ValueObjects;
+// Both the Contracts and Domain namespaces now expose a NotificationType; this handler
+// switches on the domain one (request.Type), so alias it to keep the reference unambiguous.
+using DomainNotificationType = TelegramLike.Notifications.Domain.ValueObjects.NotificationType;
 
 namespace TelegramLike.Notifications.Application.Commands.FanoutChatNotification;
 
@@ -25,12 +28,12 @@ public sealed class FanoutChatNotificationCommandHandler(
 
         var payload = request.Type switch
         {
-            NotificationType.NewMessage or NotificationType.MentionInGroup
+            DomainNotificationType.NewMessage or DomainNotificationType.MentionInGroup
                 when request.MessageId.HasValue
                 => NotificationPayload.ForNewMessage(request.ChatId, request.MessageId.Value, request.ActorId),
 
-            NotificationType.MemberJoined => NotificationPayload.ForMemberJoined(request.ChatId, request.ActorId),
-            NotificationType.MemberKicked => NotificationPayload.ForMemberKicked(request.ChatId, request.ActorId),
+            DomainNotificationType.MemberJoined => NotificationPayload.ForMemberJoined(request.ChatId, request.ActorId),
+            DomainNotificationType.MemberKicked => NotificationPayload.ForMemberKicked(request.ChatId, request.ActorId),
 
             _ => throw new InvalidOperationException(
                 $"Notification type {request.Type} requires a MessageId.")

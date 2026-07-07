@@ -22,20 +22,20 @@ internal static class ContractMappers
             CreatedAt: dto.CreatedAt,
             ReadAt: dto.ReadAt);
 
-    private static NotificationTypeContract ToContract(DomainType type) => type switch
+    private static NotificationType ToContract(DomainType type) => type switch
     {
-        DomainType.NewMessage => NotificationTypeContract.NewMessage,
-        DomainType.MentionInGroup => NotificationTypeContract.MentionInGroup,
-        DomainType.MemberJoined => NotificationTypeContract.MemberJoined,
-        DomainType.MemberKicked => NotificationTypeContract.MemberKicked,
+        DomainType.NewMessage => NotificationType.NewMessage,
+        DomainType.MentionInGroup => NotificationType.MentionInGroup,
+        DomainType.MemberJoined => NotificationType.MemberJoined,
+        DomainType.MemberKicked => NotificationType.MemberKicked,
         _ => throw new InvalidOperationException($"Unknown notification type: {type}")
     };
 
-    private static NotificationStatusContract ToContract(DomainStatus status) => status switch
+    private static NotificationStatus ToContract(DomainStatus status) => status switch
     {
-        DomainStatus.Pending => NotificationStatusContract.Pending,
-        DomainStatus.Delivered => NotificationStatusContract.Delivered,
-        DomainStatus.Read => NotificationStatusContract.Read,
+        DomainStatus.Pending => NotificationStatus.Pending,
+        DomainStatus.Delivered => NotificationStatus.Delivered,
+        DomainStatus.Read => NotificationStatus.Read,
         _ => throw new InvalidOperationException($"Unknown notification status: {status}")
     };
 }

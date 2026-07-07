@@ -1,6 +1,6 @@
 namespace TelegramLike.Contracts.Notifications;
 
-public enum NotificationTypeContract
+public enum NotificationType
 {
     NewMessage = 0,
     MentionInGroup = 1,
@@ -8,7 +8,7 @@ public enum NotificationTypeContract
     MemberKicked = 3
 }
 
-public enum NotificationStatusContract
+public enum NotificationStatus
 {
     Pending = 0,
     Delivered = 1,
@@ -18,11 +18,11 @@ public enum NotificationStatusContract
 public sealed record NotificationApiDto(
     Guid Id,
     Guid RecipientId,
-    NotificationTypeContract Type,
+    NotificationType Type,
     Guid ChatId,
     Guid? MessageId,
     Guid? ActorId,
-    NotificationStatusContract Status,
+    NotificationStatus Status,
     DateTime CreatedAt,
     DateTime? ReadAt);
 
