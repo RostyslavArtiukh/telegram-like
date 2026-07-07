@@ -64,13 +64,24 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x
+          # net9 for the referenced SDK/Contracts projects; net10 SDK to build the
+          # app's net10.0-windows target framework.
+          dotnet-version: |
+            9.0.x
+            10.0.x
 
       - name: Install MAUI (Windows) workload
         run: dotnet workload install maui-windows
 
-      - name: Restore
-        run: dotnet restore TelegramLike.App.slnx
-
-      - name: Build
-        run: dotnet build TelegramLike.App.slnx -c Release --no-restore
+      # Build the Windows TFM of the app project directly (not the .slnx): the .slnx
+      # also carries a net10.0-android TFM, and CI only installs the maui-windows
+      # workload. Building the csproj still compile-checks the app + its SDK/Contracts
+      # references, which is the drift check we want.
+      #
+      # No separate `dotnet restore` + `--no-restore`: the app is an unpackaged,
+      # self-contained Windows app (WindowsPackageType=None), so the MAUI build sets a
+      # win-x64 RuntimeIdentifier that a RID-less restore never sees — leaving the
+      # CoreCLR win-x64 runtime pack unrestored (NETSDK1112). Letting `build` do its own
+      # restore fetches that pack with the correct RID.
+      - name: Build (Windows TFM)
+        run: dotnet build src/app/TelegramLike.App/TelegramLike.App.csproj -c Release -f net10.0-windows10.0.19041.0
