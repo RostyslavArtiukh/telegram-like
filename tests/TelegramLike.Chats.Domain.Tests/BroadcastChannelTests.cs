@@ -59,7 +59,7 @@ public class BroadcastChannelTests
 
         var act = () => chat.PromoteToAdmin(viewerB, viewerA);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Only Owner can promote*");
+        act.Should().Throw<DomainException>().WithMessage("*Only Owner can promote*");
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class BroadcastChannelTests
 
         var act = () => chat.PromoteToAdmin(ownerId, ownerId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*already highest role*");
+        act.Should().Throw<DomainException>().WithMessage("*already highest role*");
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class BroadcastChannelTests
 
         var act = () => chat.DemoteToViewer(ownerId, ownerId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Cannot demote the Owner*");
+        act.Should().Throw<DomainException>().WithMessage("*Cannot demote the Owner*");
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public class BroadcastChannelTests
 
         var act = () => chat.DemoteToViewer(adminId, adminId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Only Owner can demote*");
+        act.Should().Throw<DomainException>().WithMessage("*Only Owner can demote*");
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class BroadcastChannelTests
 
         var act = () => chat.Kick(adminB, adminA);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Only Owner can kick an Admin*");
+        act.Should().Throw<DomainException>().WithMessage("*Only Owner can kick an Admin*");
     }
 
     [Fact]
@@ -174,6 +174,6 @@ public class BroadcastChannelTests
 
         var act = () => chat.Leave(ownerId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*transfer ownership*");
+        act.Should().Throw<DomainException>().WithMessage("*transfer ownership*");
     }
 }

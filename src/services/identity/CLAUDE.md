@@ -5,7 +5,7 @@ Owns users + authentication, and **signs the access JWTs every other service tru
 ## Endpoints
 - **Public (no bearer — these bootstrap auth):** `POST /auth/register`, `POST /auth/login` (→ session token), `POST /auth/token` (session token → `{userId, username, email, accessToken, expiresInSeconds}`).
 - **Authed (validates its own `iss=telegramlike-identity` token):** `GET /users/{id}`, `POST /users/by-ids`, `GET /users/by-username?u=`.
-- **Controllers (`Controllers/`):** `AuthController` (`[AllowAnonymous]`, the bootstrap trio) + `UsersController` (authed lookups), on `ApiControllerBase`; `DomainExceptionFilter` keeps the legacy `400 {error}` body (`ValidationException`/`InvalidOperationException`) the Web BFF client reads — **not** `ProblemDetails`. See the `api_controllers` memory.
+- **Controllers (`Controllers/`):** `AuthController` (`[AllowAnonymous]`, the bootstrap trio) + `UsersController` (authed lookups), on `ApiControllerBase`; `DomainExceptionFilter` keeps the legacy `400 {error}` body (`ValidationException`/`DomainException`) the Web BFF client reads — **not** `ProblemDetails`. Handlers throw `DomainException` (in `Identity.Domain`); its `ArgumentException` value-object guards are deliberately left unmapped (→500), preserving the prior contract. See the `api_controllers` memory.
 
 ## Key pieces
 - `AccessTokenIssuer` (Infrastructure) — HMAC-SHA256, `iss=telegramlike-identity`, claims `sub`/`jti`, lifetime = `ServiceAuth:TokenLifetimeSeconds`.

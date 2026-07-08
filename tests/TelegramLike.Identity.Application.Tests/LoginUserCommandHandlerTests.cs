@@ -1,3 +1,4 @@
+using TelegramLike.Identity.Domain;
 using FluentAssertions;
 using NSubstitute;
 using TelegramLike.Identity.Application.Commands.LoginUser;
@@ -26,7 +27,7 @@ public class LoginUserCommandHandlerTests
 
         var act = () => Handler.Handle(new LoginUserCommand("nobody@x.com", "pw"), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*Invalid email or password*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*Invalid email or password*");
     }
 
     [Fact]
@@ -39,7 +40,7 @@ public class LoginUserCommandHandlerTests
 
         var act = () => Handler.Handle(new LoginUserCommand(user.Email.Value, "wrong"), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*Invalid email or password*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*Invalid email or password*");
         await _sessionService.DidNotReceive().CreateSessionAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 
@@ -58,7 +59,7 @@ public class LoginUserCommandHandlerTests
 
         var act = () => Handler.Handle(new LoginUserCommand(user.Email.Value, "correct"), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*not active*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*not active*");
         await _sessionService.DidNotReceive().CreateSessionAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 

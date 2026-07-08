@@ -37,7 +37,7 @@ public abstract class Chat : AggregateRoot
 
     protected Member RequireActiveMember(Guid userId)
         => FindActiveMember(userId)
-           ?? throw new InvalidOperationException($"User {userId} is not an active member of this chat.");
+           ?? throw new DomainException($"User {userId} is not an active member of this chat.");
 
     internal IReadOnlyList<Guid> RecipientsExcept(Guid actorUserId)
         => ActiveMembers.Where(m => m.UserId != actorUserId).Select(m => m.UserId).ToList();
@@ -45,7 +45,7 @@ public abstract class Chat : AggregateRoot
     protected void EnsureNotDeleted()
     {
         if (IsDeleted)
-            throw new InvalidOperationException("Chat is deleted.");
+            throw new DomainException("Chat is deleted.");
     }
 
     public virtual void Rename(ChatName newName, Guid renamedBy)
@@ -53,10 +53,10 @@ public abstract class Chat : AggregateRoot
         EnsureNotDeleted();
         var actor = RequireActiveMember(renamedBy);
         if (actor.Role != MemberRole.Owner && actor.Role != MemberRole.Admin)
-            throw new InvalidOperationException("Only Owner or Admin can rename a chat.");
+            throw new DomainException("Only Owner or Admin can rename a chat.");
 
         if (Name is null)
-            throw new InvalidOperationException("This chat type does not support a name.");
+            throw new DomainException("This chat type does not support a name.");
 
         var oldName = Name.Value;
         Name = newName;
@@ -68,7 +68,7 @@ public abstract class Chat : AggregateRoot
         EnsureNotDeleted();
         var actor = RequireActiveMember(deletedBy);
         if (actor.Role != MemberRole.Owner)
-            throw new InvalidOperationException("Only Owner can delete a chat.");
+            throw new DomainException("Only Owner can delete a chat.");
 
         DeletedAt = DateTime.UtcNow;
         RaiseDomainEvent(new ChatDeletedEvent(Id, deletedBy));

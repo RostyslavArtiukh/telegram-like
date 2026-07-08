@@ -52,7 +52,7 @@ public class UserTests
     {
         var user = NewUser();
         var act = () => user.Block(user.Id);
-        act.Should().Throw<InvalidOperationException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using TelegramLike.Chats.Domain;
 using FluentAssertions;
 using NSubstitute;
 using TelegramLike.Chats.Application.Commands.ChangeMemberRole;
@@ -21,7 +22,7 @@ public class JoinChatCommandHandlerTests
 
         var act = () => Handler.Handle(new JoinChatCommand(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*not found*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*not found*");
     }
 
     [Fact]
@@ -45,7 +46,7 @@ public class JoinChatCommandHandlerTests
 
         var act = () => Handler.Handle(new JoinChatCommand(chat.Id, Guid.NewGuid()), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*does not support Join*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*does not support Join*");
     }
 }
 
@@ -82,7 +83,7 @@ public class KickMemberCommandHandlerTests
 
         var act = () => Handler.Handle(new KickMemberCommand(chat.Id, memberB, memberA), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<DomainException>();
         await _repo.DidNotReceive().UpdateAsync(Arg.Any<Chat>(), Arg.Any<CancellationToken>());
     }
 
@@ -93,7 +94,7 @@ public class KickMemberCommandHandlerTests
 
         var act = () => Handler.Handle(new KickMemberCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*not found*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*not found*");
     }
 }
 
@@ -131,7 +132,7 @@ public class ChangeMemberRoleCommandHandlerTests
         var act = () => Handler.Handle(
             new ChangeMemberRoleCommand(chat.Id, memberB, MemberRole.Admin, memberA), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
@@ -160,7 +161,7 @@ public class ChangeMemberRoleCommandHandlerTests
         var act = () => Handler.Handle(
             new ChangeMemberRoleCommand(chat.Id, viewerId, MemberRole.Member, ownerId), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*Admin/Viewer*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*Admin/Viewer*");
     }
 
     [Fact]
@@ -172,6 +173,6 @@ public class ChangeMemberRoleCommandHandlerTests
         var act = () => Handler.Handle(
             new ChangeMemberRoleCommand(chat.Id, Guid.NewGuid(), MemberRole.Admin, Guid.NewGuid()), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*does not support role changes*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*does not support role changes*");
     }
 }

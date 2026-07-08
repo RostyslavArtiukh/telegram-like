@@ -26,10 +26,10 @@ public sealed class RegisterUserCommandHandler(
         var username = Username.Create(request.Username);
 
         if (await userRepository.ExistsByEmailAsync(email, cancellationToken))
-            throw new InvalidOperationException($"Email '{request.Email}' is already taken.");
+            throw new DomainException($"Email '{request.Email}' is already taken.");
 
         if (await userRepository.ExistsByUsernameAsync(username, cancellationToken))
-            throw new InvalidOperationException($"Username '{request.Username}' is already taken.");
+            throw new DomainException($"Username '{request.Username}' is already taken.");
 
         var passwordHash = passwordHasher.Hash(request.Password);
         var user = User.Register(userId, request.Email, request.Username, request.DisplayName, passwordHash);

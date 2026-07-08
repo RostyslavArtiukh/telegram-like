@@ -6,6 +6,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="TelegramLike.Chats.Domain" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="FluentValidation" Version="11.10.0" />
     <PackageReference Include="MassTransit" Version="8.3.0" />
     <PackageReference Include="MediatR" Version="14.1.0" />

@@ -15,7 +15,7 @@ public sealed class MarkMessageAsReadCommandHandler(
     public async Task Handle(MarkMessageAsReadCommand request, CancellationToken cancellationToken)
     {
         var message = await messageRepository.GetByIdAsync(request.MessageId, cancellationToken)
-                      ?? throw new InvalidOperationException("Message not found.");
+                      ?? throw new DomainException("Message not found.");
 
         var isMember = await membership.IsActiveMemberAsync(message.ChatId, request.ReaderUserId, cancellationToken);
         if (!isMember)

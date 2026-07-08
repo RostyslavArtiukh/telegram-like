@@ -1,3 +1,4 @@
+using TelegramLike.Messaging.Domain;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -95,7 +96,7 @@ public class MarkMessageAsReadCommandHandlerTests
         var act = () => Handler.Handle(
             new MarkMessageAsReadCommand(Guid.NewGuid(), Guid.NewGuid(), IsBroadcast: false), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*not found*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*not found*");
     }
 
     [Fact]

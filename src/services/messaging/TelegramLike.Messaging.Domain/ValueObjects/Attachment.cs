@@ -18,10 +18,10 @@ public sealed record Attachment
     public static Attachment Create(AttachmentType type, string url, long sizeBytes, string? fileName = null)
     {
         if (string.IsNullOrWhiteSpace(url))
-            throw new ArgumentException("Attachment url cannot be empty.", nameof(url));
+            throw new DomainException("Attachment url cannot be empty.");
 
         if (sizeBytes <= 0)
-            throw new ArgumentException("Attachment size must be positive.", nameof(sizeBytes));
+            throw new DomainException("Attachment size must be positive.");
 
         return new Attachment(type, url.Trim(), sizeBytes, string.IsNullOrWhiteSpace(fileName) ? null : fileName.Trim());
     }

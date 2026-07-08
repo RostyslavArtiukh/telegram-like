@@ -27,7 +27,7 @@ public sealed class SendMessageCommandHandler(
         {
             // The chat is materialized and the author is not in it → a genuine
             // non-member. Fail closed (→ 403 via DomainExceptionFilter).
-            throw new UnauthorizedAccessException("You are not an active member of this chat.");
+            throw new ForbiddenException("You are not an active member of this chat.");
         }
 
         if (!chatKnown)
@@ -50,13 +50,13 @@ public sealed class SendMessageCommandHandler(
         if (request.ReplyToMessageId.HasValue)
         {
             var replyTarget = await messageRepository.GetByIdAsync(request.ReplyToMessageId.Value, cancellationToken)
-                              ?? throw new InvalidOperationException("Reply target message not found.");
+                              ?? throw new DomainException("Reply target message not found.");
 
             if (replyTarget.ChatId != request.ChatId)
-                throw new InvalidOperationException("Cannot reply to a message from a different chat.");
+                throw new DomainException("Cannot reply to a message from a different chat.");
 
             if (replyTarget.IsRetracted)
-                throw new InvalidOperationException("Cannot reply to a retracted message.");
+                throw new DomainException("Cannot reply to a retracted message.");
         }
 
         var attachments = request.Attachments?

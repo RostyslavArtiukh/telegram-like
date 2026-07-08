@@ -19,10 +19,10 @@ public sealed record MessageContent
         var normalizedAttachments = (IReadOnlyList<Attachment>)(attachments?.ToList() ?? new List<Attachment>());
 
         if (normalizedText is null && normalizedAttachments.Count == 0)
-            throw new ArgumentException("Message must contain text or at least one attachment.");
+            throw new DomainException("Message must contain text or at least one attachment.");
 
         if (normalizedText is not null && normalizedText.Length > MaxTextLength)
-            throw new ArgumentException($"Message text cannot exceed {MaxTextLength} characters.");
+            throw new DomainException($"Message text cannot exceed {MaxTextLength} characters.");
 
         return new MessageContent(normalizedText, normalizedAttachments);
     }

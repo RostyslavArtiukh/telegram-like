@@ -10,12 +10,12 @@ public sealed record ChatName
     public static ChatName Create(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new ArgumentException("Chat name cannot be empty.");
+            throw new DomainException("Chat name cannot be empty.");
 
         value = value.Trim();
 
         if (value.Length > MaxLength)
-            throw new ArgumentException($"Chat name cannot exceed {MaxLength} characters.");
+            throw new DomainException($"Chat name cannot exceed {MaxLength} characters.");
 
         return new ChatName(value);
     }

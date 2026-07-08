@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Logging;
+using TelegramLike.Notifications.Domain;
 
 namespace TelegramLike.Notifications.Api.Filters;
 
@@ -10,42 +13,52 @@ namespace TelegramLike.Notifications.Api.Filters;
 /// former minimal API. Registered globally (see <c>Program.cs</c>) so every action is
 /// covered without per-action wiring.
 /// <para>
-/// Mapping intentionally matches the previous minimal-API behaviour exactly: only the
-/// <c>POST /notifications/{id}/read</c> endpoint caught <see cref="InvalidOperationException"/>
-/// and returned <c>Results.Problem(ex.Message, statusCode: 400)</c> — a 400 with a
-/// <see cref="ProblemDetails"/> body. No other endpoint caught anything, so every other
-/// exception (including <see cref="ArgumentException"/> from the mark-read commands) was
-/// left to bubble up as a 500. We preserve that here: <see cref="InvalidOperationException"/>
-/// → 400 <see cref="ProblemDetails"/>, everything else unhandled → 500.
+/// Only deliberate <see cref="DomainException"/>s (business-rule violations from the mark-read
+/// command, e.g. "notification not found", "cannot mark another user's notification as read")
+/// map to <c>400</c>. This preserves the previous behaviour — the only endpoint that emitted a
+/// 400 was <c>POST /notifications/{id}/read</c> — while fixing its flaw: it used to catch the
+/// raw <see cref="InvalidOperationException"/> base type, so a framework-thrown one (LINQ, the
+/// Mongo driver, an enum-mapping default case) would have been mislabelled as a client 400 with
+/// an internal message. Those now bubble up as a <c>500</c>.
 /// </para>
 /// <remarks>
-/// Unlike the Chats <c>DomainExceptionFilter</c> this does NOT map <see cref="ArgumentException"/>
-/// (→400) or <see cref="UnauthorizedAccessException"/> (→403): notifications never emitted those
-/// status codes from its API, and mapping them would silently change the wire contract.
+/// Unlike Chats this maps no <c>403</c>, and <see cref="ArgumentException"/> guards stay a 500 —
+/// notifications never emitted those codes from its API, and mapping them would change the wire
+/// contract. Mapped exceptions are logged and the response carries the current trace id
+/// (<c>traceId</c> extension) so a client-reported error correlates with its Jaeger trace.
 /// </remarks>
 /// </summary>
-public sealed class DomainExceptionFilter : IExceptionFilter
+public sealed class DomainExceptionFilter(ILogger<DomainExceptionFilter> logger) : IExceptionFilter
 {
     public void OnException(ExceptionContext context)
     {
         var statusCode = context.Exception switch
         {
-            InvalidOperationException => StatusCodes.Status400BadRequest,
+            DomainException => StatusCodes.Status400BadRequest,
             _ => (int?)null
         };
 
         if (statusCode is null)
             return;
 
-        context.Result = new ObjectResult(new ProblemDetails
+        var traceId = Activity.Current?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier;
+        logger.LogWarning(
+            "Domain exception {ExceptionType} mapped to {Status} for {Method} {Path} (traceId {TraceId}): {Message}",
+            context.Exception.GetType().Name,
+            statusCode,
+            context.HttpContext.Request.Method,
+            context.HttpContext.Request.Path,
+            traceId,
+            context.Exception.Message);
+
+        var problem = new ProblemDetails
         {
             Status = statusCode,
             Detail = context.Exception.Message
-        })
-        {
-            StatusCode = statusCode
         };
+        problem.Extensions["traceId"] = traceId;
 
+        context.Result = new ObjectResult(problem) { StatusCode = statusCode };
         context.ExceptionHandled = true;
     }
 }

@@ -10,7 +10,7 @@ public sealed class TransferOwnershipCommandHandler(IChatRepository chatReposito
     public async Task Handle(TransferOwnershipCommand request, CancellationToken cancellationToken)
     {
         var chat = await chatRepository.GetByIdAsync(request.ChatId, cancellationToken)
-                   ?? throw new InvalidOperationException("Chat not found.");
+                   ?? throw new DomainException("Chat not found.");
 
         switch (chat)
         {
@@ -21,7 +21,7 @@ public sealed class TransferOwnershipCommandHandler(IChatRepository chatReposito
                 broadcast.TransferOwnership(request.NewOwnerUserId, request.CurrentOwnerUserId);
                 break;
             default:
-                throw new InvalidOperationException("This chat type does not support ownership transfer.");
+                throw new DomainException("This chat type does not support ownership transfer.");
         }
 
         await chatRepository.UpdateAsync(chat, cancellationToken);

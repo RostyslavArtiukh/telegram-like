@@ -10,7 +10,7 @@ public sealed class GetChatMembersQueryHandler(IChatQueryService chatQueryServic
     {
         // Only members may enumerate the roster (names/roles). 403 for a non-member.
         if (!await chatQueryService.IsActiveMemberAsync(request.ChatId, request.RequesterId, cancellationToken))
-            throw new UnauthorizedAccessException("You are not a member of this chat.");
+            throw new ForbiddenException("You are not a member of this chat.");
 
         return await chatQueryService.GetChatMembersAsync(request.ChatId, cancellationToken);
     }

@@ -96,7 +96,7 @@ public sealed class User : AggregateRoot
     public void Block(Guid targetUserId)
     {
         if (targetUserId == Id)
-            throw new InvalidOperationException("Cannot block yourself.");
+            throw new DomainException("Cannot block yourself.");
 
         if (_blockedUserIds.Contains(targetUserId))
             return;

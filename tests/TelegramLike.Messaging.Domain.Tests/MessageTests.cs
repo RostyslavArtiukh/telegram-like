@@ -30,7 +30,7 @@ public class MessageTests
         var act = () => Message.Send(
             Guid.Empty, Guid.NewGuid(), Guid.NewGuid(), MessageContent.Create("hi"), [Guid.NewGuid()]);
 
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public class MessageTests
         var act = () => Message.Send(
             Guid.NewGuid(), Guid.Empty, Guid.NewGuid(), MessageContent.Create("hi"), [Guid.NewGuid()]);
 
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class MessageTests
         var act = () => Message.Send(
             Guid.NewGuid(), Guid.NewGuid(), Guid.Empty, MessageContent.Create("hi"), [Guid.NewGuid()]);
 
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -117,21 +117,21 @@ public class MessageTests
     public void ReplyReference_To_with_empty_id_throws()
     {
         var act = () => ReplyReference.To(Guid.Empty);
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
     public void ForwardReference_From_with_empty_messageId_throws()
     {
         var act = () => ForwardReference.From(Guid.Empty, Guid.NewGuid());
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
     public void ForwardReference_From_with_empty_chatId_throws()
     {
         var act = () => ForwardReference.From(Guid.NewGuid(), Guid.Empty);
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<DomainException>();
     }
 
     // ---- Retract ----
@@ -157,7 +157,7 @@ public class MessageTests
 
         var act = () => message.Retract(Guid.NewGuid(), isAuthorOrModerator: false);
 
-        act.Should().Throw<InvalidOperationException>();
+        act.Should().Throw<DomainException>();
         message.IsRetracted.Should().BeFalse();
         message.DomainEvents.OfType<MessageRetractedEvent>().Should().BeEmpty();
     }
@@ -170,7 +170,7 @@ public class MessageTests
 
         var act = () => message.Retract(Guid.NewGuid(), isAuthorOrModerator: true);
 
-        act.Should().Throw<InvalidOperationException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public class MessageTests
 
         var act = () => message.AddReaction(Guid.NewGuid(), Emoji.Like, isPremium: false);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*retracted*");
+        act.Should().Throw<DomainException>().WithMessage("*retracted*");
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public class MessageTests
 
         var act = () => message.RemoveReaction(Guid.NewGuid(), Emoji.Like);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("Reaction not found.");
+        act.Should().Throw<DomainException>().WithMessage("Reaction not found.");
     }
 
     // ---- Reactions ----
@@ -218,7 +218,7 @@ public class MessageTests
 
         var act = () => message.AddReaction(userId, Emoji.Heart, isPremium: false);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*maximum number of reactions (1)*");
+        act.Should().Throw<DomainException>().WithMessage("*maximum number of reactions (1)*");
     }
 
     [Fact]
@@ -243,7 +243,7 @@ public class MessageTests
 
         var act = () => message.AddReaction(userId, Emoji.Wow, isPremium: true);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*maximum number of reactions (2)*");
+        act.Should().Throw<DomainException>().WithMessage("*maximum number of reactions (2)*");
     }
 
     [Fact]
@@ -255,7 +255,7 @@ public class MessageTests
 
         var act = () => message.AddReaction(userId, Emoji.Like, isPremium: true);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*already reacted*");
+        act.Should().Throw<DomainException>().WithMessage("*already reacted*");
     }
 
     [Fact]
@@ -301,7 +301,7 @@ public class MessageTests
 
         var act = () => message.RemoveReaction(Guid.NewGuid(), Emoji.Like);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("Reaction not found.");
+        act.Should().Throw<DomainException>().WithMessage("Reaction not found.");
     }
 
     // ---- Broadcast read count ----
@@ -324,6 +324,6 @@ public class MessageTests
 
         var act = () => message.IncrementBroadcastReadCount();
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*only available for BroadcastChannel*");
+        act.Should().Throw<DomainException>().WithMessage("*only available for BroadcastChannel*");
     }
 }

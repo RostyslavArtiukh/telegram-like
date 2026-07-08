@@ -67,9 +67,9 @@ public sealed class Message : AggregateRoot
     {
         // Caller-supplied id doubles as the idempotency key: a retried send reuses the
         // same id, so the unique _id insert dedupes it (see MessageRepository.AddAsync).
-        if (messageId == Guid.Empty) throw new ArgumentException("MessageId cannot be empty.", nameof(messageId));
-        if (chatId == Guid.Empty) throw new ArgumentException("ChatId cannot be empty.", nameof(chatId));
-        if (authorId == Guid.Empty) throw new ArgumentException("AuthorId cannot be empty.", nameof(authorId));
+        if (messageId == Guid.Empty) throw new DomainException("MessageId cannot be empty.");
+        if (chatId == Guid.Empty) throw new DomainException("ChatId cannot be empty.");
+        if (authorId == Guid.Empty) throw new DomainException("AuthorId cannot be empty.");
         ArgumentNullException.ThrowIfNull(recipients);
 
         var message = new Message(
@@ -115,7 +115,7 @@ public sealed class Message : AggregateRoot
         EnsureNotRetracted();
 
         if (!isAuthorOrModerator)
-            throw new InvalidOperationException("Only the author, an Admin, or the Owner can retract a message.");
+            throw new DomainException("Only the author, an Admin, or the Owner can retract a message.");
 
         Status = MessageStatus.Retracted(retractedBy, DateTime.UtcNow);
         Content = MessageContent.Create("[retracted]");
@@ -129,11 +129,11 @@ public sealed class Message : AggregateRoot
         var existing = _reactions.Where(r => r.UserId == userId).ToList();
 
         if (existing.Any(r => r.Emoji == emoji))
-            throw new InvalidOperationException("User has already reacted with this emoji.");
+            throw new DomainException("User has already reacted with this emoji.");
 
         var limit = isPremium ? PremiumUserReactionLimit : FreeUserReactionLimit;
         if (existing.Count >= limit)
-            throw new InvalidOperationException(
+            throw new DomainException(
                 $"User has reached the maximum number of reactions ({limit}) for this message.");
 
         _reactions.Add(Reaction.Add(userId, emoji));
@@ -143,7 +143,7 @@ public sealed class Message : AggregateRoot
     public void RemoveReaction(Guid userId, Emoji emoji)
     {
         var reaction = _reactions.FirstOrDefault(r => r.UserId == userId && r.Emoji == emoji)
-            ?? throw new InvalidOperationException("Reaction not found.");
+            ?? throw new DomainException("Reaction not found.");
 
         _reactions.Remove(reaction);
         RaiseDomainEvent(new ReactionRemovedEvent(Id, ChatId, userId, emoji));
@@ -152,7 +152,7 @@ public sealed class Message : AggregateRoot
     public void IncrementBroadcastReadCount()
     {
         if (BroadcastReadCount is null)
-            throw new InvalidOperationException("Broadcast read count is only available for BroadcastChannel messages.");
+            throw new DomainException("Broadcast read count is only available for BroadcastChannel messages.");
 
         BroadcastReadCount++;
     }
@@ -160,6 +160,6 @@ public sealed class Message : AggregateRoot
     private void EnsureNotRetracted()
     {
         if (IsRetracted)
-            throw new InvalidOperationException("Cannot operate on a retracted message.");
+            throw new DomainException("Cannot operate on a retracted message.");
     }
 }

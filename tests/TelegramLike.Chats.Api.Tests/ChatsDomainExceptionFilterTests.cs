@@ -9,20 +9,23 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using TelegramLike.Chats.Application.Commands.KickMember;
 using TelegramLike.Chats.Api.Tests.Harness;
+using TelegramLike.Chats.Domain;
 
 namespace TelegramLike.Chats.Api.Tests;
 
 /// <summary>
-/// DomainExceptionFilter contract for Chats:
-///   InvalidOperationException → 400 ProblemDetails
-///   ArgumentException         → 400 ProblemDetails
-///   UnauthorizedAccessException → 403 ProblemDetails
+/// DomainExceptionFilter contract for Chats after the domain-exception refactor:
+///   <see cref="DomainException"/>    → 400 ProblemDetails
+///   <see cref="ForbiddenException"/> → 403 ProblemDetails
+///   framework exceptions (raw InvalidOperationException / ArgumentException) → 500, NOT 400.
 ///
-/// Each test creates its own ChatsApiFactory to avoid NSubstitute When/Do
-/// config accumulation across tests sharing the same mock instance.
-/// The UnauthorizedAccessException case uses When/Do rather than .Throws() because
-/// KickMemberCommand : IRequest (non-generic, i.e. IRequest&lt;Unit&gt;) and NSubstitute's
-/// .Throws() does not reliably intercept that path through ISender.Send&lt;TResponse&gt;.
+/// The last case is the deliberate behaviour change: the previous filter caught the raw BCL
+/// base types, so a framework-thrown exception (LINQ, the Mongo driver, a data-integrity default
+/// case) was mislabelled as a client 400 with an internal message. Now only deliberate domain
+/// exceptions map to 4xx.
+///
+/// Each test creates its own ChatsApiFactory to avoid NSubstitute When/Do config accumulation
+/// across tests sharing the same mock instance.
 /// </summary>
 public sealed class ChatsDomainExceptionFilterTests
 {
@@ -31,15 +34,15 @@ public sealed class ChatsDomainExceptionFilterTests
     private static StringContent Json(object body)
         => new(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
-    // ── InvalidOperationException → 400 ProblemDetails ────────────────────
+    // ── DomainException → 400 ProblemDetails ──────────────────────────────
 
     [Fact]
-    public async Task InvalidOperationException_Returns400WithProblemDetails()
+    public async Task DomainException_Returns400WithProblemDetails()
     {
         await using var factory = new ChatsApiFactory();
         factory.Mediator
             .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
-            .Throws(new InvalidOperationException("chat already exists"));
+            .Throws(new DomainException("chat already exists"));
 
         var client = factory.CreateAuthenticatedClient();
         var body = Json(new { name = "Dup" });
@@ -53,32 +56,10 @@ public sealed class ChatsDomainExceptionFilterTests
         problem.Detail.Should().Be("chat already exists");
     }
 
-    // ── ArgumentException → 400 ProblemDetails ────────────────────────────
+    // ── ForbiddenException → 403 ProblemDetails ───────────────────────────
 
     [Fact]
-    public async Task ArgumentException_Returns400WithProblemDetails()
-    {
-        await using var factory = new ChatsApiFactory();
-        factory.Mediator
-            .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
-            .Throws(new ArgumentException("name is invalid"));
-
-        var client = factory.CreateAuthenticatedClient();
-        var body = Json(new { name = "" });
-        var response = await client.PostAsync("/chats/broadcast", body);
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
-        problem.Should().NotBeNull();
-        problem!.Status.Should().Be(400);
-        problem.Detail.Should().Be("name is invalid");
-    }
-
-    // ── UnauthorizedAccessException → 403 ProblemDetails ─────────────────
-
-    [Fact]
-    public async Task UnauthorizedAccessException_Returns403WithProblemDetails()
+    public async Task ForbiddenException_Returns403WithProblemDetails()
     {
         await using var factory = new ChatsApiFactory();
         // KickMemberCommand : IRequest (non-generic). Using When/Do on the concrete
@@ -86,7 +67,7 @@ public sealed class ChatsDomainExceptionFilterTests
         // non-generic IRequest commands through ISender.Send<TResponse>.
         factory.Mediator
             .When(m => m.Send(Arg.Any<KickMemberCommand>(), Arg.Any<CancellationToken>()))
-            .Do(_ => throw new UnauthorizedAccessException("only owners may kick"));
+            .Do(_ => throw new ForbiddenException("only owners may kick"));
 
         var client = factory.CreateAuthenticatedClient();
         var response = await client.PostAsync(
@@ -101,6 +82,33 @@ public sealed class ChatsDomainExceptionFilterTests
         problem.Detail.Should().Be("only owners may kick");
     }
 
+    // ── framework exception is NOT mapped to 400 (bubbles as a server error) ──
+
+    [Fact]
+    public async Task FrameworkException_IsNotMappedTo400()
+    {
+        await using var factory = new ChatsApiFactory();
+        factory.Mediator
+            .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("sequence contains no elements"));
+
+        var client = factory.CreateAuthenticatedClient();
+
+        HttpResponseMessage? response;
+        try
+        {
+            response = await client.PostAsync("/chats/group", Json(new { name = "x" }));
+        }
+        catch (InvalidOperationException)
+        {
+            // TestServer rethrew the unhandled exception — that alone proves the filter
+            // no longer converts a framework exception into a client 400.
+            return;
+        }
+
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+    }
+
     // ── Response content-type is application/problem+json ─────────────────
 
     [Fact]
@@ -109,7 +117,7 @@ public sealed class ChatsDomainExceptionFilterTests
         await using var factory = new ChatsApiFactory();
         factory.Mediator
             .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
-            .Throws(new InvalidOperationException("boom"));
+            .Throws(new DomainException("boom"));
 
         var client = factory.CreateAuthenticatedClient();
         var response = await client.PostAsync("/chats/group", Json(new { name = "x" }));

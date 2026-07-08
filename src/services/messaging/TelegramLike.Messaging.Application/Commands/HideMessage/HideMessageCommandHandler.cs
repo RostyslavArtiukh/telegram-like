@@ -12,7 +12,7 @@ public sealed class HideMessageCommandHandler(
     public async Task Handle(HideMessageCommand request, CancellationToken cancellationToken)
     {
         var message = await messageRepository.GetByIdAsync(request.MessageId, cancellationToken)
-                      ?? throw new InvalidOperationException("Message not found.");
+                      ?? throw new DomainException("Message not found.");
 
         await hiddenMessageRepository.HideAsync(message.Id, request.UserId, cancellationToken);
     }

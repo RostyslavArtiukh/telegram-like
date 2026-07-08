@@ -13,14 +13,14 @@ public class DirectChatTests
         var userId = Guid.NewGuid();
         var act = () => DirectChat.Create(Guid.NewGuid(), userId, userId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*two distinct users*");
+        act.Should().Throw<DomainException>().WithMessage("*two distinct users*");
     }
 
     [Fact]
     public void Create_with_empty_id_throws()
     {
         var act = () => DirectChat.Create(Guid.Empty, Guid.NewGuid(), Guid.NewGuid());
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class DirectChatTests
 
         var act = () => chat.Rename(ChatName.Create("x"), Guid.NewGuid());
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*cannot be renamed*");
+        act.Should().Throw<DomainException>().WithMessage("*cannot be renamed*");
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class DirectChatTests
 
         var act = () => chat.Delete(Guid.NewGuid());
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*cannot be deleted*");
+        act.Should().Throw<DomainException>().WithMessage("*cannot be deleted*");
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class DirectChatTests
 
         var act = () => chat.Leave(initiatorId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*does not support Leave*");
+        act.Should().Throw<DomainException>().WithMessage("*does not support Leave*");
     }
 
     [Fact]
@@ -77,6 +77,6 @@ public class DirectChatTests
 
         var act = () => chat.Kick(peerId, initiatorId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*does not support Kick*");
+        act.Should().Throw<DomainException>().WithMessage("*does not support Kick*");
     }
 }

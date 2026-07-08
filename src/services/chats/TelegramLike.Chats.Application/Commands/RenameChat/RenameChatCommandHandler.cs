@@ -10,7 +10,7 @@ public sealed class RenameChatCommandHandler(IChatRepository chatRepository)
     public async Task Handle(RenameChatCommand request, CancellationToken cancellationToken)
     {
         var chat = await chatRepository.GetByIdAsync(request.ChatId, cancellationToken)
-                   ?? throw new InvalidOperationException("Chat not found.");
+                   ?? throw new DomainException("Chat not found.");
 
         chat.Rename(ChatName.Create(request.NewName), request.ActorUserId);
         await chatRepository.UpdateAsync(chat, cancellationToken);

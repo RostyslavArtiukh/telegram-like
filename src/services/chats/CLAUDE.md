@@ -13,4 +13,4 @@ Own **autonomous outbox bundle** (full copy, not shared). Publishes `MemberJoine
 ## Endpoints (`/chats`, authed)
 `my`, `{id}`, `{id}/members`, create `direct|group|broadcast`, `{id}/join`, `{id}/leave`, members `{u}/kick` · `{u}/role`, `transfer-ownership`, `PATCH {id}` (rename).
 
-Controllers (`Controllers/`): `ChatsController` (lifecycle + queries) + `ChatMembersController` (membership), both on `ApiControllerBase`; errors via global `DomainExceptionFilter` (`InvalidOperationException`/`ArgumentException`→400, `UnauthorizedAccessException`→403, `ProblemDetails`); request records in `Contracts/`. See the `api_controllers` memory.
+Controllers (`Controllers/`): `ChatsController` (lifecycle + queries) + `ChatMembersController` (membership), both on `ApiControllerBase`; errors via global `DomainExceptionFilter` (`DomainException`→400, `ForbiddenException`→403, `ProblemDetails` + `traceId`); handlers/domain throw those semantic types (in `Chats.Domain`), **not** raw BCL exceptions — a framework `InvalidOperationException`/`ArgumentException` now → 500, not a mislabelled 400. Request records in `Contracts/`. See the `api_controllers` memory.

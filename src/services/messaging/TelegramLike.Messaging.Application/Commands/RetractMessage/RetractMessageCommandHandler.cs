@@ -17,7 +17,7 @@ public sealed class RetractMessageCommandHandler(
         await ConcurrencyRetry.ExecuteAsync(async () =>
         {
             var message = await messageRepository.GetByIdAsync(request.MessageId, cancellationToken)
-                          ?? throw new InvalidOperationException("Message not found.");
+                          ?? throw new DomainException("Message not found.");
 
             var isMember = await membership.IsActiveMemberAsync(message.ChatId, request.ActorUserId, cancellationToken);
             if (!isMember)

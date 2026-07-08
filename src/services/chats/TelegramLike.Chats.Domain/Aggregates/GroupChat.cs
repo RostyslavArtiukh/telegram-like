@@ -14,7 +14,7 @@ public sealed class GroupChat : Chat
     public static GroupChat Create(Guid id, ChatName name, Guid ownerUserId)
     {
         // Caller-supplied id doubles as the idempotency key (see ChatRepository.AddAsync).
-        if (id == Guid.Empty) throw new ArgumentException("Chat id cannot be empty.", nameof(id));
+        if (id == Guid.Empty) throw new DomainException("Chat id cannot be empty.");
         var chat = new GroupChat(id, name, ownerUserId, DateTime.UtcNow);
         var owner = Member.Join(ownerUserId, MemberRole.Owner);
         chat._members.Add(owner);
@@ -38,7 +38,7 @@ public sealed class GroupChat : Chat
 
         var existing = FindAnyMember(userId);
         if (existing is { Status: MemberStatus.Banned })
-            throw new InvalidOperationException("User is banned from this chat.");
+            throw new DomainException("User is banned from this chat.");
         if (existing is { Status: MemberStatus.Active })
             return;
 
@@ -55,7 +55,7 @@ public sealed class GroupChat : Chat
         EnsureNotDeleted();
         var member = RequireActiveMember(userId);
         if (member.Role == MemberRole.Owner)
-            throw new InvalidOperationException("Owner must transfer ownership before leaving.");
+            throw new DomainException("Owner must transfer ownership before leaving.");
 
         member.Leave();
         RaiseDomainEvent(new MemberLeftEvent(Id, userId));
@@ -68,11 +68,11 @@ public sealed class GroupChat : Chat
         var target = RequireActiveMember(targetUserId);
 
         if (actor.Role != MemberRole.Owner && actor.Role != MemberRole.Admin)
-            throw new InvalidOperationException("Only Owner or Admin can kick.");
+            throw new DomainException("Only Owner or Admin can kick.");
         if (target.Role == MemberRole.Owner)
-            throw new InvalidOperationException("Cannot kick the Owner.");
+            throw new DomainException("Cannot kick the Owner.");
         if (target.Role == MemberRole.Admin && actor.Role != MemberRole.Owner)
-            throw new InvalidOperationException("Only Owner can kick an Admin.");
+            throw new DomainException("Only Owner can kick an Admin.");
 
         target.Kick(kickedBy);
         RaiseDomainEvent(new MemberKickedEvent(Id, targetUserId, kickedBy, RecipientsExcept(kickedBy)));
@@ -84,15 +84,15 @@ public sealed class GroupChat : Chat
         var actor = RequireActiveMember(bannedBy);
 
         if (actor.Role != MemberRole.Owner && actor.Role != MemberRole.Admin)
-            throw new InvalidOperationException("Only Owner or Admin can ban.");
+            throw new DomainException("Only Owner or Admin can ban.");
 
         var target = FindAnyMember(targetUserId)
-                     ?? throw new InvalidOperationException("Target user is not part of this chat.");
+                     ?? throw new DomainException("Target user is not part of this chat.");
 
         if (target.Role == MemberRole.Owner)
-            throw new InvalidOperationException("Cannot ban the Owner.");
+            throw new DomainException("Cannot ban the Owner.");
         if (target.Role == MemberRole.Admin && actor.Role != MemberRole.Owner)
-            throw new InvalidOperationException("Only Owner can ban an Admin.");
+            throw new DomainException("Only Owner can ban an Admin.");
 
         target.Ban(bannedBy, reason);
         RaiseDomainEvent(new MemberBannedEvent(Id, targetUserId, bannedBy, reason));
@@ -102,17 +102,17 @@ public sealed class GroupChat : Chat
     {
         EnsureNotDeleted();
         if (newRole == MemberRole.Owner)
-            throw new InvalidOperationException("Use TransferOwnership to assign Owner.");
+            throw new DomainException("Use TransferOwnership to assign Owner.");
         if (newRole == MemberRole.Viewer)
-            throw new InvalidOperationException("Viewer role is only valid in BroadcastChannel.");
+            throw new DomainException("Viewer role is only valid in BroadcastChannel.");
 
         var actor = RequireActiveMember(changedBy);
         var target = RequireActiveMember(targetUserId);
 
         if (actor.Role != MemberRole.Owner)
-            throw new InvalidOperationException("Only Owner can change roles.");
+            throw new DomainException("Only Owner can change roles.");
         if (target.Role == MemberRole.Owner)
-            throw new InvalidOperationException("Cannot change Owner's role directly.");
+            throw new DomainException("Cannot change Owner's role directly.");
         if (target.Role == newRole)
             return;
 
@@ -128,9 +128,9 @@ public sealed class GroupChat : Chat
         var newOwner = RequireActiveMember(newOwnerUserId);
 
         if (currentOwner.Role != MemberRole.Owner)
-            throw new InvalidOperationException("Only current Owner can transfer ownership.");
+            throw new DomainException("Only current Owner can transfer ownership.");
         if (newOwnerUserId == currentOwnerUserId)
-            throw new InvalidOperationException("Cannot transfer ownership to yourself.");
+            throw new DomainException("Cannot transfer ownership to yourself.");
 
         var previousOwnerOldRole = currentOwner.Role;
         var newOwnerOldRole = newOwner.Role;

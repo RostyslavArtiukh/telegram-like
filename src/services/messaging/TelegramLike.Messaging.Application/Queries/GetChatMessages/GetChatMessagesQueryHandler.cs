@@ -19,7 +19,7 @@ public sealed class GetChatMessagesQueryHandler(
         // SendMessage, e.g. a MemberJoined still in flight).
         var activeMembers = await membership.GetActiveMemberIdsAsync(request.ChatId, cancellationToken);
         if (activeMembers.Count > 0 && !activeMembers.Contains(request.RequesterId))
-            throw new UnauthorizedAccessException("You are not an active member of this chat.");
+            throw new ForbiddenException("You are not an active member of this chat.");
 
         return await messageQueryService.GetChatMessagesAsync(
             request.ChatId,

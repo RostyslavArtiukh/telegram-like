@@ -1,3 +1,4 @@
+using TelegramLike.Messaging.Domain;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -58,7 +59,7 @@ public class SendMessageCommandHandlerTests
 
         var act = () => Handler.Handle(Command(chatId, authorId), CancellationToken.None);
 
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        await act.Should().ThrowAsync<ForbiddenException>();
         await _messageRepository.DidNotReceive().AddAsync(Arg.Any<Message>(), Arg.Any<CancellationToken>());
     }
 
@@ -98,7 +99,7 @@ public class SendMessageCommandHandlerTests
 
         var act = () => Handler.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*different chat*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*different chat*");
     }
 
     [Fact]
@@ -119,7 +120,7 @@ public class SendMessageCommandHandlerTests
 
         var act = () => Handler.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*retracted*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*retracted*");
     }
 
     [Fact]
@@ -135,7 +136,7 @@ public class SendMessageCommandHandlerTests
 
         var act = () => Handler.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*not found*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*not found*");
     }
 
     [Fact]

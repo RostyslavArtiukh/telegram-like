@@ -1,3 +1,4 @@
+using TelegramLike.Chats.Domain;
 using FluentAssertions;
 using NSubstitute;
 using TelegramLike.Chats.Application.Common.Interfaces;
@@ -22,7 +23,7 @@ public class GetChatMembersQueryHandlerTests
 
         var act = () => Handler.Handle(new GetChatMembersQuery(chatId, requesterId), CancellationToken.None);
 
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        await act.Should().ThrowAsync<ForbiddenException>();
         await _queryService.DidNotReceive().GetChatMembersAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 

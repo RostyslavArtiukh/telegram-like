@@ -1,3 +1,4 @@
+using TelegramLike.Messaging.Domain;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -68,7 +69,7 @@ public class RetractMessageCommandHandlerTests
         var act = () => Handler.Handle(
             new RetractMessageCommand(message.Id, attackerId, ActorIsModerator: true), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<DomainException>();
         message.IsRetracted.Should().BeFalse();
         await _messageRepository.DidNotReceive().UpdateAsync(Arg.Any<Message>(), Arg.Any<CancellationToken>());
     }
@@ -81,7 +82,7 @@ public class RetractMessageCommandHandlerTests
         var act = () => Handler.Handle(
             new RetractMessageCommand(Guid.NewGuid(), Guid.NewGuid(), ActorIsModerator: false), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*not found*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*not found*");
     }
 
     [Fact]
@@ -101,6 +102,6 @@ public class RetractMessageCommandHandlerTests
         var act = () => Handler.Handle(
             new RetractMessageCommand(message.Id, strangerId, ActorIsModerator: false), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<DomainException>();
     }
 }

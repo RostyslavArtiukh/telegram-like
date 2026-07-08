@@ -1,4 +1,5 @@
 using MongoDB.Driver;
+using TelegramLike.Identity.Domain;
 using TelegramLike.Identity.Domain.Aggregates;
 using TelegramLike.Identity.Domain.Repositories;
 using TelegramLike.Identity.Domain.ValueObjects;
@@ -60,9 +61,9 @@ internal sealed class UserRepository(IMongoDatabase database) : IUserRepository
         catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
         {
             // Race backstop for the check-then-act in RegisterUserCommandHandler: the
-            // unique email/username index rejected a concurrent duplicate. Map to the
-            // same 400 {error} the pre-check would have produced.
-            throw new InvalidOperationException("Email or username is already taken.");
+            // unique email/username index rejected a concurrent duplicate. A DomainException
+            // (business rule) keeps the same 400 {error} the pre-check would have produced.
+            throw new DomainException("Email or username is already taken.");
         }
     }
 

@@ -11,7 +11,7 @@ public sealed class ChangeMemberRoleCommandHandler(IChatRepository chatRepositor
     public async Task Handle(ChangeMemberRoleCommand request, CancellationToken cancellationToken)
     {
         var chat = await chatRepository.GetByIdAsync(request.ChatId, cancellationToken)
-                   ?? throw new InvalidOperationException("Chat not found.");
+                   ?? throw new DomainException("Chat not found.");
 
         switch (chat)
         {
@@ -24,11 +24,11 @@ public sealed class ChangeMemberRoleCommandHandler(IChatRepository chatRepositor
                 else if (request.NewRole == MemberRole.Viewer)
                     broadcast.DemoteToViewer(request.TargetUserId, request.ActorUserId);
                 else
-                    throw new InvalidOperationException(
+                    throw new DomainException(
                         $"BroadcastChannel supports only Admin/Viewer role changes, got {request.NewRole}.");
                 break;
             default:
-                throw new InvalidOperationException("This chat type does not support role changes.");
+                throw new DomainException("This chat type does not support role changes.");
         }
 
         await chatRepository.UpdateAsync(chat, cancellationToken);

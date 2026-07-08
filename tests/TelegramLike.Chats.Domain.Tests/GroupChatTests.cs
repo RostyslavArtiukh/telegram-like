@@ -25,7 +25,7 @@ public class GroupChatTests
     public void Create_with_empty_id_throws()
     {
         var act = () => GroupChat.Create(Guid.Empty, Name(), Guid.NewGuid());
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class GroupChatTests
 
         var act = () => chat.Join(userId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*banned*");
+        act.Should().Throw<DomainException>().WithMessage("*banned*");
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class GroupChatTests
 
         var act = () => chat.Leave(ownerId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*transfer ownership*");
+        act.Should().Throw<DomainException>().WithMessage("*transfer ownership*");
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class GroupChatTests
 
         var act = () => chat.Kick(targetId, memberId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Only Owner or Admin*");
+        act.Should().Throw<DomainException>().WithMessage("*Only Owner or Admin*");
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class GroupChatTests
 
         var act = () => chat.Kick(ownerId, adminId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Cannot kick the Owner*");
+        act.Should().Throw<DomainException>().WithMessage("*Cannot kick the Owner*");
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class GroupChatTests
 
         var act = () => chat.Kick(adminB, adminA);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Only Owner can kick an Admin*");
+        act.Should().Throw<DomainException>().WithMessage("*Only Owner can kick an Admin*");
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class GroupChatTests
 
         var act = () => chat.ChangeMemberRole(memberId, MemberRole.Owner, ownerId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*TransferOwnership*");
+        act.Should().Throw<DomainException>().WithMessage("*TransferOwnership*");
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class GroupChatTests
 
         var act = () => chat.ChangeMemberRole(memberId, MemberRole.Viewer, ownerId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*only valid in BroadcastChannel*");
+        act.Should().Throw<DomainException>().WithMessage("*only valid in BroadcastChannel*");
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public class GroupChatTests
 
         var act = () => chat.ChangeMemberRole(memberId, MemberRole.Admin, adminId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Only Owner can change roles*");
+        act.Should().Throw<DomainException>().WithMessage("*Only Owner can change roles*");
     }
 
     [Fact]
@@ -235,7 +235,7 @@ public class GroupChatTests
 
         var act = () => chat.TransferOwnership(memberB, memberA);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Only current Owner*");
+        act.Should().Throw<DomainException>().WithMessage("*Only current Owner*");
     }
 
     [Fact]
@@ -246,7 +246,7 @@ public class GroupChatTests
 
         var act = () => chat.TransferOwnership(ownerId, ownerId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*yourself*");
+        act.Should().Throw<DomainException>().WithMessage("*yourself*");
     }
 
     [Fact]
@@ -277,7 +277,7 @@ public class GroupChatTests
 
         var act = () => chat.Rename(Name("New name"), memberId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Only Owner or Admin*");
+        act.Should().Throw<DomainException>().WithMessage("*Only Owner or Admin*");
     }
 
     [Fact]
@@ -303,7 +303,7 @@ public class GroupChatTests
 
         var act = () => chat.Delete(adminId);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Only Owner*");
+        act.Should().Throw<DomainException>().WithMessage("*Only Owner*");
     }
 
     [Fact]
@@ -327,6 +327,6 @@ public class GroupChatTests
 
         var act = () => chat.Join(Guid.NewGuid());
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*deleted*");
+        act.Should().Throw<DomainException>().WithMessage("*deleted*");
     }
 }

@@ -1,3 +1,4 @@
+using TelegramLike.Identity.Domain;
 using FluentAssertions;
 using NSubstitute;
 using TelegramLike.Identity.Application.Commands.RegisterUser;
@@ -40,7 +41,7 @@ public class RegisterUserCommandHandlerTests
         var act = () => Handler.Handle(
             new RegisterUserCommand("taken@b.com", "newuser", "New User", "pw"), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*already taken*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*already taken*");
         await _userRepository.DidNotReceive().AddAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
     }
 
@@ -54,7 +55,7 @@ public class RegisterUserCommandHandlerTests
         var act = () => Handler.Handle(
             new RegisterUserCommand("new@b.com", "takenuser", "New User", "pw"), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*already taken*");
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*already taken*");
         await _userRepository.DidNotReceive().AddAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
     }
 

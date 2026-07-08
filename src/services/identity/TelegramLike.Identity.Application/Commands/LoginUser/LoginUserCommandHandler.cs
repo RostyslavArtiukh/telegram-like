@@ -16,16 +16,16 @@ public sealed class LoginUserCommandHandler(
     {
         var email = Email.Create(request.Email);
         var user = await userRepository.GetByEmailAsync(email, cancellationToken)
-            ?? throw new InvalidOperationException("Invalid email or password.");
+            ?? throw new DomainException("Invalid email or password.");
 
         if (!passwordHasher.Verify(request.Password, user.Password.Hash))
-            throw new InvalidOperationException("Invalid email or password.");
+            throw new DomainException("Invalid email or password.");
 
         // A banned/deleted user must not be able to mint a session (the durable
         // credential that exchanges for access JWTs). The aggregate models the
         // status; enforce it at the auth boundary.
         if (user.Status != AccountStatus.Active)
-            throw new InvalidOperationException("This account is not active.");
+            throw new DomainException("This account is not active.");
 
         return await sessionService.CreateSessionAsync(user.Id, cancellationToken);
     }

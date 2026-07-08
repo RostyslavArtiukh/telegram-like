@@ -9,17 +9,22 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using TelegramLike.Messaging.Api.Tests.Harness;
 using TelegramLike.Messaging.Application.Commands.RetractMessage;
+using TelegramLike.Messaging.Domain;
 
 namespace TelegramLike.Messaging.Api.Tests;
 
 /// <summary>
-/// DomainExceptionFilter contract for Messaging:
-///   InvalidOperationException → 400 ProblemDetails
-///   ArgumentException         → 400 ProblemDetails
-///   UnauthorizedAccessException → 403 ProblemDetails
+/// DomainExceptionFilter contract for Messaging after the domain-exception refactor:
+///   <see cref="DomainException"/>    → 400 ProblemDetails
+///   <see cref="ForbiddenException"/> → 403 ProblemDetails
+///   framework exceptions (raw InvalidOperationException / ArgumentException) → 500, NOT 400.
 ///
-/// Each test creates its own MessagingApiFactory to avoid NSubstitute When/Do
-/// config accumulation across tests sharing the same mock instance.
+/// (FluentValidation's ValidationException also maps to 400, exercised elsewhere.) The framework
+/// case is the deliberate behaviour change: the previous filter caught the raw BCL base types, so
+/// a framework-thrown exception was mislabelled as a client 400 with an internal message.
+///
+/// Each test creates its own MessagingApiFactory to avoid NSubstitute When/Do config
+/// accumulation across tests sharing the same mock instance.
 /// </summary>
 public sealed class MessagingDomainExceptionFilterTests
 {
@@ -30,16 +35,16 @@ public sealed class MessagingDomainExceptionFilterTests
     private static StringContent Json(object body)
         => new(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
-    // ── InvalidOperationException → 400 ProblemDetails ────────────────────
+    // ── DomainException → 400 ProblemDetails ──────────────────────────────
 
     [Fact]
-    public async Task InvalidOperationException_Returns400WithProblemDetails()
+    public async Task DomainException_Returns400WithProblemDetails()
     {
         await using var factory = new MessagingApiFactory();
         // POST /messages → SendMessageCommand : IRequest<Guid> — .Throws() on IRequest<Guid> works.
         factory.Mediator
             .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
-            .Throws(new InvalidOperationException("message text required"));
+            .Throws(new DomainException("message text required"));
 
         var client = factory.CreateAuthenticatedClient();
         var body = Json(new
@@ -59,10 +64,10 @@ public sealed class MessagingDomainExceptionFilterTests
         problem.Detail.Should().Be("message text required");
     }
 
-    // ── ArgumentException → 400 ProblemDetails ────────────────────────────
+    // ── ForbiddenException → 403 ProblemDetails ───────────────────────────
 
     [Fact]
-    public async Task ArgumentException_Returns400WithProblemDetails()
+    public async Task ForbiddenException_Returns403WithProblemDetails()
     {
         await using var factory = new MessagingApiFactory();
         // POST /messages/{id}/retract → RetractMessageCommand : IRequest (non-generic).
@@ -70,30 +75,7 @@ public sealed class MessagingDomainExceptionFilterTests
         // reliably intercept non-generic IRequest calls through ISender.Send<TResponse>.
         factory.Mediator
             .When(m => m.Send(Arg.Any<RetractMessageCommand>(), Arg.Any<CancellationToken>()))
-            .Do(_ => throw new ArgumentException("invalid retract target"));
-
-        var client = factory.CreateAuthenticatedClient();
-        var response = await client.PostAsync(
-            $"/messages/{SomeMessageId}/retract",
-            Json(new { actorIsModerator = false }));
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
-        problem.Should().NotBeNull();
-        problem!.Status.Should().Be(400);
-        problem.Detail.Should().Be("invalid retract target");
-    }
-
-    // ── UnauthorizedAccessException → 403 ProblemDetails ─────────────────
-
-    [Fact]
-    public async Task UnauthorizedAccessException_Returns403WithProblemDetails()
-    {
-        await using var factory = new MessagingApiFactory();
-        factory.Mediator
-            .When(m => m.Send(Arg.Any<RetractMessageCommand>(), Arg.Any<CancellationToken>()))
-            .Do(_ => throw new UnauthorizedAccessException("not the author"));
+            .Do(_ => throw new ForbiddenException("not the author"));
 
         var client = factory.CreateAuthenticatedClient();
         var response = await client.PostAsync(
@@ -108,6 +90,40 @@ public sealed class MessagingDomainExceptionFilterTests
         problem.Detail.Should().Be("not the author");
     }
 
+    // ── framework exception is NOT mapped to 400 (bubbles as a server error) ──
+
+    [Fact]
+    public async Task FrameworkException_IsNotMappedTo400()
+    {
+        await using var factory = new MessagingApiFactory();
+        factory.Mediator
+            .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("sequence contains no elements"));
+
+        var client = factory.CreateAuthenticatedClient();
+        var body = Json(new
+        {
+            chatId = SomeChatId,
+            text = "x",
+            recipients = new[] { SomeUserId },
+            isBroadcast = false
+        });
+
+        HttpResponseMessage? response;
+        try
+        {
+            response = await client.PostAsync("/messages", body);
+        }
+        catch (InvalidOperationException)
+        {
+            // TestServer rethrew the unhandled exception — that alone proves the filter
+            // no longer converts a framework exception into a client 400.
+            return;
+        }
+
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+    }
+
     // ── Response content-type is application/problem+json ─────────────────
 
     [Fact]
@@ -116,7 +132,7 @@ public sealed class MessagingDomainExceptionFilterTests
         await using var factory = new MessagingApiFactory();
         factory.Mediator
             .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
-            .Throws(new InvalidOperationException("boom"));
+            .Throws(new DomainException("boom"));
 
         var client = factory.CreateAuthenticatedClient();
         var body = Json(new

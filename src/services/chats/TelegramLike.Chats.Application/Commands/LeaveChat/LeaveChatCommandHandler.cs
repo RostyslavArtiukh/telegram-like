@@ -9,7 +9,7 @@ public sealed class LeaveChatCommandHandler(IChatRepository chatRepository)
     public async Task Handle(LeaveChatCommand request, CancellationToken cancellationToken)
     {
         var chat = await chatRepository.GetByIdAsync(request.ChatId, cancellationToken)
-                   ?? throw new InvalidOperationException("Chat not found.");
+                   ?? throw new DomainException("Chat not found.");
 
         chat.Leave(request.UserId);
         await chatRepository.UpdateAsync(chat, cancellationToken);

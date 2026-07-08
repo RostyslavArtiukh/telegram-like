@@ -10,7 +10,7 @@ public sealed class JoinChatCommandHandler(IChatRepository chatRepository)
     public async Task Handle(JoinChatCommand request, CancellationToken cancellationToken)
     {
         var chat = await chatRepository.GetByIdAsync(request.ChatId, cancellationToken)
-                   ?? throw new InvalidOperationException("Chat not found.");
+                   ?? throw new DomainException("Chat not found.");
 
         switch (chat)
         {
@@ -21,7 +21,7 @@ public sealed class JoinChatCommandHandler(IChatRepository chatRepository)
                 broadcast.Join(request.UserId);
                 break;
             default:
-                throw new InvalidOperationException("This chat type does not support Join.");
+                throw new DomainException("This chat type does not support Join.");
         }
 
         await chatRepository.UpdateAsync(chat, cancellationToken);

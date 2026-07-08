@@ -14,7 +14,7 @@ public sealed class BroadcastChannel : Chat
     public static BroadcastChannel Create(Guid id, ChatName name, Guid ownerUserId)
     {
         // Caller-supplied id doubles as the idempotency key (see ChatRepository.AddAsync).
-        if (id == Guid.Empty) throw new ArgumentException("Chat id cannot be empty.", nameof(id));
+        if (id == Guid.Empty) throw new DomainException("Chat id cannot be empty.");
         var chat = new BroadcastChannel(id, name, ownerUserId, DateTime.UtcNow);
         var owner = Member.Join(ownerUserId, MemberRole.Owner);
         chat._members.Add(owner);
@@ -38,7 +38,7 @@ public sealed class BroadcastChannel : Chat
 
         var existing = FindAnyMember(userId);
         if (existing is { Status: MemberStatus.Banned })
-            throw new InvalidOperationException("User is banned from this channel.");
+            throw new DomainException("User is banned from this channel.");
         if (existing is { Status: MemberStatus.Active })
             return;
 
@@ -55,7 +55,7 @@ public sealed class BroadcastChannel : Chat
         EnsureNotDeleted();
         var member = RequireActiveMember(userId);
         if (member.Role == MemberRole.Owner)
-            throw new InvalidOperationException("Owner must transfer ownership before leaving.");
+            throw new DomainException("Owner must transfer ownership before leaving.");
 
         member.Leave();
         RaiseDomainEvent(new MemberLeftEvent(Id, userId));
@@ -68,11 +68,11 @@ public sealed class BroadcastChannel : Chat
         var target = RequireActiveMember(targetUserId);
 
         if (actor.Role != MemberRole.Owner && actor.Role != MemberRole.Admin)
-            throw new InvalidOperationException("Only Owner or Admin can kick.");
+            throw new DomainException("Only Owner or Admin can kick.");
         if (target.Role == MemberRole.Owner)
-            throw new InvalidOperationException("Cannot kick the Owner.");
+            throw new DomainException("Cannot kick the Owner.");
         if (target.Role == MemberRole.Admin && actor.Role != MemberRole.Owner)
-            throw new InvalidOperationException("Only Owner can kick an Admin.");
+            throw new DomainException("Only Owner can kick an Admin.");
 
         target.Kick(kickedBy);
         RaiseDomainEvent(new MemberKickedEvent(Id, targetUserId, kickedBy, RecipientsExcept(kickedBy)));
@@ -85,9 +85,9 @@ public sealed class BroadcastChannel : Chat
         var target = RequireActiveMember(targetUserId);
 
         if (actor.Role != MemberRole.Owner)
-            throw new InvalidOperationException("Only Owner can promote to Admin.");
+            throw new DomainException("Only Owner can promote to Admin.");
         if (target.Role == MemberRole.Owner)
-            throw new InvalidOperationException("Owner is already highest role.");
+            throw new DomainException("Owner is already highest role.");
         if (target.Role == MemberRole.Admin)
             return;
 
@@ -103,9 +103,9 @@ public sealed class BroadcastChannel : Chat
         var target = RequireActiveMember(targetUserId);
 
         if (actor.Role != MemberRole.Owner)
-            throw new InvalidOperationException("Only Owner can demote.");
+            throw new DomainException("Only Owner can demote.");
         if (target.Role == MemberRole.Owner)
-            throw new InvalidOperationException("Cannot demote the Owner.");
+            throw new DomainException("Cannot demote the Owner.");
         if (target.Role == MemberRole.Viewer)
             return;
 
@@ -121,9 +121,9 @@ public sealed class BroadcastChannel : Chat
         var newOwner = RequireActiveMember(newOwnerUserId);
 
         if (currentOwner.Role != MemberRole.Owner)
-            throw new InvalidOperationException("Only current Owner can transfer ownership.");
+            throw new DomainException("Only current Owner can transfer ownership.");
         if (newOwnerUserId == currentOwnerUserId)
-            throw new InvalidOperationException("Cannot transfer ownership to yourself.");
+            throw new DomainException("Cannot transfer ownership to yourself.");
 
         var previousOwnerOldRole = currentOwner.Role;
         var newOwnerOldRole = newOwner.Role;
