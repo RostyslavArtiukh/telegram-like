@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using OpenTelemetry;
 
-namespace TelegramLike.Gateway.Observability;
+namespace TelegramLike.Gateway;
 
 /// <summary>
 /// The realtime hub's SignalR clients send the access JWT as <c>?access_token=</c>, which

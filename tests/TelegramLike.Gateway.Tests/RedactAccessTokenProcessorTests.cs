@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using FluentAssertions;
-using TelegramLike.Gateway.Observability;
 
 namespace TelegramLike.Gateway.Tests;
 

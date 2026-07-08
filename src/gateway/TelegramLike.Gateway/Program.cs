@@ -1,16 +1,14 @@
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using TelegramLike.Gateway.Observability;
+using TelegramLike.Gateway;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// YARP reverse proxy — routes and clusters come entirely from the "ReverseProxy"
-// config section (appsettings + env overrides), so adding/retargeting a service
-// is a config change, not code. The gateway itself does no auth: it forwards the
-// Authorization header untouched and each service validates the Identity-issued JWT.
-builder.Services.AddReverseProxy()
-    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+// YARP reverse proxy — routes/clusters generated from the backend list in GatewayRouting.
+// The gateway itself does no auth: it forwards the Authorization header untouched and each
+// service validates the Identity-issued JWT.
+builder.Services.AddGatewayReverseProxy(builder.Configuration);
 
 // Trace the gateway hop too, so a request shows Web BFF -> gateway -> service in
 // Jaeger. HttpClientInstrumentation captures the outbound proxied call.
