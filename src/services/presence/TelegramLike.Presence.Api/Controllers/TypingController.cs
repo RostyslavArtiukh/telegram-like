@@ -19,32 +19,26 @@ namespace TelegramLike.Presence.Api.Controllers;
 /// </summary>
 [Route("presence/typing")]
 [Authorize]
-public sealed class TypingController : ApiControllerBase
+public sealed class TypingController(IMediator mediator) : ApiControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public TypingController(IMediator mediator) => _mediator = mediator;
-
     [HttpPost("{chatId:guid}/start")]
     public async Task<IActionResult> StartTyping(Guid chatId, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new StartTypingCommand(chatId, userId), cancellationToken);
+        await mediator.Send(new StartTypingCommand(chatId, CurrentUserId), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("{chatId:guid}/stop")]
     public async Task<IActionResult> StopTyping(Guid chatId, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new StopTypingCommand(chatId, userId), cancellationToken);
+        await mediator.Send(new StopTypingCommand(chatId, CurrentUserId), cancellationToken);
         return NoContent();
     }
 
     [HttpGet("{chatId:guid}")]
     public async Task<IActionResult> GetTypingUsers(Guid chatId, CancellationToken cancellationToken)
     {
-        var dto = await _mediator.Send(new GetTypingUsersQuery(chatId), cancellationToken);
+        var dto = await mediator.Send(new GetTypingUsersQuery(chatId), cancellationToken);
         return Ok(dto);
     }
 }

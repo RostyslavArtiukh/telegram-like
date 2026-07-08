@@ -15,12 +15,8 @@ namespace TelegramLike.Notifications.Api.Controllers;
 /// </summary>
 [Route("notifications")]
 [Authorize]
-public sealed class NotificationFeedController : ApiControllerBase
+public sealed class NotificationFeedController(IMediator mediator) : ApiControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public NotificationFeedController(IMediator mediator) => _mediator = mediator;
-
     [HttpGet]
     public async Task<IActionResult> GetFeed(
         [FromQuery] DateTime? before,
@@ -28,10 +24,8 @@ public sealed class NotificationFeedController : ApiControllerBase
         [FromQuery] bool? unreadOnly,
         CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-
-        var result = await _mediator.Send(
-            new GetNotificationFeedQuery(userId, before, pageSize ?? 20, unreadOnly ?? false), cancellationToken);
+        var result = await mediator.Send(
+            new GetNotificationFeedQuery(CurrentUserId, before, pageSize ?? 20, unreadOnly ?? false), cancellationToken);
 
         return Ok(result.ToContract());
     }
@@ -39,9 +33,7 @@ public sealed class NotificationFeedController : ApiControllerBase
     [HttpGet("unread-count")]
     public async Task<IActionResult> GetUnreadCount(CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-
-        var count = await _mediator.Send(new GetUnreadCountQuery(userId), cancellationToken);
+        var count = await mediator.Send(new GetUnreadCountQuery(CurrentUserId), cancellationToken);
         return Ok(new UnreadCountResponse(count));
     }
 }

@@ -17,25 +17,19 @@ namespace TelegramLike.Messaging.Api.Controllers;
 /// exceptions are mapped to status codes by <see cref="Filters.DomainExceptionFilter"/>.
 /// </summary>
 [Authorize]
-public sealed class MessagesController : ApiControllerBase
+public sealed class MessagesController(IMediator mediator) : ApiControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public MessagesController(IMediator mediator) => _mediator = mediator;
-
     [HttpPost("/messages")]
     public async Task<IActionResult> Send([FromBody] SendMessageRequest body, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-
         var attachments = body.Attachments?
             .Select(a => new SendMessageAttachment(a.Type, a.Url, a.SizeBytes, a.FileName))
             .ToList();
 
-        var id = await _mediator.Send(new SendMessageCommand(
+        var id = await mediator.Send(new SendMessageCommand(
             body.MessageId,
             body.ChatId,
-            userId,
+            CurrentUserId,
             body.Text,
             body.Recipients,
             body.IsBroadcast,
@@ -50,8 +44,7 @@ public sealed class MessagesController : ApiControllerBase
     [HttpGet("/messages/{messageId:guid}")]
     public async Task<IActionResult> GetById(Guid messageId, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        var result = await _mediator.Send(new GetMessageByIdQuery(messageId, userId), cancellationToken);
+        var result = await mediator.Send(new GetMessageByIdQuery(messageId, CurrentUserId), cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }
 
@@ -59,16 +52,14 @@ public sealed class MessagesController : ApiControllerBase
     public async Task<IActionResult> Retract(
         Guid messageId, [FromBody] RetractMessageRequest body, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new RetractMessageCommand(messageId, userId, body.ActorIsModerator), cancellationToken);
+        await mediator.Send(new RetractMessageCommand(messageId, CurrentUserId, body.ActorIsModerator), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("/messages/{messageId:guid}/hide")]
     public async Task<IActionResult> Hide(Guid messageId, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new HideMessageCommand(messageId, userId), cancellationToken);
+        await mediator.Send(new HideMessageCommand(messageId, CurrentUserId), cancellationToken);
         return NoContent();
     }
 
@@ -79,9 +70,8 @@ public sealed class MessagesController : ApiControllerBase
         [FromQuery] int? pageSize,
         CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        var result = await _mediator.Send(
-            new GetChatMessagesQuery(chatId, userId, before, pageSize ?? 50), cancellationToken);
+        var result = await mediator.Send(
+            new GetChatMessagesQuery(chatId, CurrentUserId, before, pageSize ?? 50), cancellationToken);
         return Ok(result);
     }
 }

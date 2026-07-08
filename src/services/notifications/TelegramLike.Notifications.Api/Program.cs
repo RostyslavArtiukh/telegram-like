@@ -1,8 +1,5 @@
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -25,31 +22,7 @@ builder.Services.AddNotificationsInfrastructure(builder.Configuration);
 builder.Services
     .AddControllers(options => options.Filters.Add<DomainExceptionFilter>());
 
-var jwtSecret = builder.Configuration["ServiceAuth:JwtSecret"]
-                ?? throw new InvalidOperationException("ServiceAuth:JwtSecret is not configured.");
-var jwtIssuer = builder.Configuration["ServiceAuth:Issuer"]
-                ?? throw new InvalidOperationException("ServiceAuth:Issuer is not configured.");
-var jwtAudience = builder.Configuration["ServiceAuth:Audience"]
-                  ?? throw new InvalidOperationException("ServiceAuth:Audience is not configured.");
-
-builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.MapInboundClaims = false;
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = jwtIssuer,
-            ValidateAudience = true,
-            ValidAudience = jwtAudience,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-            ClockSkew = TimeSpan.FromSeconds(30)
-        };
-    });
-builder.Services.AddAuthorization();
+builder.Services.AddServiceJwtAuth(builder.Configuration);
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(r => r.AddService(

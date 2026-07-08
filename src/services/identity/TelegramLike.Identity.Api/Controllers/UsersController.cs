@@ -15,30 +15,26 @@ namespace TelegramLike.Identity.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("users")]
-public sealed class UsersController : ApiControllerBase
+public sealed class UsersController(IMediator mediator) : ApiControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public UsersController(IMediator mediator) => _mediator = mediator;
-
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
-        var dto = await _mediator.Send(new GetUserByIdQuery(id), cancellationToken);
+        var dto = await mediator.Send(new GetUserByIdQuery(id), cancellationToken);
         return dto is null ? NotFound() : Ok(dto);
     }
 
     [HttpPost("by-ids")]
     public async Task<IActionResult> GetUsernamesByIds([FromBody] Guid[] ids, CancellationToken cancellationToken)
     {
-        var map = await _mediator.Send(new GetUsernamesByIdsQuery(ids), cancellationToken);
+        var map = await mediator.Send(new GetUsernamesByIdsQuery(ids), cancellationToken);
         return Ok(map);
     }
 
     [HttpGet("by-username")]
     public async Task<IActionResult> GetIdByUsername([FromQuery(Name = "u")] string u, CancellationToken cancellationToken)
     {
-        var userId = await _mediator.Send(new GetUserIdByUsernameQuery(u), cancellationToken);
+        var userId = await mediator.Send(new GetUserIdByUsernameQuery(u), cancellationToken);
         return userId is null ? NotFound() : Ok(new { userId });
     }
 }

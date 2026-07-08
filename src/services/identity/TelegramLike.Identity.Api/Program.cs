@@ -1,9 +1,6 @@
-using System.Text;
 using FluentValidation;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -26,32 +23,8 @@ builder.Services.AddIdentityInfrastructure(builder.Configuration);
 
 builder.Services.AddControllers(options => options.Filters.Add<DomainExceptionFilter>());
 
-var jwtSecret = builder.Configuration["ServiceAuth:JwtSecret"]
-                ?? throw new InvalidOperationException("ServiceAuth:JwtSecret is not configured.");
-var jwtIssuer = builder.Configuration["ServiceAuth:Issuer"]
-                ?? throw new InvalidOperationException("ServiceAuth:Issuer is not configured.");
-var jwtAudience = builder.Configuration["ServiceAuth:Audience"]
-                  ?? throw new InvalidOperationException("ServiceAuth:Audience is not configured.");
-
 // Identity is the IdP, so it validates the very tokens it issues (issuer = telegramlike-identity).
-builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.MapInboundClaims = false;
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = jwtIssuer,
-            ValidateAudience = true,
-            ValidAudience = jwtAudience,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-            ClockSkew = TimeSpan.FromSeconds(30)
-        };
-    });
-builder.Services.AddAuthorization();
+builder.Services.AddServiceJwtAuth(builder.Configuration);
 
 var redisConnectionString = builder.Configuration["Redis:ConnectionString"]
                             ?? throw new InvalidOperationException("Redis:ConnectionString is not configured.");

@@ -16,36 +16,26 @@ namespace TelegramLike.Notifications.Api.Controllers;
 /// </summary>
 [Route("notifications")]
 [Authorize]
-public sealed class NotificationReadController : ApiControllerBase
+public sealed class NotificationReadController(IMediator mediator) : ApiControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public NotificationReadController(IMediator mediator) => _mediator = mediator;
-
     [HttpPost("{id:guid}/read")]
     public async Task<IActionResult> MarkAsRead(Guid id, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-
-        await _mediator.Send(new MarkNotificationAsReadCommand(id, userId), cancellationToken);
+        await mediator.Send(new MarkNotificationAsReadCommand(id, CurrentUserId), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("read-all")]
     public async Task<IActionResult> MarkAllAsRead(CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-
-        await _mediator.Send(new MarkAllNotificationsAsReadCommand(userId), cancellationToken);
+        await mediator.Send(new MarkAllNotificationsAsReadCommand(CurrentUserId), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("chats/{chatId:guid}/read")]
     public async Task<IActionResult> MarkChatAsRead(Guid chatId, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-
-        await _mediator.Send(new MarkChatNotificationsAsReadCommand(userId, chatId), cancellationToken);
+        await mediator.Send(new MarkChatNotificationsAsReadCommand(CurrentUserId, chatId), cancellationToken);
         return NoContent();
     }
 }

@@ -13,57 +13,47 @@ namespace TelegramLike.Chats.Api.Controllers;
 
 [Route("chats")]
 [Authorize]
-public sealed class ChatsController : ApiControllerBase
+public sealed class ChatsController(IMediator mediator) : ApiControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public ChatsController(IMediator mediator) => _mediator = mediator;
-
     [HttpGet("my")]
     public async Task<IActionResult> GetMyChats(CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        var result = await _mediator.Send(new GetMyChatsQuery(userId), cancellationToken);
+        var result = await mediator.Send(new GetMyChatsQuery(CurrentUserId), cancellationToken);
         return Ok(result);
     }
 
     [HttpGet("{chatId:guid}")]
     public async Task<IActionResult> GetChatById(Guid chatId, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        var result = await _mediator.Send(new GetChatByIdQuery(chatId, userId), cancellationToken);
+        var result = await mediator.Send(new GetChatByIdQuery(chatId, CurrentUserId), cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }
 
     [HttpPost("direct")]
     public async Task<IActionResult> CreateDirect([FromBody] CreateDirectChatRequest body, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        var id = await _mediator.Send(new CreateDirectChatCommand(body.ChatId, userId, body.PeerUserId), cancellationToken);
+        var id = await mediator.Send(new CreateDirectChatCommand(body.ChatId, CurrentUserId, body.PeerUserId), cancellationToken);
         return Created($"/chats/{id}", new ChatCreatedResponse(id));
     }
 
     [HttpPost("group")]
     public async Task<IActionResult> CreateGroup([FromBody] CreateGroupChatRequest body, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        var id = await _mediator.Send(new CreateGroupChatCommand(body.ChatId, userId, body.Name), cancellationToken);
+        var id = await mediator.Send(new CreateGroupChatCommand(body.ChatId, CurrentUserId, body.Name), cancellationToken);
         return Created($"/chats/{id}", new ChatCreatedResponse(id));
     }
 
     [HttpPost("broadcast")]
     public async Task<IActionResult> CreateBroadcast([FromBody] CreateBroadcastChannelRequest body, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        var id = await _mediator.Send(new CreateBroadcastChannelCommand(body.ChatId, userId, body.Name), cancellationToken);
+        var id = await mediator.Send(new CreateBroadcastChannelCommand(body.ChatId, CurrentUserId, body.Name), cancellationToken);
         return Created($"/chats/{id}", new ChatCreatedResponse(id));
     }
 
     [HttpPatch("{chatId:guid}")]
     public async Task<IActionResult> Rename(Guid chatId, [FromBody] RenameChatRequest body, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var actorId)) return Unauthorized();
-        await _mediator.Send(new RenameChatCommand(chatId, body.NewName, actorId), cancellationToken);
+        await mediator.Send(new RenameChatCommand(chatId, body.NewName, CurrentUserId), cancellationToken);
         return NoContent();
     }
 }

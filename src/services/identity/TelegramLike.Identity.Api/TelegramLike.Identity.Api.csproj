@@ -2,6 +2,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TelegramLike.Identity.Infrastructure\TelegramLike.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\shared\TelegramLike.Api.ServiceDefaults\TelegramLike.Api.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="TelegramLike.Api.ServiceDefaults" />
   </ItemGroup>
 
   <ItemGroup>
@@ -9,7 +14,6 @@
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="MediatR" Version="14.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
     <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.15.3-beta.1" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />

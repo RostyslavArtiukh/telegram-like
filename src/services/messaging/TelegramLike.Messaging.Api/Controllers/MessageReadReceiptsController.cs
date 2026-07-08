@@ -13,18 +13,13 @@ namespace TelegramLike.Messaging.Api.Controllers;
 /// </summary>
 [Authorize]
 [Route("messages")]
-public sealed class MessageReadReceiptsController : ApiControllerBase
+public sealed class MessageReadReceiptsController(IMediator mediator) : ApiControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public MessageReadReceiptsController(IMediator mediator) => _mediator = mediator;
-
     [HttpPost("{messageId:guid}/read")]
     public async Task<IActionResult> MarkAsRead(
         Guid messageId, [FromBody] MarkAsReadRequest body, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new MarkMessageAsReadCommand(messageId, userId, body.IsBroadcast), cancellationToken);
+        await mediator.Send(new MarkMessageAsReadCommand(messageId, CurrentUserId, body.IsBroadcast), cancellationToken);
         return NoContent();
     }
 }

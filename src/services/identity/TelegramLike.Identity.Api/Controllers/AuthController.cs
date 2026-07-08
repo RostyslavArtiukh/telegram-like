@@ -17,16 +17,12 @@ namespace TelegramLike.Identity.Api.Controllers;
 [ApiController]
 [AllowAnonymous]
 [Route("auth")]
-public sealed class AuthController : ApiControllerBase
+public sealed class AuthController(IMediator mediator) : ApiControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public AuthController(IMediator mediator) => _mediator = mediator;
-
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest body, CancellationToken cancellationToken)
     {
-        var id = await _mediator.Send(
+        var id = await mediator.Send(
             new RegisterUserCommand(body.Email, body.Username, body.DisplayName, body.Password, body.UserId), cancellationToken);
         return Ok(new { userId = id });
     }
@@ -34,7 +30,7 @@ public sealed class AuthController : ApiControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest body, CancellationToken cancellationToken)
     {
-        var token = await _mediator.Send(new LoginUserCommand(body.Email, body.Password), cancellationToken);
+        var token = await mediator.Send(new LoginUserCommand(body.Email, body.Password), cancellationToken);
         return Ok(new { sessionToken = token });
     }
 
@@ -43,7 +39,7 @@ public sealed class AuthController : ApiControllerBase
     [HttpPost("token")]
     public async Task<IActionResult> Token([FromBody] TokenRequest body, CancellationToken cancellationToken)
     {
-        var dto = await _mediator.Send(new ExchangeSessionQuery(body.SessionToken), cancellationToken);
+        var dto = await mediator.Send(new ExchangeSessionQuery(body.SessionToken), cancellationToken);
         return dto is null ? Unauthorized() : Ok(dto);
     }
 }

@@ -14,18 +14,13 @@ namespace TelegramLike.Messaging.Api.Controllers;
 /// </summary>
 [Authorize]
 [Route("messages")]
-public sealed class MessageReactionsController : ApiControllerBase
+public sealed class MessageReactionsController(IMediator mediator) : ApiControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public MessageReactionsController(IMediator mediator) => _mediator = mediator;
-
     [HttpPost("{messageId:guid}/reactions")]
     public async Task<IActionResult> Add(
         Guid messageId, [FromBody] AddReactionRequest body, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new AddReactionCommand(messageId, userId, body.Emoji, body.ActorIsPremium), cancellationToken);
+        await mediator.Send(new AddReactionCommand(messageId, CurrentUserId, body.Emoji, body.ActorIsPremium), cancellationToken);
         return NoContent();
     }
 
@@ -35,11 +30,10 @@ public sealed class MessageReactionsController : ApiControllerBase
     [HttpDelete("{messageId:guid}/reactions/{emoji}")]
     public async Task<IActionResult> Remove(Guid messageId, string emoji, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
         if (!Enum.TryParse<Emoji>(emoji, ignoreCase: true, out var parsed))
             return Problem("Unknown emoji.", statusCode: StatusCodes.Status400BadRequest);
 
-        await _mediator.Send(new RemoveReactionCommand(messageId, userId, parsed), cancellationToken);
+        await mediator.Send(new RemoveReactionCommand(messageId, CurrentUserId, parsed), cancellationToken);
         return NoContent();
     }
 }

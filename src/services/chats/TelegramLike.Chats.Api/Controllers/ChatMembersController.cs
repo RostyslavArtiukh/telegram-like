@@ -13,41 +13,33 @@ namespace TelegramLike.Chats.Api.Controllers;
 
 [Route("chats")]
 [Authorize]
-public sealed class ChatMembersController : ApiControllerBase
+public sealed class ChatMembersController(IMediator mediator) : ApiControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public ChatMembersController(IMediator mediator) => _mediator = mediator;
-
     [HttpGet("{chatId:guid}/members")]
     public async Task<IActionResult> GetChatMembers(Guid chatId, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        var result = await _mediator.Send(new GetChatMembersQuery(chatId, userId), cancellationToken);
+        var result = await mediator.Send(new GetChatMembersQuery(chatId, CurrentUserId), cancellationToken);
         return Ok(result);
     }
 
     [HttpPost("{chatId:guid}/join")]
     public async Task<IActionResult> Join(Guid chatId, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new JoinChatCommand(chatId, userId), cancellationToken);
+        await mediator.Send(new JoinChatCommand(chatId, CurrentUserId), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("{chatId:guid}/leave")]
     public async Task<IActionResult> Leave(Guid chatId, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new LeaveChatCommand(chatId, userId), cancellationToken);
+        await mediator.Send(new LeaveChatCommand(chatId, CurrentUserId), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("{chatId:guid}/members/{targetUserId:guid}/kick")]
     public async Task<IActionResult> KickMember(Guid chatId, Guid targetUserId, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var actorId)) return Unauthorized();
-        await _mediator.Send(new KickMemberCommand(chatId, targetUserId, actorId), cancellationToken);
+        await mediator.Send(new KickMemberCommand(chatId, targetUserId, CurrentUserId), cancellationToken);
         return NoContent();
     }
 
@@ -55,8 +47,7 @@ public sealed class ChatMembersController : ApiControllerBase
     public async Task<IActionResult> ChangeMemberRole(
         Guid chatId, Guid targetUserId, [FromBody] ChangeMemberRoleRequest body, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var actorId)) return Unauthorized();
-        await _mediator.Send(new ChangeMemberRoleCommand(chatId, targetUserId, body.NewRole, actorId), cancellationToken);
+        await mediator.Send(new ChangeMemberRoleCommand(chatId, targetUserId, body.NewRole, CurrentUserId), cancellationToken);
         return NoContent();
     }
 
@@ -64,8 +55,7 @@ public sealed class ChatMembersController : ApiControllerBase
     public async Task<IActionResult> TransferOwnership(
         Guid chatId, [FromBody] TransferOwnershipRequest body, CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var actorId)) return Unauthorized();
-        await _mediator.Send(new TransferOwnershipCommand(chatId, body.NewOwnerUserId, actorId), cancellationToken);
+        await mediator.Send(new TransferOwnershipCommand(chatId, body.NewOwnerUserId, CurrentUserId), cancellationToken);
         return NoContent();
     }
 }

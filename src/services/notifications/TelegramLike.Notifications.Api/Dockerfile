@@ -15,6 +15,7 @@ COPY ["src/services/notifications/TelegramLike.Notifications.Api/TelegramLike.No
 COPY ["src/services/notifications/TelegramLike.Notifications.Infrastructure/TelegramLike.Notifications.Infrastructure.csproj", "src/services/notifications/TelegramLike.Notifications.Infrastructure/"]
 COPY ["src/services/notifications/TelegramLike.Notifications.Application/TelegramLike.Notifications.Application.csproj", "src/services/notifications/TelegramLike.Notifications.Application/"]
 COPY ["src/services/notifications/TelegramLike.Notifications.Domain/TelegramLike.Notifications.Domain.csproj", "src/services/notifications/TelegramLike.Notifications.Domain/"]
+COPY ["src/shared/TelegramLike.Api.ServiceDefaults/TelegramLike.Api.ServiceDefaults.csproj", "src/shared/TelegramLike.Api.ServiceDefaults/"]
 COPY ["src/TelegramLike.Contracts/TelegramLike.Contracts.csproj", "src/TelegramLike.Contracts/"]
 RUN dotnet restore "src/services/notifications/TelegramLike.Notifications.Api/TelegramLike.Notifications.Api.csproj"
 

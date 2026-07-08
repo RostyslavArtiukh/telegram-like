@@ -16,39 +16,33 @@ namespace TelegramLike.Presence.Api.Controllers;
 /// </summary>
 [Route("presence")]
 [Authorize]
-public sealed class PresenceController : ApiControllerBase
+public sealed class PresenceController(IMediator mediator) : ApiControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public PresenceController(IMediator mediator) => _mediator = mediator;
-
     [HttpPost("heartbeat")]
     public async Task<IActionResult> Heartbeat(CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new HeartbeatCommand(userId), cancellationToken);
+        await mediator.Send(new HeartbeatCommand(CurrentUserId), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("offline")]
     public async Task<IActionResult> GoOffline(CancellationToken cancellationToken)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized();
-        await _mediator.Send(new GoOfflineCommand(userId), cancellationToken);
+        await mediator.Send(new GoOfflineCommand(CurrentUserId), cancellationToken);
         return NoContent();
     }
 
     [HttpGet("{userId:guid}")]
     public async Task<IActionResult> GetUserPresence(Guid userId, CancellationToken cancellationToken)
     {
-        var dto = await _mediator.Send(new GetUserPresenceQuery(userId), cancellationToken);
+        var dto = await mediator.Send(new GetUserPresenceQuery(userId), cancellationToken);
         return dto is null ? NotFound() : Ok(dto);
     }
 
     [HttpPost("batch")]
     public async Task<IActionResult> GetBatchPresence([FromBody] Guid[] userIds, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetBatchPresenceQuery(userIds), cancellationToken);
+        var result = await mediator.Send(new GetBatchPresenceQuery(userIds), cancellationToken);
         return Ok(result);
     }
 }

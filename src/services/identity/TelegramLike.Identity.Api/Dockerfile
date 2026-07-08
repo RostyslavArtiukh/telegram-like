@@ -15,6 +15,7 @@ COPY ["src/services/identity/TelegramLike.Identity.Api/TelegramLike.Identity.Api
 COPY ["src/services/identity/TelegramLike.Identity.Infrastructure/TelegramLike.Identity.Infrastructure.csproj", "src/services/identity/TelegramLike.Identity.Infrastructure/"]
 COPY ["src/services/identity/TelegramLike.Identity.Application/TelegramLike.Identity.Application.csproj", "src/services/identity/TelegramLike.Identity.Application/"]
 COPY ["src/services/identity/TelegramLike.Identity.Domain/TelegramLike.Identity.Domain.csproj", "src/services/identity/TelegramLike.Identity.Domain/"]
+COPY ["src/shared/TelegramLike.Api.ServiceDefaults/TelegramLike.Api.ServiceDefaults.csproj", "src/shared/TelegramLike.Api.ServiceDefaults/"]
 RUN dotnet restore "src/services/identity/TelegramLike.Identity.Api/TelegramLike.Identity.Api.csproj"
 
 COPY . .
