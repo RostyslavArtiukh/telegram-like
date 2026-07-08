@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.SignalR.Client;
 using TelegramLike.Client.Auth;
 using TelegramLike.Contracts.Realtime;
@@ -7,8 +8,9 @@ namespace TelegramLike.Client.Realtime;
 internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
 {
     private readonly HubConnection _connection;
-    private readonly HashSet<Guid> _joinedChats = [];
-    private readonly object _joinedLock = new();
+    // The byte value is unused — this is a concurrent set: joins/leaves and the
+    // reconnect flush touch it from different threads without external locking.
+    private readonly ConcurrentDictionary<Guid, byte> _joinedChats = new();
     private readonly SemaphoreSlim _connectGate = new(1, 1);
 
     public event Action<MessageSentPush>? MessageSent;
@@ -60,7 +62,7 @@ internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
         // Record intent BEFORE touching the wire: if the hub is down or mid-connect,
         // the join is flushed once a connection is (re)established. This also means a
         // chat opened before the hub connected is not silently missed.
-        lock (_joinedLock) _joinedChats.Add(chatId);
+        _joinedChats.TryAdd(chatId, 0);
 
         await EnsureConnectedAsync(cancellationToken);
         try
@@ -76,7 +78,7 @@ internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
 
     public async Task LeaveChatAsync(Guid chatId, CancellationToken cancellationToken = default)
     {
-        lock (_joinedLock) _joinedChats.Remove(chatId);
+        _joinedChats.TryRemove(chatId, out _);
         try
         {
             if (_connection.State == HubConnectionState.Connected)
@@ -121,8 +123,8 @@ internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
 
     private async Task FlushJoinsAsync(CancellationToken cancellationToken = default)
     {
-        Guid[] chats;
-        lock (_joinedLock) chats = [.. _joinedChats];
+        // Keys returns a stable snapshot, so a concurrent join/leave can't disrupt the loop.
+        var chats = _joinedChats.Keys.ToArray();
         foreach (var chatId in chats)
         {
             try

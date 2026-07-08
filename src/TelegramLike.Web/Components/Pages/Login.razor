@@ -1,8 +1,4 @@
 @page "/login"
-@using TelegramLike.Client.Identity
-@inject IIdentityAuthApi IdentityAuth
-@inject NavigationManager Navigation
-@inject IJSRuntime JavaScript
 
 <PageTitle>Sign in</PageTitle>
 
@@ -17,32 +13,32 @@
                     Account created! Please sign in.
                 </MudAlert>
             }
-            @if (hadInvalidSession)
-            {
-                <MudAlert Severity="Severity.Error" Class="mb-4">
-                    Invalid session. Please try again.
-                </MudAlert>
-            }
-
-            <MudTextField @bind-Value="emailAddress" Label="Email" Placeholder="you@example.com"
-                          Variant="Variant.Outlined" InputType="InputType.Email" Class="mb-3"
-                          Immediate="true" />
-
-            <MudTextField @bind-Value="password" Label="Password" Placeholder="Your password"
-                          Variant="Variant.Outlined" InputType="InputType.Password" Class="mb-3"
-                          Immediate="true"
-                          OnKeyDown="@(args => SubmitOnEnterAsync(args))" />
-
-            @if (!string.IsNullOrEmpty(errorMessage))
+            @if (errorMessage is not null)
             {
                 <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
             }
 
-            <MudButton OnClick="SignInAsync" Variant="Variant.Filled" Color="Color.Primary"
-                       FullWidth="true" Disabled="isSigningIn"
-                       StartIcon="@Icons.Material.Filled.Login">
-                @(isSigningIn ? "Signing in…" : "Sign in")
-            </MudButton>
+            @* A native POST of the credentials straight to /auth/signin, which performs
+               login + token exchange + cookie sign-in entirely server-side (see Program.cs).
+               The session token is minted and consumed on the server and never touches the
+               browser — no query string, no hidden token field. Styled with MudBlazor but
+               kept a real <form method="post"> so the browser navigates natively. *@
+            <form method="post" action="/auth/signin">
+                <AntiforgeryToken />
+
+                <MudTextField T="string" name="email" Label="Email" Placeholder="you@example.com"
+                              Variant="Variant.Outlined" InputType="InputType.Email" Class="mb-3"
+                              Required="true" />
+
+                <MudTextField T="string" name="password" Label="Password" Placeholder="Your password"
+                              Variant="Variant.Outlined" InputType="InputType.Password" Class="mb-3"
+                              Required="true" />
+
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                           FullWidth="true" StartIcon="@Icons.Material.Filled.Login">
+                    Sign in
+                </MudButton>
+            </form>
 
             <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-4">
                 No account? <MudLink Href="/register">Register</MudLink>
@@ -51,71 +47,22 @@
     </MudCard>
 </MudContainer>
 
-@* Hidden auto-submitting form: hands the session token to /auth/signin as a POST
-   body (see Program.cs) so it never appears in the URL / browser history / Referer. *@
-<form @ref="sessionTokenFormElement" method="post" action="/auth/signin" style="display:none" aria-hidden="true">
-    <input type="hidden" name="token" value="@pendingSessionToken" />
-</form>
-
 @code {
     [SupplyParameterFromQuery(Name = "registered")] private string? RegisteredFlag { get; set; }
     [SupplyParameterFromQuery(Name = "error")] private string? ErrorFlag { get; set; }
 
-    private string emailAddress = "";
-    private string password = "";
-    private string? errorMessage;
-    private bool hadInvalidSession;
-    private bool isSigningIn;
     private bool showAccountCreatedNotice;
-    private string? pendingSessionToken;
-    private bool sessionTokenFormSubmitted;
-    private ElementReference sessionTokenFormElement;
+    private string? errorMessage;
 
     protected override void OnParametersSet()
     {
         showAccountCreatedNotice = RegisteredFlag == "true";
-        hadInvalidSession = ErrorFlag is not null;
-    }
-
-    private async Task SubmitOnEnterAsync(KeyboardEventArgs args)
-    {
-        if (args.Key is "Enter" or "NumpadEnter") await SignInAsync();
-    }
-
-    private async Task SignInAsync()
-    {
-        errorMessage = null;
-        isSigningIn = true;
-
-        try
+        errorMessage = ErrorFlag switch
         {
-            var sessionToken = await IdentityAuth.LoginAsync(emailAddress, password);
-            // Hand off to the hidden form (submitted from OnAfterRenderAsync once the
-            // token has actually reached the DOM) rather than navigating with the
-            // token in the query string.
-            pendingSessionToken = sessionToken;
-            sessionTokenFormSubmitted = false;
-        }
-        catch (InvalidOperationException ex)
-        {
-            // Identity rejected the credentials / request — show its message verbatim.
-            errorMessage = ex.Message;
-            isSigningIn = false;
-        }
-        catch (Exception)
-        {
-            // Downstream outage: timeout, open circuit breaker, DNS/connection failure, etc.
-            errorMessage = "Sign-in is temporarily unavailable. Please try again in a moment.";
-            isSigningIn = false;
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (pendingSessionToken is not null && !sessionTokenFormSubmitted)
-        {
-            sessionTokenFormSubmitted = true;
-            await JavaScript.InvokeVoidAsync("telegramLike.submitForm", sessionTokenFormElement);
-        }
+            null => null,
+            "invalid" => "Invalid email or password.",
+            "unavailable" => "Sign-in is temporarily unavailable. Please try again in a moment.",
+            _ => "Invalid session. Please try again."
+        };
     }
 }

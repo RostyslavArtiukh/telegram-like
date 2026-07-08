@@ -1,16 +1,12 @@
-using System.Security.Claims;
 using MassTransit;
 using MudBlazor.Services;
-using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Mvc;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using TelegramLike.Client;
 using TelegramLike.Client.Auth;
-using TelegramLike.Client.Identity;
 using TelegramLike.Web.Components;
 using TelegramLike.Web.Services;
 using TelegramLike.Web.Services.ChatChanged;
@@ -65,6 +61,10 @@ builder.Services.AddOpenTelemetry()
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options => options.DetailedErrors = builder.Environment.IsDevelopment());
+
+// Controllers back the /auth callbacks (Controllers/AuthController.cs) — the only
+// classic HTTP endpoints in this Blazor host; everything else is Razor components.
+builder.Services.AddControllers();
 
 // MudBlazor: dialogs, snackbars, popovers, theming. The whole UI runs
 // InteractiveServer (set on <Routes> in App.razor) so these services have a live
@@ -169,52 +169,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 
-// Auth callback: Blazor Login page posts here (form body, not a query string) after
-// obtaining a session token, so the durable token never lands in the browser's
-// history/access logs/Referer header. [FromForm] binding requires an antiforgery
-// token by default for minimal APIs; this handoff has no cookie/session yet to derive
-// one from, so it's explicitly exempted below.
-app.MapPost("/auth/signin", async (
-    [FromForm] string? token,
-    IIdentityAuthApi identity,
-    HttpContext httpContext) =>
-{
-    if (string.IsNullOrEmpty(token)) return Results.Redirect("/login?error=invalid");
-
-    // Exchange the session token at the IdP for the user's identity claims.
-    var session = await identity.ExchangeAsync(token);
-    if (session is null) return Results.Redirect("/login?error=invalid");
-
-    var claims = new List<Claim>
-    {
-        new(ClaimTypes.NameIdentifier, session.UserId.ToString()),
-        new(ClaimTypes.Name, session.Username),
-        new(ClaimTypes.Email, session.Email),
-        new("session_token", token)
-    };
-    var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "Cookies"));
-    await httpContext.SignInAsync("Cookies", principal);
-
-    return Results.Redirect("/");
-}).DisableAntiforgery();
-
-// Side-effecting sign-out is now a POST guarded by the antiforgery token (logout CSRF);
-// NavMenu submits it via a real <form>. Validated manually rather than relying on
-// minimal-API form-binding metadata, since this endpoint takes no form fields of its own.
-app.MapPost("/auth/signout", async (HttpContext httpContext, IAntiforgery antiforgery) =>
-{
-    try
-    {
-        await antiforgery.ValidateRequestAsync(httpContext);
-    }
-    catch (AntiforgeryValidationException)
-    {
-        return Results.BadRequest("Invalid request.");
-    }
-
-    await httpContext.SignOutAsync("Cookies");
-    return Results.Redirect("/login");
-});
+// Auth callbacks (/auth/signin, /auth/signout) live in Controllers/AuthController.cs,
+// matching the 5 services' convention that HTTP endpoints don't sit inline in Program.cs.
+app.MapControllers();
 
 app.MapPrometheusScrapingEndpoint();
 
