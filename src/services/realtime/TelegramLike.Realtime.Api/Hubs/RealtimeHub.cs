@@ -12,7 +12,7 @@ namespace TelegramLike.Realtime.Api.Hubs;
 /// integration events into these groups.
 /// </summary>
 [Authorize]
-public sealed class RealtimeHub(IChatMembershipTracker membership) : Hub
+public sealed class RealtimeHub(ChatMembershipTracker membership) : Hub
 {
     public override async Task OnConnectedAsync()
     {

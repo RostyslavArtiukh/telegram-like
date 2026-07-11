@@ -2,8 +2,8 @@
 @implements IAsyncDisposable
 @using TelegramLike.Contracts.Notifications
 @inject TelegramLikeSession Session
-@inject INotificationsApi NotificationsApi
-@inject ITelegramLikeRealtimeClient Realtime
+@inject NotificationsApiClient NotificationsApi
+@inject TelegramLikeRealtimeClient Realtime
 @inject NavigationManager Navigation
 
 <div class="d-flex align-center justify-space-between mb-4">

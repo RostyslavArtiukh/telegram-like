@@ -1,5 +1,5 @@
 using StackExchange.Redis;
-using TelegramLike.Identity.Application.Common.Interfaces;
+using TelegramLike.Identity.Application.Security;
 
 namespace TelegramLike.Identity.Infrastructure.Caching;
 

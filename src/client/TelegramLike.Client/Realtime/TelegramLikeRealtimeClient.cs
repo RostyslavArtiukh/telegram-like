@@ -5,7 +5,7 @@ using TelegramLike.Contracts.Realtime;
 
 namespace TelegramLike.Client.Realtime;
 
-internal sealed class TelegramLikeRealtimeClient : ITelegramLikeRealtimeClient
+public sealed class TelegramLikeRealtimeClient : IAsyncDisposable
 {
     private readonly HubConnection _connection;
     // The byte value is unused — this is a concurrent set: joins/leaves and the

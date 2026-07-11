@@ -1,9 +1,9 @@
 using TelegramLike.Chats.Domain.ValueObjects;
-using TelegramLike.Chats.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 
 namespace TelegramLike.Chats.Domain.Entities;
 
-public sealed class Member : Entity
+public sealed class Member : ObjectWithId
 {
     public Guid UserId { get; private set; }
     public MemberRole Role { get; private set; }
@@ -41,7 +41,7 @@ public sealed class Member : Entity
     public static Member Join(Guid userId, MemberRole role)
         => new(Guid.NewGuid(), userId, role, MemberStatus.Active, DateTime.UtcNow, null, null, null, null);
 
-    public static Member Reconstitute(
+    public static Member FromStorage(
         Guid id,
         Guid userId,
         MemberRole role,

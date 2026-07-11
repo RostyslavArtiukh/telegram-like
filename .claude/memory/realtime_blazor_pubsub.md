@@ -15,14 +15,14 @@ metadata:
 - Для **real-time UI events** з backend сервісів → не створюй SignalR Hub. Використовуй цей патерн:
   1. Backend сервіс публікує integration event у RabbitMQ
   2. Web має MassTransit consumer (`AddInfrastructure(cfg, bus => bus.AddConsumer<...>())`)
-  3. Consumer викликає shared in-memory pubsub (`ITypingPubSub` як приклад)
+  3. Consumer викликає shared in-memory pubsub (`TypingPubSub` як приклад)
   4. Razor компонент на init підписується (`pubsub.Subscribe(key, callback)`), на dispose — відписується
   5. Callback оновлює state і робить `InvokeAsync(StateHasChanged)`
 
 **Файли (приклад typing):**
 - [Contracts/Presence/UserTypingIntegrationEvent.cs](src/TelegramLike.Contracts/Presence/UserTypingIntegrationEvent.cs)
 - [Presence StartTypingCommandHandler](src/services/presence/TelegramLike.Presence.Application/Commands/StartTyping/StartTypingCommandHandler.cs) — `IPublishEndpoint.Publish`
-- [Web/Services/Typing/ITypingPubSub.cs](src/TelegramLike.Web/Services/Typing/ITypingPubSub.cs) + `TypingPubSub.cs` — `ConcurrentDictionary<chatId, ConcurrentDictionary<token, callback>>`
+- [Web/Services/Typing/TypingPubSub.cs](src/TelegramLike.Web/Services/Typing/TypingPubSub.cs) + `TypingPubSub.cs` — `ConcurrentDictionary<chatId, ConcurrentDictionary<token, callback>>`
 - [Web/Services/Typing/UserTypingConsumer.cs](src/TelegramLike.Web/Services/Typing/UserTypingConsumer.cs)
 - [Web/Components/Pages/ChatView.razor](src/TelegramLike.Web/Components/Pages/ChatView.razor) — `_typingSubscription = TypingPubSub.Subscribe(ChatId, OnRemoteTypingAsync);`
 

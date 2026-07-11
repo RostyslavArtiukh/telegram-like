@@ -1,10 +1,10 @@
 @page "/chats"
 @implements IDisposable
 @inject TelegramLikeSession Session
-@inject IChatsApi ChatsApi
-@inject IIdentityUsersApi IdentityUsers
-@inject INotificationsApi NotificationsApi
-@inject ITelegramLikeRealtimeClient Realtime
+@inject ChatsApiClient ChatsApi
+@inject IdentityUsersApiClient IdentityUsers
+@inject NotificationsApiClient NotificationsApi
+@inject TelegramLikeRealtimeClient Realtime
 @inject NavigationManager Navigation
 
 <div class="d-flex align-center justify-space-between mb-4">

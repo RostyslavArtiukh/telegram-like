@@ -1,9 +1,9 @@
-using TelegramLike.Messaging.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 using TelegramLike.Messaging.Domain.ValueObjects;
 
 namespace TelegramLike.Messaging.Domain.Entities;
 
-public sealed class Reaction : Entity
+public sealed class Reaction : ObjectWithId
 {
     public Guid UserId { get; private set; }
     public Emoji Emoji { get; private set; }
@@ -21,6 +21,6 @@ public sealed class Reaction : Entity
     internal static Reaction Add(Guid userId, Emoji emoji)
         => new(Guid.NewGuid(), userId, emoji, DateTime.UtcNow);
 
-    public static Reaction Reconstitute(Guid id, Guid userId, Emoji emoji, DateTime addedAt)
+    public static Reaction FromStorage(Guid id, Guid userId, Emoji emoji, DateTime addedAt)
         => new(id, userId, emoji, addedAt);
 }

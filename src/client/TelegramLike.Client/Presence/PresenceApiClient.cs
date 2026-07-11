@@ -6,7 +6,7 @@ using TelegramLike.Client.Auth;
 
 namespace TelegramLike.Client.Presence;
 
-internal sealed class PresenceApiClient(HttpClient http, IAccessTokenProvider tokenProvider) : IPresenceApi
+public sealed class PresenceApiClient(HttpClient http, IAccessTokenProvider tokenProvider)
 {
     public async Task HeartbeatAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -47,9 +47,9 @@ internal sealed class PresenceApiClient(HttpClient http, IAccessTokenProvider to
     }
 
     public async Task<UserPresenceSummary?> GetUserPresenceAsync(
-        Guid actorUserId, Guid targetUserId, CancellationToken cancellationToken = default)
+        Guid requestedByUserId, Guid userId, CancellationToken cancellationToken = default)
     {
-        using var request = await NewRequestAsync(HttpMethod.Get, $"/presence/{targetUserId}", cancellationToken);
+        using var request = await NewRequestAsync(HttpMethod.Get, $"/presence/{userId}", cancellationToken);
         using var response = await http.SendAsync(request, cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotFound) return null;
         response.EnsureSuccessStatusCode();
@@ -64,7 +64,7 @@ internal sealed class PresenceApiClient(HttpClient http, IAccessTokenProvider to
     }
 
     public async Task<IReadOnlyDictionary<Guid, bool>> GetBatchPresenceAsync(
-        Guid actorUserId, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default)
+        Guid requestedByUserId, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default)
     {
         if (userIds.Count == 0) return new Dictionary<Guid, bool>();
 
@@ -98,3 +98,5 @@ internal sealed class PresenceApiClient(HttpClient http, IAccessTokenProvider to
         [property: JsonPropertyName("lastSeenAt")] DateTime? LastSeenAt,
         [property: JsonPropertyName("hideLastSeen")] bool HideLastSeen);
 }
+
+public sealed record UserPresenceSummary(Guid UserId, bool IsOnline, DateTime? LastSeenAt);

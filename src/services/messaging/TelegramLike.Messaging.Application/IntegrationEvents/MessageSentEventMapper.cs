@@ -1,16 +1,16 @@
-using TelegramLike.Messaging.Application.Common.IntegrationEvents;
+using TelegramLike.Application.ServiceDefaults;
 using TelegramLike.Contracts.Common;
 using TelegramLike.Contracts.Messaging;
-using TelegramLike.Messaging.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 using TelegramLike.Messaging.Domain.Events;
 
 namespace TelegramLike.Messaging.Application.IntegrationEvents;
 
 public sealed class MessageSentEventMapper : IIntegrationEventMapper
 {
-    public Type DomainEventType => typeof(MessageSentEvent);
+    public Type ChangeEventType => typeof(MessageSentEvent);
 
-    public IIntegrationEvent Map(IDomainEvent domainEvent)
+    public IIntegrationEvent Map(IChangeEvent domainEvent)
     {
         var e = (MessageSentEvent)domainEvent;
         return new MessageSentIntegrationEvent(

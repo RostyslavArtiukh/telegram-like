@@ -1,13 +1,13 @@
 @page "/chat/{ChatId:guid}"
 @implements IAsyncDisposable
 @inject TelegramLikeSession Session
-@inject IChatsApi ChatsApi
-@inject IMessagingApi MessagingApi
-@inject IPresenceApi PresenceApi
-@inject INotificationsApi NotificationsApi
-@inject IIdentityUsersApi IdentityUsers
+@inject ChatsApiClient ChatsApi
+@inject MessagingApiClient MessagingApi
+@inject PresenceApiClient PresenceApi
+@inject NotificationsApiClient NotificationsApi
+@inject IdentityUsersApiClient IdentityUsers
 @inject UsernameCache Usernames
-@inject ITelegramLikeRealtimeClient Realtime
+@inject TelegramLikeRealtimeClient Realtime
 @inject NavigationManager Navigation
 
 @if (chatLoadError is not null)

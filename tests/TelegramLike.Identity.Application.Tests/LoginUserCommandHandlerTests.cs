@@ -2,7 +2,7 @@ using TelegramLike.Identity.Domain;
 using FluentAssertions;
 using NSubstitute;
 using TelegramLike.Identity.Application.Commands.LoginUser;
-using TelegramLike.Identity.Application.Common.Interfaces;
+using TelegramLike.Identity.Application.Security;
 using TelegramLike.Identity.Domain.Aggregates;
 using TelegramLike.Identity.Domain.Repositories;
 
@@ -49,7 +49,7 @@ public class LoginUserCommandHandlerTests
     [InlineData(AccountStatus.Deleted)]
     public async Task Non_active_account_is_rejected_even_with_correct_password(AccountStatus status)
     {
-        var user = User.Reconstitute(
+        var user = User.FromStorage(
             Guid.NewGuid(), "a@b.com", "someuser", "Some User", "hashed",
             avatarUrl: null, status: status, isPremium: false, premiumExpiresAt: null,
             blockedUserIds: [], createdAt: DateTime.UtcNow, updatedAt: DateTime.UtcNow);

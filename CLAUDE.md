@@ -10,6 +10,11 @@ Telegram-like messenger. Migrated from a modular monolith to **microservices + a
 - **5 services** — `src/services/<name>/`, each = Domain/Application/Infrastructure/Api, own Mongo DB, own port:
   - identity **8085** · notifications **8081** · presence **8082** · chats **8083** · messaging **8084**
 - **Realtime** — `src/services/realtime`, port **8086**. Single-project SignalR hub for external clients (SDK/MAUI): relays integration events into per-user/per-chat hub groups. No DB, no domain. The Web BFF does not use it. See `src/services/realtime/CLAUDE.md`.
+- **Shared projects** — `src/shared/`, one per layer so a layer only drags its own dependencies:
+  - `TelegramLike.Domain.ServiceDefaults` (zero deps): `ObjectWithId` (id + equality), `ObjectWithEvents` (records `IChangeEvent`s via `RecordEvent`/`PendingEvents`/`ClearPendingEvents`), `DomainException`/`ForbiddenException`. Referenced by every service Domain (+ global `<Using>`).
+  - `TelegramLike.Application.ServiceDefaults`: `ValidateRequestBeforeHandling` (MediatR pipeline validation), `IIntegrationEventMapper` (change event → integration event, keyed by `ChangeEventType`).
+  - `TelegramLike.Infrastructure.ServiceDefaults`: the **outgoing-events queue** (transactional outbox: `OutgoingEventsStore`/`OutgoingEventsWriter`/`OutgoingEventsSender`, Mongo collection `outgoing_events`, config `OutgoingEvents:*`, wired by `AddOutgoingEvents`) + `AddMongoDb`/`AddRedis`/`AddRabbitMqBus` setup helpers. Per-service DI lives in each `InfrastructureSetup.cs`.
+  - `TelegramLike.Api.ServiceDefaults`: JWT auth (`AddServiceJwtAuth`) + `ApiControllerBase`. `DomainExceptionFilter` stays per-service on purpose — each maps a different wire contract.
 - **Shared infra:** MongoDB (per-service DB, replica set `rs0`), Redis, RabbitMQ (vhost `telegramlike`), Jaeger (OTLP 4317, UI 16686).
 
 ## Gateway routing

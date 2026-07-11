@@ -3,7 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TelegramLike.Messaging.Application.Commands.SendMessage;
-using TelegramLike.Messaging.Application.Common.Interfaces;
+using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Aggregates;
 using TelegramLike.Messaging.Domain.Repositories;
 
@@ -45,7 +45,7 @@ public class SendMessageCommandHandlerTests
         await Handler.Handle(Command(chatId, authorId, [spoofedRecipient]), CancellationToken.None);
 
         captured.Should().NotBeNull();
-        captured!.DomainEvents.OfType<TelegramLike.Messaging.Domain.Events.MessageSentEvent>()
+        captured!.PendingEvents.OfType<TelegramLike.Messaging.Domain.Events.MessageSentEvent>()
             .Single().Recipients.Should().BeEquivalentTo([otherMember]);
     }
 
@@ -78,7 +78,7 @@ public class SendMessageCommandHandlerTests
 
         await Handler.Handle(Command(chatId, authorId, callerRecipients), CancellationToken.None);
 
-        captured!.DomainEvents.OfType<TelegramLike.Messaging.Domain.Events.MessageSentEvent>()
+        captured!.PendingEvents.OfType<TelegramLike.Messaging.Domain.Events.MessageSentEvent>()
             .Single().Recipients.Should().BeEquivalentTo(callerRecipients);
     }
 
@@ -140,7 +140,7 @@ public class SendMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Client_supplied_message_id_is_reused_as_idempotency_key()
+    public async Task Client_supplied_message_id_is_reused_as_duplicate_protection_key()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();

@@ -21,4 +21,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Using Include="TelegramLike.Domain.ServiceDefaults" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../shared/TelegramLike.Application.ServiceDefaults/TelegramLike.Application.ServiceDefaults.csproj" />
+  </ItemGroup>
+
 </Project>

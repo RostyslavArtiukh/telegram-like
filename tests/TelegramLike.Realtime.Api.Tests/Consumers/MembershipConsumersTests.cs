@@ -6,7 +6,7 @@ using FluentAssertions;
 namespace TelegramLike.Realtime.Api.Tests.Consumers;
 
 /// <summary>
-/// These consumers only update IChatMembershipTracker (the in-memory authorization
+/// These consumers only update ChatMembershipTracker (the in-memory authorization
 /// view backing JoinChat) — they push nothing to hub groups. Exercised against the
 /// real tracker rather than a mock so both the wiring and the tracker semantics are
 /// verified together.

@@ -23,21 +23,21 @@ public sealed record SendMessageRequest(
     Guid? ReplyToMessageId = null,
     Guid? ForwardOriginalMessageId = null,
     Guid? ForwardOriginalChatId = null,
-    // Client-generated idempotency key = the message's id. Empty/absent => the
+    // Client-generated duplicate-protection key = the message's id. Empty/absent => the
     // service mints one. A retried send reuses it so the message isn't duplicated.
     Guid MessageId = default);
 
 /// <summary>
-/// Body for <c>POST /messages/{messageId}/reactions</c>. <see cref="ActorIsPremium"/> is a
+/// Body for <c>POST /messages/{messageId}/reactions</c>. <see cref="UserIsPremium"/> is a
 /// BFF-enriched input. <see cref="Emoji"/> serialises as its enum name.
 /// </summary>
-public sealed record AddReactionRequest(Emoji Emoji, bool ActorIsPremium);
+public sealed record AddReactionRequest(Emoji Emoji, bool UserIsPremium);
 
 /// <summary>
-/// Body for <c>POST /messages/{messageId}/retract</c>. <see cref="ActorIsModerator"/> is a
+/// Body for <c>POST /messages/{messageId}/retract</c>. <see cref="RetractedByModerator"/> is a
 /// BFF-enriched input.
 /// </summary>
-public sealed record RetractMessageRequest(bool ActorIsModerator);
+public sealed record RetractMessageRequest(bool RetractedByModerator);
 
 /// <summary>
 /// Body for <c>POST /messages/{messageId}/read</c>. <see cref="IsBroadcast"/> is a

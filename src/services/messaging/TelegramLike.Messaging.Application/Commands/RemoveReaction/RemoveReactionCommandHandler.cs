@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using TelegramLike.Messaging.Application.Common;
-using TelegramLike.Messaging.Application.Common.Interfaces;
+using TelegramLike.Messaging.Application;
+using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Repositories;
 
 namespace TelegramLike.Messaging.Application.Commands.RemoveReaction;

@@ -1,16 +1,16 @@
-using TelegramLike.Chats.Application.Common.IntegrationEvents;
+using TelegramLike.Application.ServiceDefaults;
 using TelegramLike.Contracts.Chats;
 using TelegramLike.Contracts.Common;
 using TelegramLike.Chats.Domain.Events;
-using TelegramLike.Chats.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 
 namespace TelegramLike.Chats.Application.IntegrationEvents;
 
 public sealed class MemberLeftEventMapper : IIntegrationEventMapper
 {
-    public Type DomainEventType => typeof(MemberLeftEvent);
+    public Type ChangeEventType => typeof(MemberLeftEvent);
 
-    public IIntegrationEvent Map(IDomainEvent domainEvent)
+    public IIntegrationEvent Map(IChangeEvent domainEvent)
     {
         var e = (MemberLeftEvent)domainEvent;
         return new MemberLeftIntegrationEvent(

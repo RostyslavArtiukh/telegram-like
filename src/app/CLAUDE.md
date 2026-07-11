@@ -11,7 +11,7 @@ Native desktop/mobile messenger app: MAUI shell + `BlazorWebView` rendering Razo
 ## Patterns
 - **Realtime lifecycle:** connect once after login (`Login.EnterAsync`), `JoinChatAsync`/`LeaveChatAsync` per open chat (Chat.razor), disconnect on sign-out. Hub events fire on background threads → always `InvokeAsync(StateHasChanged)`.
 - Pushes carry ids only; components refetch the entity over HTTP (`GetMessageByIdAsync`) — same signal-then-fetch model as the events themselves.
-- Enrichment (recipients/isBroadcast) happens app-side via `IChatsApi` helpers before `SendMessageAsync` — mirrors the Web BFF until enrichment moves server-side.
+- Enrichment (recipients/isBroadcast) happens app-side via `ChatsApiClient` helpers before `SendMessageAsync` — mirrors the Web BFF until enrichment moves server-side.
 - `PresenceHeartbeat` singleton: 20s heartbeat while signed in (Redis TTL 30s); `UsernameCache` batches id→username lookups.
 - Session store is in-memory for now — login is per-launch. Android step should register a SecureStorage-backed `ISessionStore`.
 

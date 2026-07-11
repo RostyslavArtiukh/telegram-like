@@ -5,7 +5,7 @@ using TelegramLike.Contracts.Notifications;
 
 namespace TelegramLike.Client.Notifications;
 
-internal sealed class NotificationsApiClient(HttpClient http, IAccessTokenProvider tokenProvider) : INotificationsApi
+public sealed class NotificationsApiClient(HttpClient http, IAccessTokenProvider tokenProvider)
 {
     public async Task<NotificationFeedApiDto> GetFeedAsync(
         Guid userId,

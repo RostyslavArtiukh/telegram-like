@@ -9,4 +9,4 @@ public sealed record AddReactionCommand(
     Emoji Emoji,
     // Premium status lives in Identity. The Web BFF reads it from the session
     // and passes it in, so Messaging never has to call Identity.
-    bool ActorIsPremium) : IRequest;
+    bool UserIsPremium) : IRequest;

@@ -1,5 +1,5 @@
 using MediatR;
-using TelegramLike.Messaging.Application.Common.Interfaces;
+using TelegramLike.Messaging.Application.Storage;
 
 namespace TelegramLike.Messaging.Application.Queries.GetMessageById;
 

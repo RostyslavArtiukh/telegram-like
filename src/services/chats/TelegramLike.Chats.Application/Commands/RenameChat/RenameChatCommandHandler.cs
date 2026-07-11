@@ -12,7 +12,7 @@ public sealed class RenameChatCommandHandler(IChatRepository chatRepository)
         var chat = await chatRepository.GetByIdAsync(request.ChatId, cancellationToken)
                    ?? throw new DomainException("Chat not found.");
 
-        chat.Rename(ChatName.Create(request.NewName), request.ActorUserId);
+        chat.Rename(ChatName.Create(request.NewName), request.RenamedByUserId);
         await chatRepository.UpdateAsync(chat, cancellationToken);
     }
 }

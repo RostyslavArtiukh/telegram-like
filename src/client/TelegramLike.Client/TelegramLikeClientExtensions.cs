@@ -29,13 +29,14 @@ public static class TelegramLikeClientExtensions
         // applied once per attempt and never doubled.
 
         // Public auth client (no token) — also used by IAccessTokenProvider implementations
-        // for the session-token exchange.
+        // for the session-token exchange. Kept behind its interface so TelegramLikeSession
+        // tests can substitute it; the other clients are registered as themselves.
         AddClient<IIdentityAuthApi, IdentityAuthApiClient>(services, gatewayBaseUrl, "/identity");
-        AddClient<IIdentityUsersApi, IdentityUsersApiClient>(services, gatewayBaseUrl, "/identity");
-        AddClient<INotificationsApi, NotificationsApiClient>(services, gatewayBaseUrl, "/notifications");
-        AddClient<IPresenceApi, PresenceApiClient>(services, gatewayBaseUrl, "/presence");
-        AddClient<IChatsApi, ChatsApiClient>(services, gatewayBaseUrl, "/chats");
-        AddClient<IMessagingApi, MessagingApiClient>(services, gatewayBaseUrl, "/messaging");
+        AddClient<IdentityUsersApiClient>(services, gatewayBaseUrl, "/identity");
+        AddClient<NotificationsApiClient>(services, gatewayBaseUrl, "/notifications");
+        AddClient<PresenceApiClient>(services, gatewayBaseUrl, "/presence");
+        AddClient<ChatsApiClient>(services, gatewayBaseUrl, "/chats");
+        AddClient<MessagingApiClient>(services, gatewayBaseUrl, "/messaging");
 
         return services;
     }
@@ -58,11 +59,20 @@ public static class TelegramLikeClientExtensions
             sp.GetRequiredService<ISessionStore>()));
         services.TryAddSingleton<IAccessTokenProvider>(sp => sp.GetRequiredService<TelegramLikeSession>());
 
-        services.TryAddSingleton<ITelegramLikeRealtimeClient>(sp => new TelegramLikeRealtimeClient(
+        services.TryAddSingleton<TelegramLikeRealtimeClient>(sp => new TelegramLikeRealtimeClient(
             gatewayBaseUrl,
             sp.GetRequiredService<IAccessTokenProvider>()));
 
         return services;
+    }
+
+    private static void AddClient<TClient>(
+        IServiceCollection services, Uri gatewayBaseUrl, string servicePrefix)
+        where TClient : class
+    {
+        services.AddHttpClient<TClient>(client => client.BaseAddress = gatewayBaseUrl)
+            .AddServiceResilience()
+            .AddHttpMessageHandler(() => new ServicePrefixHandler(servicePrefix));
     }
 
     private static void AddClient<TInterface, TImplementation>(

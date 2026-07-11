@@ -16,8 +16,8 @@ public class GroupChatTests
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
 
         chat.FindActiveMember(ownerId)!.Role.Should().Be(MemberRole.Owner);
-        chat.DomainEvents.OfType<ChatCreatedEvent>().Should().ContainSingle();
-        chat.DomainEvents.OfType<MemberJoinedEvent>().Should().ContainSingle()
+        chat.PendingEvents.OfType<ChatCreatedEvent>().Should().ContainSingle();
+        chat.PendingEvents.OfType<MemberJoinedEvent>().Should().ContainSingle()
             .Which.Role.Should().Be(MemberRole.Owner);
     }
 
@@ -37,7 +37,7 @@ public class GroupChatTests
         chat.Join(userId);
 
         chat.FindActiveMember(userId)!.Role.Should().Be(MemberRole.Member);
-        chat.DomainEvents.OfType<MemberJoinedEvent>().Should().ContainSingle(e => e.UserId == userId && e.Role == MemberRole.Member);
+        chat.PendingEvents.OfType<MemberJoinedEvent>().Should().ContainSingle(e => e.UserId == userId && e.Role == MemberRole.Member);
     }
 
     [Fact]
@@ -46,11 +46,11 @@ public class GroupChatTests
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), Guid.NewGuid());
         var userId = Guid.NewGuid();
         chat.Join(userId);
-        chat.ClearDomainEvents();
+        chat.ClearPendingEvents();
 
         chat.Join(userId);
 
-        chat.DomainEvents.Should().BeEmpty();
+        chat.PendingEvents.Should().BeEmpty();
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class GroupChatTests
         chat.Leave(userId);
 
         chat.FindActiveMember(userId).Should().BeNull();
-        chat.DomainEvents.OfType<MemberLeftEvent>().Should().ContainSingle(e => e.UserId == userId);
+        chat.PendingEvents.OfType<MemberLeftEvent>().Should().ContainSingle(e => e.UserId == userId);
     }
 
     [Fact]
@@ -200,12 +200,12 @@ public class GroupChatTests
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
         var memberId = Guid.NewGuid();
         chat.Join(memberId);
-        chat.ClearDomainEvents();
+        chat.ClearPendingEvents();
 
         chat.ChangeMemberRole(memberId, MemberRole.Admin, ownerId);
 
         chat.FindActiveMember(memberId)!.Role.Should().Be(MemberRole.Admin);
-        chat.DomainEvents.OfType<MemberRoleChangedEvent>().Should().ContainSingle(e =>
+        chat.PendingEvents.OfType<MemberRoleChangedEvent>().Should().ContainSingle(e =>
             e.UserId == memberId && e.OldRole == MemberRole.Member && e.NewRole == MemberRole.Admin);
     }
 
@@ -216,11 +216,11 @@ public class GroupChatTests
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
         var memberId = Guid.NewGuid();
         chat.Join(memberId);
-        chat.ClearDomainEvents();
+        chat.ClearPendingEvents();
 
         chat.ChangeMemberRole(memberId, MemberRole.Member, ownerId);
 
-        chat.DomainEvents.OfType<MemberRoleChangedEvent>().Should().BeEmpty();
+        chat.PendingEvents.OfType<MemberRoleChangedEvent>().Should().BeEmpty();
     }
 
     [Fact]
@@ -256,14 +256,14 @@ public class GroupChatTests
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
         var memberId = Guid.NewGuid();
         chat.Join(memberId);
-        chat.ClearDomainEvents();
+        chat.ClearPendingEvents();
 
         chat.TransferOwnership(memberId, ownerId);
 
         chat.FindActiveMember(ownerId)!.Role.Should().Be(MemberRole.Admin);
         chat.FindActiveMember(memberId)!.Role.Should().Be(MemberRole.Owner);
-        chat.DomainEvents.OfType<MemberRoleChangedEvent>().Should().HaveCount(2);
-        chat.DomainEvents.OfType<OwnershipTransferredEvent>().Should().ContainSingle(e =>
+        chat.PendingEvents.OfType<MemberRoleChangedEvent>().Should().HaveCount(2);
+        chat.PendingEvents.OfType<OwnershipTransferredEvent>().Should().ContainSingle(e =>
             e.PreviousOwner == ownerId && e.NewOwner == memberId);
     }
 
@@ -289,7 +289,7 @@ public class GroupChatTests
         chat.Rename(Name("New"), ownerId);
 
         chat.Name!.Value.Should().Be("New");
-        chat.DomainEvents.OfType<ChatRenamedEvent>().Should().ContainSingle();
+        chat.PendingEvents.OfType<ChatRenamedEvent>().Should().ContainSingle();
     }
 
     [Fact]
@@ -315,7 +315,7 @@ public class GroupChatTests
         chat.Delete(ownerId);
 
         chat.IsDeleted.Should().BeTrue();
-        chat.DomainEvents.OfType<ChatDeletedEvent>().Should().ContainSingle();
+        chat.PendingEvents.OfType<ChatDeletedEvent>().Should().ContainSingle();
     }
 
     [Fact]

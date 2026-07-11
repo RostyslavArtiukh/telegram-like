@@ -3,7 +3,7 @@ using TelegramLike.Contracts.Notifications;
 
 namespace TelegramLike.Web.Services.UnreadCount;
 
-internal sealed class UnreadCountChangedConsumer(IUnreadCountPubSub pubsub) : IConsumer<UnreadCountChangedIntegrationEvent>
+internal sealed class UnreadCountChangedConsumer(UnreadCountPubSub pubsub) : IConsumer<UnreadCountChangedIntegrationEvent>
 {
     public async Task Consume(ConsumeContext<UnreadCountChangedIntegrationEvent> context)
     {

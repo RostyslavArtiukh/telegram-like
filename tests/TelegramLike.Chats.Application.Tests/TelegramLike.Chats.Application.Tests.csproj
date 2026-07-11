@@ -24,4 +24,8 @@
     <ProjectReference Include="..\..\src\services\chats\TelegramLike.Chats.Application\TelegramLike.Chats.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="TelegramLike.Domain.ServiceDefaults" />
+  </ItemGroup>
+
 </Project>

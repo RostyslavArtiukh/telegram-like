@@ -1,10 +1,10 @@
-using TelegramLike.Notifications.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 using TelegramLike.Notifications.Domain.Events;
 using TelegramLike.Notifications.Domain.ValueObjects;
 
 namespace TelegramLike.Notifications.Domain.Aggregates;
 
-public sealed class Notification : AggregateRoot
+public sealed class Notification : ObjectWithEvents
 {
     public Guid RecipientId { get; private set; }
     public NotificationType Type { get; private set; }
@@ -57,13 +57,13 @@ public sealed class Notification : AggregateRoot
             readAt: null,
             sourceEventId);
 
-        notification.RaiseDomainEvent(new NotificationCreatedEvent(
+        notification.RecordEvent(new NotificationCreatedEvent(
             notification.Id, recipientId, type, payload));
 
         return notification;
     }
 
-    public static Notification Reconstitute(
+    public static Notification FromStorage(
         Guid id,
         Guid recipientId,
         NotificationType type,
@@ -86,6 +86,6 @@ public sealed class Notification : AggregateRoot
 
         Status = NotificationStatus.Read;
         ReadAt = DateTime.UtcNow;
-        RaiseDomainEvent(new NotificationReadEvent(Id, RecipientId, ReadAt.Value));
+        RecordEvent(new NotificationReadEvent(Id, RecipientId, ReadAt.Value));
     }
 }

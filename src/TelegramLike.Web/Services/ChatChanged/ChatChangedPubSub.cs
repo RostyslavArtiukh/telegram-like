@@ -2,7 +2,11 @@ using System.Collections.Concurrent;
 
 namespace TelegramLike.Web.Services.ChatChanged;
 
-internal sealed class ChatChangedPubSub : IChatChangedPubSub
+/// Unified pubsub for "something in this chat changed and the message list
+/// needs to redraw" — MessageRetracted / ReactionAdded / ReactionRemoved.
+/// One subscription per ChatView, one callback (reload). New events live —
+/// just add another consumer that publishes here.
+internal sealed class ChatChangedPubSub
 {
     private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, Func<Task>>> _subs = new();
 

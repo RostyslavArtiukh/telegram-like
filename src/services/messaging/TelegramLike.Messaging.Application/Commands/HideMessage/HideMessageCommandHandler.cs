@@ -1,5 +1,5 @@
 using MediatR;
-using TelegramLike.Messaging.Application.Common.Interfaces;
+using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Repositories;
 
 namespace TelegramLike.Messaging.Application.Commands.HideMessage;

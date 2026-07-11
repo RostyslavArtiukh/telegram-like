@@ -1,11 +1,11 @@
 using TelegramLike.Chats.Domain.Entities;
 using TelegramLike.Chats.Domain.Events;
 using TelegramLike.Chats.Domain.ValueObjects;
-using TelegramLike.Chats.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 
 namespace TelegramLike.Chats.Domain.Aggregates;
 
-public abstract class Chat : AggregateRoot
+public abstract class Chat : ObjectWithEvents
 {
     protected readonly List<Member> _members = [];
 
@@ -39,8 +39,8 @@ public abstract class Chat : AggregateRoot
         => FindActiveMember(userId)
            ?? throw new DomainException($"User {userId} is not an active member of this chat.");
 
-    internal IReadOnlyList<Guid> RecipientsExcept(Guid actorUserId)
-        => ActiveMembers.Where(m => m.UserId != actorUserId).Select(m => m.UserId).ToList();
+    internal IReadOnlyList<Guid> RecipientsExcept(Guid excludedUserId)
+        => ActiveMembers.Where(m => m.UserId != excludedUserId).Select(m => m.UserId).ToList();
 
     protected void EnsureNotDeleted()
     {
@@ -51,8 +51,8 @@ public abstract class Chat : AggregateRoot
     public virtual void Rename(ChatName newName, Guid renamedBy)
     {
         EnsureNotDeleted();
-        var actor = RequireActiveMember(renamedBy);
-        if (actor.Role != MemberRole.Owner && actor.Role != MemberRole.Admin)
+        var actingMember = RequireActiveMember(renamedBy);
+        if (actingMember.Role != MemberRole.Owner && actingMember.Role != MemberRole.Admin)
             throw new DomainException("Only Owner or Admin can rename a chat.");
 
         if (Name is null)
@@ -60,20 +60,20 @@ public abstract class Chat : AggregateRoot
 
         var oldName = Name.Value;
         Name = newName;
-        RaiseDomainEvent(new ChatRenamedEvent(Id, oldName, newName.Value, renamedBy));
+        RecordEvent(new ChatRenamedEvent(Id, oldName, newName.Value, renamedBy));
     }
 
     public virtual void Delete(Guid deletedBy)
     {
         EnsureNotDeleted();
-        var actor = RequireActiveMember(deletedBy);
-        if (actor.Role != MemberRole.Owner)
+        var actingMember = RequireActiveMember(deletedBy);
+        if (actingMember.Role != MemberRole.Owner)
             throw new DomainException("Only Owner can delete a chat.");
 
         DeletedAt = DateTime.UtcNow;
-        RaiseDomainEvent(new ChatDeletedEvent(Id, deletedBy));
+        RecordEvent(new ChatDeletedEvent(Id, deletedBy));
     }
 
     public abstract void Leave(Guid userId);
-    public abstract void Kick(Guid targetUserId, Guid kickedBy);
+    public abstract void Kick(Guid memberUserId, Guid kickedBy);
 }

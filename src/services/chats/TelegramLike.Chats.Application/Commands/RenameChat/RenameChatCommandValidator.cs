@@ -8,7 +8,7 @@ public sealed class RenameChatCommandValidator : AbstractValidator<RenameChatCom
     public RenameChatCommandValidator()
     {
         RuleFor(x => x.ChatId).NotEmpty();
-        RuleFor(x => x.ActorUserId).NotEmpty();
+        RuleFor(x => x.RenamedByUserId).NotEmpty();
         RuleFor(x => x.NewName).NotEmpty().MaximumLength(ChatName.MaxLength);
     }
 }

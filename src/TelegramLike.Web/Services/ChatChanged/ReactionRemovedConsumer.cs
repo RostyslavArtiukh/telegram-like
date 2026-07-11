@@ -3,7 +3,7 @@ using TelegramLike.Contracts.Messaging;
 
 namespace TelegramLike.Web.Services.ChatChanged;
 
-internal sealed class ReactionRemovedConsumer(IChatChangedPubSub pubsub)
+internal sealed class ReactionRemovedConsumer(ChatChangedPubSub pubsub)
     : IConsumer<ReactionRemovedIntegrationEvent>
 {
     public Task Consume(ConsumeContext<ReactionRemovedIntegrationEvent> context) =>

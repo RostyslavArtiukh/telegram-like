@@ -20,7 +20,7 @@ public class NotificationTests
         n.RecipientId.Should().Be(recipient);
         n.Status.Should().Be(NotificationStatus.Pending);
         n.ReadAt.Should().BeNull();
-        n.DomainEvents.OfType<NotificationCreatedEvent>().Should().ContainSingle();
+        n.PendingEvents.OfType<NotificationCreatedEvent>().Should().ContainSingle();
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class NotificationTests
 
         n.Status.Should().Be(NotificationStatus.Read);
         n.ReadAt.Should().NotBeNull();
-        n.DomainEvents.OfType<NotificationReadEvent>().Should().ContainSingle();
+        n.PendingEvents.OfType<NotificationReadEvent>().Should().ContainSingle();
     }
 
     [Fact]
@@ -85,11 +85,11 @@ public class NotificationTests
     {
         var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
         n.MarkAsRead();
-        n.ClearDomainEvents();
+        n.ClearPendingEvents();
 
         n.MarkAsRead();
 
-        n.DomainEvents.Should().BeEmpty();
+        n.PendingEvents.Should().BeEmpty();
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class NotificationTests
         var payload = NotificationPayload.ForMemberJoined(Guid.NewGuid(), Guid.NewGuid());
 
         payload.MessageId.Should().BeNull();
-        payload.ActorId.Should().NotBeNull();
+        payload.TriggeredByUserId.Should().NotBeNull();
     }
 
     [Fact]

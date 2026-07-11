@@ -16,7 +16,7 @@ public class BroadcastChannelTests
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
 
         chat.FindActiveMember(ownerId)!.Role.Should().Be(MemberRole.Owner);
-        chat.DomainEvents.OfType<ChatCreatedEvent>().Should().ContainSingle();
+        chat.PendingEvents.OfType<ChatCreatedEvent>().Should().ContainSingle();
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public class BroadcastChannelTests
         chat.Join(userId);
 
         chat.FindActiveMember(userId)!.Role.Should().Be(MemberRole.Viewer);
-        chat.DomainEvents.OfType<MemberJoinedEvent>().Should().ContainSingle(e => e.UserId == userId && e.Role == MemberRole.Viewer);
+        chat.PendingEvents.OfType<MemberJoinedEvent>().Should().ContainSingle(e => e.UserId == userId && e.Role == MemberRole.Viewer);
     }
 
     [Fact]
@@ -80,12 +80,12 @@ public class BroadcastChannelTests
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
         var viewerId = Guid.NewGuid();
         chat.Join(viewerId);
-        chat.ClearDomainEvents();
+        chat.ClearPendingEvents();
 
         chat.PromoteToAdmin(viewerId, ownerId);
 
         chat.FindActiveMember(viewerId)!.Role.Should().Be(MemberRole.Admin);
-        chat.DomainEvents.OfType<MemberRoleChangedEvent>().Should().ContainSingle(e =>
+        chat.PendingEvents.OfType<MemberRoleChangedEvent>().Should().ContainSingle(e =>
             e.OldRole == MemberRole.Viewer && e.NewRole == MemberRole.Admin);
     }
 
@@ -122,12 +122,12 @@ public class BroadcastChannelTests
         var adminId = Guid.NewGuid();
         chat.Join(adminId);
         chat.PromoteToAdmin(adminId, ownerId);
-        chat.ClearDomainEvents();
+        chat.ClearPendingEvents();
 
         chat.DemoteToViewer(adminId, ownerId);
 
         chat.FindActiveMember(adminId)!.Role.Should().Be(MemberRole.Viewer);
-        chat.DomainEvents.OfType<MemberRoleChangedEvent>().Should().ContainSingle(e =>
+        chat.PendingEvents.OfType<MemberRoleChangedEvent>().Should().ContainSingle(e =>
             e.OldRole == MemberRole.Admin && e.NewRole == MemberRole.Viewer);
     }
 
@@ -155,14 +155,14 @@ public class BroadcastChannelTests
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
         var viewerId = Guid.NewGuid();
         chat.Join(viewerId);
-        chat.ClearDomainEvents();
+        chat.ClearPendingEvents();
 
         chat.TransferOwnership(viewerId, ownerId);
 
         chat.FindActiveMember(ownerId)!.Role.Should().Be(MemberRole.Admin);
         chat.FindActiveMember(viewerId)!.Role.Should().Be(MemberRole.Owner);
-        chat.DomainEvents.OfType<MemberRoleChangedEvent>().Should().HaveCount(2);
-        chat.DomainEvents.OfType<OwnershipTransferredEvent>().Should().ContainSingle(e =>
+        chat.PendingEvents.OfType<MemberRoleChangedEvent>().Should().HaveCount(2);
+        chat.PendingEvents.OfType<OwnershipTransferredEvent>().Should().ContainSingle(e =>
             e.PreviousOwner == ownerId && e.NewOwner == viewerId);
     }
 

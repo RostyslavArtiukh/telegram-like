@@ -1,6 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using TelegramLike.Messaging.Application.Common.Interfaces;
+using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Aggregates;
 using TelegramLike.Messaging.Domain.Repositories;
 using TelegramLike.Messaging.Domain.ValueObjects;
@@ -73,7 +73,7 @@ public sealed class SendMessageCommandHandler(
             ? ForwardReference.From(request.ForwardOriginalMessageId.Value, request.ForwardOriginalChatId.Value)
             : null;
 
-        // Idempotency key: use the client-supplied id so a retried send collapses onto
+        // Duplicate protection: use the client-supplied id so a retried send collapses onto
         // the same document; mint one only if the caller didn't provide it.
         var messageId = request.MessageId == Guid.Empty ? Guid.NewGuid() : request.MessageId;
 

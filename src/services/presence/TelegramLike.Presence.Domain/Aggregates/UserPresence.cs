@@ -1,10 +1,10 @@
-using TelegramLike.Presence.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 using TelegramLike.Presence.Domain.Events;
 using TelegramLike.Presence.Domain.ValueObjects;
 
 namespace TelegramLike.Presence.Domain.Aggregates;
 
-public sealed class UserPresence : AggregateRoot
+public sealed class UserPresence : ObjectWithEvents
 {
     public OnlineStatus Status { get; private set; }
     public DateTime? LastSeenAt { get; private set; }
@@ -28,7 +28,7 @@ public sealed class UserPresence : AggregateRoot
         return new UserPresence(userId, OnlineStatus.Offline, lastSeenAt: null, hideLastSeen);
     }
 
-    public static UserPresence Reconstitute(Guid userId, OnlineStatus status, DateTime? lastSeenAt, bool hideLastSeen)
+    public static UserPresence FromStorage(Guid userId, OnlineStatus status, DateTime? lastSeenAt, bool hideLastSeen)
         => new(userId, status, lastSeenAt, hideLastSeen);
 
     public void GoOnline(DateTime at)
@@ -36,7 +36,7 @@ public sealed class UserPresence : AggregateRoot
         if (Status == OnlineStatus.Online) return;
 
         Status = OnlineStatus.Online;
-        RaiseDomainEvent(new UserCameOnlineEvent(Id, at));
+        RecordEvent(new UserCameOnlineEvent(Id, at));
     }
 
     public void GoOffline(DateTime at)
@@ -45,7 +45,7 @@ public sealed class UserPresence : AggregateRoot
 
         Status = OnlineStatus.Offline;
         LastSeenAt = HideLastSeen ? null : at;
-        RaiseDomainEvent(new UserWentOfflineEvent(Id, LastSeenAt));
+        RecordEvent(new UserWentOfflineEvent(Id, LastSeenAt));
     }
 
     public void SetHideLastSeen(bool hide)

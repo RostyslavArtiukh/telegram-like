@@ -69,7 +69,7 @@ public class MessageTests
 
         var message = NewMessage(chatId, authorId, recipients);
 
-        var evt = message.DomainEvents.OfType<MessageSentEvent>().Should().ContainSingle().Subject;
+        var evt = message.PendingEvents.OfType<MessageSentEvent>().Should().ContainSingle().Subject;
         evt.ChatId.Should().Be(chatId);
         evt.AuthorId.Should().Be(authorId);
         evt.Recipients.Should().BeEquivalentTo(recipients);
@@ -98,7 +98,7 @@ public class MessageTests
         var message = NewMessage(replyTo: ReplyReference.To(replyToId));
 
         message.ReplyTo!.ReplyToMessageId.Should().Be(replyToId);
-        message.DomainEvents.OfType<MessageSentEvent>().Single().ReplyToMessageId.Should().Be(replyToId);
+        message.PendingEvents.OfType<MessageSentEvent>().Single().ReplyToMessageId.Should().Be(replyToId);
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class MessageTests
 
         message.ForwardFrom!.OriginalMessageId.Should().Be(originalMessageId);
         message.ForwardFrom!.OriginalChatId.Should().Be(originalChatId);
-        message.DomainEvents.OfType<MessageSentEvent>().Single().ForwardOriginalMessageId.Should().Be(originalMessageId);
+        message.PendingEvents.OfType<MessageSentEvent>().Single().ForwardOriginalMessageId.Should().Be(originalMessageId);
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class MessageTests
 
         message.IsRetracted.Should().BeTrue();
         message.Content.Text.Should().Be("[retracted]");
-        message.DomainEvents.OfType<MessageRetractedEvent>().Should().ContainSingle()
+        message.PendingEvents.OfType<MessageRetractedEvent>().Should().ContainSingle()
             .Which.RetractedBy.Should().Be(retractedBy);
     }
 
@@ -159,7 +159,7 @@ public class MessageTests
 
         act.Should().Throw<DomainException>();
         message.IsRetracted.Should().BeFalse();
-        message.DomainEvents.OfType<MessageRetractedEvent>().Should().BeEmpty();
+        message.PendingEvents.OfType<MessageRetractedEvent>().Should().BeEmpty();
     }
 
     [Fact]
@@ -277,7 +277,7 @@ public class MessageTests
 
         message.AddReaction(userId, Emoji.Fire, isPremium: false);
 
-        message.DomainEvents.OfType<ReactionAddedEvent>().Should().ContainSingle()
+        message.PendingEvents.OfType<ReactionAddedEvent>().Should().ContainSingle()
             .Which.Emoji.Should().Be(Emoji.Fire);
     }
 
@@ -291,7 +291,7 @@ public class MessageTests
         message.RemoveReaction(userId, Emoji.Like);
 
         message.Reactions.Should().BeEmpty();
-        message.DomainEvents.OfType<ReactionRemovedEvent>().Should().ContainSingle();
+        message.PendingEvents.OfType<ReactionRemovedEvent>().Should().ContainSingle();
     }
 
     [Fact]

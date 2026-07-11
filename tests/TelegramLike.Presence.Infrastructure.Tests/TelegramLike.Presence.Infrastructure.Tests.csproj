@@ -26,4 +26,8 @@
     <ProjectReference Include="..\..\src\services\presence\TelegramLike.Presence.Infrastructure\TelegramLike.Presence.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="TelegramLike.Domain.ServiceDefaults" />
+  </ItemGroup>
+
 </Project>

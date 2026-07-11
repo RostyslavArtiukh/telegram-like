@@ -1,5 +1,5 @@
 using MediatR;
-using TelegramLike.Identity.Application.Common.Interfaces;
+using TelegramLike.Identity.Application.Security;
 using TelegramLike.Identity.Domain.Aggregates;
 using TelegramLike.Identity.Domain.Repositories;
 using TelegramLike.Identity.Domain.ValueObjects;

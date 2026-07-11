@@ -13,7 +13,7 @@ public sealed class DirectChat : Chat
 
     public static DirectChat Create(Guid id, Guid initiatorUserId, Guid peerUserId)
     {
-        // Caller-supplied id doubles as the idempotency key (see ChatRepository.AddAsync).
+        // Caller-supplied id doubles as the duplicate-protection key (see ChatRepository.AddAsync).
         if (id == Guid.Empty) throw new DomainException("Chat id cannot be empty.");
         if (initiatorUserId == peerUserId)
             throw new DomainException("Direct chat requires two distinct users.");
@@ -24,13 +24,13 @@ public sealed class DirectChat : Chat
         chat._members.Add(initiator);
         chat._members.Add(peer);
 
-        chat.RaiseDomainEvent(new ChatCreatedEvent(chat.Id, ChatType.Direct, initiatorUserId));
-        chat.RaiseDomainEvent(new MemberJoinedEvent(chat.Id, initiatorUserId, MemberRole.Member, chat.RecipientsExcept(initiatorUserId)));
-        chat.RaiseDomainEvent(new MemberJoinedEvent(chat.Id, peerUserId, MemberRole.Member, chat.RecipientsExcept(peerUserId)));
+        chat.RecordEvent(new ChatCreatedEvent(chat.Id, ChatType.Direct, initiatorUserId));
+        chat.RecordEvent(new MemberJoinedEvent(chat.Id, initiatorUserId, MemberRole.Member, chat.RecipientsExcept(initiatorUserId)));
+        chat.RecordEvent(new MemberJoinedEvent(chat.Id, peerUserId, MemberRole.Member, chat.RecipientsExcept(peerUserId)));
         return chat;
     }
 
-    public static DirectChat Reconstitute(
+    public static DirectChat FromStorage(
         Guid id, Guid createdBy, DateTime createdAt, DateTime? deletedAt, IEnumerable<Member> members)
     {
         var chat = new DirectChat(id, createdBy, createdAt) { DeletedAt = deletedAt };
@@ -47,6 +47,6 @@ public sealed class DirectChat : Chat
     public override void Leave(Guid userId)
         => throw new DomainException("DirectChat does not support Leave.");
 
-    public override void Kick(Guid targetUserId, Guid kickedBy)
+    public override void Kick(Guid memberUserId, Guid kickedBy)
         => throw new DomainException("DirectChat does not support Kick.");
 }

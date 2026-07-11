@@ -3,7 +3,7 @@ using MassTransit;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TelegramLike.Contracts.Presence;
-using TelegramLike.Presence.Application.Abstractions;
+using TelegramLike.Presence.Application.Storage;
 using TelegramLike.Presence.Application.Commands.StartTyping;
 
 namespace TelegramLike.Presence.Application.Tests;

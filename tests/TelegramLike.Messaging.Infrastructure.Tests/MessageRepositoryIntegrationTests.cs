@@ -1,8 +1,9 @@
+using TelegramLike.Messaging.Domain;
 using FluentAssertions;
 using TelegramLike.Messaging.Domain.Aggregates;
-using TelegramLike.Messaging.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 using TelegramLike.Messaging.Domain.ValueObjects;
-using TelegramLike.Messaging.Infrastructure.Persistence;
+using TelegramLike.Messaging.Infrastructure.Storage;
 using TelegramLike.Messaging.Infrastructure.Tests.Fixtures;
 
 namespace TelegramLike.Messaging.Infrastructure.Tests;
@@ -10,7 +11,7 @@ namespace TelegramLike.Messaging.Infrastructure.Tests;
 [Collection(MongoCollection.Name)]
 public class MessageRepositoryIntegrationTests(MongoFixture fx)
 {
-    private MessageRepository NewRepository() => new(fx.MongoClient, fx.Database, new NoOpDomainEventDispatcher());
+    private MessageRepository NewRepository() => new(fx.MongoClient, fx.Database, new NoOpOutgoingEventsWriter());
 
     private static Message NewMessage(bool isBroadcast = false)
         => Message.Send(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), MessageContent.Create("hi"), [Guid.NewGuid()], isBroadcast: isBroadcast);

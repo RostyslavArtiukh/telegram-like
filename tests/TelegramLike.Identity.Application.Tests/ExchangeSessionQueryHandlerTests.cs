@@ -1,7 +1,7 @@
 using FluentAssertions;
 using NSubstitute;
 using TelegramLike.Identity.Application.Auth.ExchangeSession;
-using TelegramLike.Identity.Application.Common.Interfaces;
+using TelegramLike.Identity.Application.Security;
 using TelegramLike.Identity.Domain.Aggregates;
 using TelegramLike.Identity.Domain.Repositories;
 
@@ -16,7 +16,7 @@ public class ExchangeSessionQueryHandlerTests
     private ExchangeSessionQueryHandler Handler => new(_sessionService, _userRepository, _tokenIssuer);
 
     private static User NewUser(AccountStatus status = AccountStatus.Active)
-        => User.Reconstitute(
+        => User.FromStorage(
             Guid.NewGuid(), "a@b.com", "someuser", "Some User", "hashed",
             avatarUrl: null, status: status, isPremium: false, premiumExpiresAt: null,
             blockedUserIds: [], createdAt: DateTime.UtcNow, updatedAt: DateTime.UtcNow);

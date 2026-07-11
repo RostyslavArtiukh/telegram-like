@@ -1,7 +1,7 @@
 using MassTransit;
 using MediatR;
 using TelegramLike.Contracts.Presence;
-using TelegramLike.Presence.Application.Abstractions;
+using TelegramLike.Presence.Application.Storage;
 using TelegramLike.Presence.Domain.Aggregates;
 using TelegramLike.Presence.Domain.Repositories;
 using TelegramLike.Presence.Domain.ValueObjects;

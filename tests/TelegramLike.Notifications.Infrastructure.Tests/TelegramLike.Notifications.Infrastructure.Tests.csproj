@@ -24,4 +24,8 @@
     <ProjectReference Include="..\..\src\services\notifications\TelegramLike.Notifications.Infrastructure\TelegramLike.Notifications.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="TelegramLike.Domain.ServiceDefaults" />
+  </ItemGroup>
+
 </Project>

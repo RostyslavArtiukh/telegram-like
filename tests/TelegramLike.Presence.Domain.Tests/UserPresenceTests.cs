@@ -32,7 +32,7 @@ public class UserPresenceTests
         p.GoOnline(DateTime.UtcNow);
 
         p.Status.Should().Be(OnlineStatus.Online);
-        p.DomainEvents.OfType<UserCameOnlineEvent>().Should().ContainSingle();
+        p.PendingEvents.OfType<UserCameOnlineEvent>().Should().ContainSingle();
     }
 
     [Fact]
@@ -40,11 +40,11 @@ public class UserPresenceTests
     {
         var p = UserPresence.CreateOffline(Guid.NewGuid());
         p.GoOnline(DateTime.UtcNow);
-        p.ClearDomainEvents();
+        p.ClearPendingEvents();
 
         p.GoOnline(DateTime.UtcNow);
 
-        p.DomainEvents.Should().BeEmpty();
+        p.PendingEvents.Should().BeEmpty();
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class UserPresenceTests
 
         p.Status.Should().Be(OnlineStatus.Offline);
         p.LastSeenAt.Should().Be(at);
-        p.DomainEvents.OfType<UserWentOfflineEvent>().Should().ContainSingle();
+        p.PendingEvents.OfType<UserWentOfflineEvent>().Should().ContainSingle();
     }
 
     [Fact]

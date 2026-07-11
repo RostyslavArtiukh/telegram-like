@@ -1,5 +1,5 @@
 using FluentAssertions;
-using TelegramLike.Presence.Infrastructure.Persistence;
+using TelegramLike.Presence.Infrastructure.Storage;
 using TelegramLike.Presence.Infrastructure.Tests.Fixtures;
 
 namespace TelegramLike.Presence.Infrastructure.Tests;

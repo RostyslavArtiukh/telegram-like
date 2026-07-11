@@ -1,4 +1,4 @@
-using TelegramLike.Identity.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 using TelegramLike.Identity.Domain.Events;
 using TelegramLike.Identity.Domain.ValueObjects;
 
@@ -6,7 +6,7 @@ namespace TelegramLike.Identity.Domain.Aggregates;
 
 public enum AccountStatus { Active, Banned, Deleted }
 
-public sealed class User : AggregateRoot
+public sealed class User : ObjectWithEvents
 {
     private readonly List<Guid> _blockedUserIds = [];
 
@@ -45,7 +45,7 @@ public sealed class User : AggregateRoot
 
     public static User Register(Guid id, string email, string username, string displayName, string passwordHash)
     {
-        // Caller-supplied id doubles as the idempotency key (see RegisterUserCommandHandler).
+        // Caller-supplied id doubles as the duplicate-protection key (see RegisterUserCommandHandler).
         if (id == Guid.Empty) throw new ArgumentException("User id cannot be empty.", nameof(id));
         var now = DateTime.UtcNow;
         var user = new User(
@@ -62,12 +62,12 @@ public sealed class User : AggregateRoot
             createdAt: now,
             updatedAt: now);
 
-        user.RaiseDomainEvent(new UserRegisteredEvent(user.Id, email, username));
+        user.RecordEvent(new UserRegisteredEvent(user.Id, email, username));
         return user;
     }
 
     // Factory for reconstituting from persistence (no domain events raised)
-    public static User Reconstitute(
+    public static User FromStorage(
         Guid id, string email, string username, string displayName, string passwordHash,
         string? avatarUrl, AccountStatus status, bool isPremium, DateTime? premiumExpiresAt,
         List<Guid> blockedUserIds, DateTime createdAt, DateTime updatedAt)
@@ -93,22 +93,22 @@ public sealed class User : AggregateRoot
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Block(Guid targetUserId)
+    public void Block(Guid otherUserId)
     {
-        if (targetUserId == Id)
+        if (otherUserId == Id)
             throw new DomainException("Cannot block yourself.");
 
-        if (_blockedUserIds.Contains(targetUserId))
+        if (_blockedUserIds.Contains(otherUserId))
             return;
 
-        _blockedUserIds.Add(targetUserId);
+        _blockedUserIds.Add(otherUserId);
         UpdatedAt = DateTime.UtcNow;
-        RaiseDomainEvent(new UserBlockedEvent(Id, targetUserId));
+        RecordEvent(new UserBlockedEvent(Id, otherUserId));
     }
 
-    public void Unblock(Guid targetUserId)
+    public void Unblock(Guid otherUserId)
     {
-        _blockedUserIds.Remove(targetUserId);
+        _blockedUserIds.Remove(otherUserId);
         UpdatedAt = DateTime.UtcNow;
     }
 

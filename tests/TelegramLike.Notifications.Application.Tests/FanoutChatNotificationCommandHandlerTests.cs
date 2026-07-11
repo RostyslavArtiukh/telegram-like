@@ -42,7 +42,7 @@ public class FanoutChatNotificationCommandHandlerTests
         await Handler.Handle(
             new FanoutChatNotificationCommand(
                 ChatId: chatId,
-                ActorId: actor,
+                TriggeredByUserId: actor,
                 Type: DomainNotificationType.NewMessage,
                 Recipients: new[] { member1, member2 },
                 SourceEventId: Guid.NewGuid(),
@@ -67,7 +67,7 @@ public class FanoutChatNotificationCommandHandlerTests
         await Handler.Handle(
             new FanoutChatNotificationCommand(
                 ChatId: Guid.NewGuid(),
-                ActorId: actor,
+                TriggeredByUserId: actor,
                 Type: DomainNotificationType.NewMessage,
                 Recipients: new[] { other, actor },
                 SourceEventId: Guid.NewGuid(),
@@ -83,7 +83,7 @@ public class FanoutChatNotificationCommandHandlerTests
         await Handler.Handle(
             new FanoutChatNotificationCommand(
                 ChatId: Guid.NewGuid(),
-                ActorId: Guid.NewGuid(),
+                TriggeredByUserId: Guid.NewGuid(),
                 Type: DomainNotificationType.NewMessage,
                 Recipients: [],
                 SourceEventId: Guid.NewGuid(),
@@ -100,7 +100,7 @@ public class FanoutChatNotificationCommandHandlerTests
         var act = () => Handler.Handle(
             new FanoutChatNotificationCommand(
                 ChatId: Guid.NewGuid(),
-                ActorId: Guid.NewGuid(),
+                TriggeredByUserId: Guid.NewGuid(),
                 Type: DomainNotificationType.NewMessage,
                 Recipients: new[] { Guid.NewGuid() },
                 SourceEventId: Guid.NewGuid(),
@@ -118,7 +118,7 @@ public class FanoutChatNotificationCommandHandlerTests
         await Handler.Handle(
             new FanoutChatNotificationCommand(
                 ChatId: Guid.NewGuid(),
-                ActorId: Guid.NewGuid(),
+                TriggeredByUserId: Guid.NewGuid(),
                 Type: DomainNotificationType.MemberJoined,
                 Recipients: new[] { Guid.NewGuid() },
                 SourceEventId: Guid.NewGuid()),
@@ -141,7 +141,7 @@ public class FanoutChatNotificationCommandHandlerTests
         await Handler.Handle(
             new FanoutChatNotificationCommand(
                 ChatId: Guid.NewGuid(),
-                ActorId: Guid.NewGuid(),
+                TriggeredByUserId: Guid.NewGuid(),
                 Type: DomainNotificationType.NewMessage,
                 Recipients: new[] { Guid.NewGuid() },
                 SourceEventId: Guid.NewGuid(),

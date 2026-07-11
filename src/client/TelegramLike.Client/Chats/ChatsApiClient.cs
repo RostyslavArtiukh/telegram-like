@@ -5,7 +5,7 @@ using TelegramLike.Client.Auth;
 
 namespace TelegramLike.Client.Chats;
 
-internal sealed class ChatsApiClient(HttpClient http, IAccessTokenProvider tokenProvider) : IChatsApi
+public sealed class ChatsApiClient(HttpClient http, IAccessTokenProvider tokenProvider)
 {
     public async Task<IReadOnlyList<ChatSummary>> GetMyChatsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -32,7 +32,7 @@ internal sealed class ChatsApiClient(HttpClient http, IAccessTokenProvider token
         return await response.Content.ReadFromJsonAsync<List<ChatMember>>(cancellationToken) ?? [];
     }
 
-    // Each create generates the chat id up front as the idempotency key (body +
+    // Each create generates the chat id up front as the duplicate-protection key (body +
     // Idempotency-Key header, so the resilience pipeline may safely retry). The server
     // reply is still the authoritative id — a direct-chat create returns the existing
     // chat's id when a chat between the pair already exists.
@@ -69,18 +69,18 @@ internal sealed class ChatsApiClient(HttpClient http, IAccessTokenProvider token
     public Task LeaveChatAsync(Guid userId, Guid chatId, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Post, $"/chats/{chatId}/leave", content: null, cancellationToken);
 
-    public Task KickMemberAsync(Guid actorUserId, Guid chatId, Guid targetUserId, CancellationToken cancellationToken = default)
-        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{targetUserId}/kick", content: null, cancellationToken);
+    public Task KickMemberAsync(Guid kickedByUserId, Guid chatId, Guid memberToKickUserId, CancellationToken cancellationToken = default)
+        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{memberToKickUserId}/kick", content: null, cancellationToken);
 
-    public Task ChangeMemberRoleAsync(Guid actorUserId, Guid chatId, Guid targetUserId, MemberRole newRole, CancellationToken cancellationToken = default)
-        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{targetUserId}/role",
+    public Task ChangeMemberRoleAsync(Guid changedByUserId, Guid chatId, Guid memberToChangeUserId, MemberRole newRole, CancellationToken cancellationToken = default)
+        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{memberToChangeUserId}/role",
             JsonContent.Create(new { newRole = newRole.ToString() }), cancellationToken);
 
     public Task TransferOwnershipAsync(Guid currentOwnerUserId, Guid chatId, Guid newOwnerUserId, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Post, $"/chats/{chatId}/transfer-ownership",
             JsonContent.Create(new { newOwnerUserId }), cancellationToken);
 
-    public Task RenameChatAsync(Guid actorUserId, Guid chatId, string newName, CancellationToken cancellationToken = default)
+    public Task RenameChatAsync(Guid renamedByUserId, Guid chatId, string newName, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Patch, $"/chats/{chatId}",
             JsonContent.Create(new { newName }), cancellationToken);
 

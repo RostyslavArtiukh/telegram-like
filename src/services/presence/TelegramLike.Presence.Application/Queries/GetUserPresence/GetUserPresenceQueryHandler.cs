@@ -1,5 +1,5 @@
 using MediatR;
-using TelegramLike.Presence.Application.Abstractions;
+using TelegramLike.Presence.Application.Storage;
 using TelegramLike.Presence.Domain.ValueObjects;
 
 namespace TelegramLike.Presence.Application.Queries.GetUserPresence;

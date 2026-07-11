@@ -1,7 +1,7 @@
 using FluentAssertions;
 using TelegramLike.Notifications.Domain.Aggregates;
 using TelegramLike.Notifications.Domain.ValueObjects;
-using TelegramLike.Notifications.Infrastructure.Persistence;
+using TelegramLike.Notifications.Infrastructure.Storage;
 using TelegramLike.Notifications.Infrastructure.Tests.Fixtures;
 
 namespace TelegramLike.Notifications.Infrastructure.Tests;

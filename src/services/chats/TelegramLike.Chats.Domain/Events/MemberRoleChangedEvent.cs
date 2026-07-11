@@ -1,5 +1,5 @@
 using TelegramLike.Chats.Domain.ValueObjects;
-using TelegramLike.Chats.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 
 namespace TelegramLike.Chats.Domain.Events;
 
@@ -8,7 +8,7 @@ public sealed record MemberRoleChangedEvent(
     Guid UserId,
     MemberRole OldRole,
     MemberRole NewRole,
-    Guid ChangedBy) : IDomainEvent
+    Guid ChangedBy) : IChangeEvent
 {
     public Guid EventId { get; } = Guid.NewGuid();
     public DateTime OccurredAt { get; } = DateTime.UtcNow;

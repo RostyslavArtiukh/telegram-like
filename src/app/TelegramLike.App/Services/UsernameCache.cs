@@ -7,7 +7,7 @@ namespace TelegramLike.App.Services;
 /// Resolves userIds to usernames via Identity, cached for the app's lifetime.
 /// Unknown ids render as a short id until <see cref="EnsureAsync"/> fills them in.
 /// </summary>
-public sealed class UsernameCache(IIdentityUsersApi users)
+public sealed class UsernameCache(IdentityUsersApiClient users)
 {
     private readonly ConcurrentDictionary<Guid, string> _names = new();
 

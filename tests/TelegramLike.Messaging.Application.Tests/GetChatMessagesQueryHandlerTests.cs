@@ -1,7 +1,7 @@
 using TelegramLike.Messaging.Domain;
 using FluentAssertions;
 using NSubstitute;
-using TelegramLike.Messaging.Application.Common.Interfaces;
+using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Application.Queries;
 using TelegramLike.Messaging.Application.Queries.GetChatMessages;
 

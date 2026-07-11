@@ -8,7 +8,7 @@ using OpenTelemetry.Trace;
 using FluentValidation;
 using TelegramLike.Messaging.Api.Filters;
 using TelegramLike.Messaging.Application.Commands.SendMessage;
-using TelegramLike.Messaging.Application.Common.Behaviors;
+using TelegramLike.Application.ServiceDefaults;
 using TelegramLike.Messaging.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(SendMessageCommand).Assembly);
-    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+    cfg.AddOpenBehavior(typeof(ValidateRequestBeforeHandling<,>));
 });
 builder.Services.AddValidatorsFromAssembly(typeof(SendMessageCommand).Assembly);
 

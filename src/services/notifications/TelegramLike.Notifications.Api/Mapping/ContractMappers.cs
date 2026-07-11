@@ -17,7 +17,7 @@ internal static class ContractMappers
             Type: ToContract(dto.Type),
             ChatId: dto.ChatId,
             MessageId: dto.MessageId,
-            ActorId: dto.ActorId,
+            TriggeredByUserId: dto.TriggeredByUserId,
             Status: ToContract(dto.Status),
             CreatedAt: dto.CreatedAt,
             ReadAt: dto.ReadAt);

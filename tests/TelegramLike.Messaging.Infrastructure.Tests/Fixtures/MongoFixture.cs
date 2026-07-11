@@ -1,6 +1,6 @@
 using MongoDB.Driver;
 using Testcontainers.MongoDb;
-using TelegramLike.Messaging.Infrastructure.Persistence;
+using TelegramLike.Messaging.Infrastructure.Storage;
 
 namespace TelegramLike.Messaging.Infrastructure.Tests.Fixtures;
 

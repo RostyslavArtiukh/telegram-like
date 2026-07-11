@@ -10,15 +10,7 @@ namespace TelegramLike.Realtime.Api.Membership;
 /// known chats and fails open for unknown ones (e.g. right after a restart, before
 /// events flow) — matching the rest of the system rather than locking members out.
 /// </summary>
-public interface IChatMembershipTracker
-{
-    bool IsKnownChat(Guid chatId);
-    bool IsMember(Guid chatId, Guid userId);
-    void Join(Guid chatId, Guid userId);
-    void Leave(Guid chatId, Guid userId);
-}
-
-internal sealed class ChatMembershipTracker : IChatMembershipTracker
+public sealed class ChatMembershipTracker
 {
     private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, byte>> _membersByChat = new();
 

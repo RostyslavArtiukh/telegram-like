@@ -8,7 +8,7 @@ namespace TelegramLike.Realtime.Api.Consumers;
 // chat. Per-instance queues mean every replica maintains its own tracker for its own
 // connections. These update no hub group — they only maintain the authorization view.
 
-internal sealed class MemberJoinedMembershipConsumer(IChatMembershipTracker tracker)
+internal sealed class MemberJoinedMembershipConsumer(ChatMembershipTracker tracker)
     : IConsumer<MemberJoinedIntegrationEvent>
 {
     public Task Consume(ConsumeContext<MemberJoinedIntegrationEvent> context)
@@ -18,7 +18,7 @@ internal sealed class MemberJoinedMembershipConsumer(IChatMembershipTracker trac
     }
 }
 
-internal sealed class MemberLeftMembershipConsumer(IChatMembershipTracker tracker)
+internal sealed class MemberLeftMembershipConsumer(ChatMembershipTracker tracker)
     : IConsumer<MemberLeftIntegrationEvent>
 {
     public Task Consume(ConsumeContext<MemberLeftIntegrationEvent> context)
@@ -28,7 +28,7 @@ internal sealed class MemberLeftMembershipConsumer(IChatMembershipTracker tracke
     }
 }
 
-internal sealed class MemberKickedMembershipConsumer(IChatMembershipTracker tracker)
+internal sealed class MemberKickedMembershipConsumer(ChatMembershipTracker tracker)
     : IConsumer<MemberKickedIntegrationEvent>
 {
     public Task Consume(ConsumeContext<MemberKickedIntegrationEvent> context)

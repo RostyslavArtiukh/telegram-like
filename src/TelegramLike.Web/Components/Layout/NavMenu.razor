@@ -1,8 +1,8 @@
 @using TelegramLike.Web.Services
 @using TelegramLike.Client.Notifications
 @using TelegramLike.Web.Services.UnreadCount
-@inject INotificationsApi NotificationsApi
-@inject IUnreadCountPubSub UnreadCountPubSub
+@inject NotificationsApiClient NotificationsApi
+@inject UnreadCountPubSub UnreadCountPubSub
 @inject CurrentUserAccessor CurrentUser
 @implements IDisposable
 

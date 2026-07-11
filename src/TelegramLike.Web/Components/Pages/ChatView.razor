@@ -11,15 +11,15 @@
 @using TelegramLike.Web.Services.Presence
 @using TelegramLike.Client.Presence
 @using TelegramLike.Web.Services.Typing
-@inject IIdentityUsersApi IdentityUsers
-@inject IChatsApi ChatsApi
-@inject IMessagingApi MessagingApi
-@inject IPresenceApi PresenceApi
-@inject INotificationsApi NotificationsApi
-@inject ITypingPubSub TypingPubSub
-@inject INewMessagePubSub NewMessagePubSub
-@inject IChatChangedPubSub ChatChangedPubSub
-@inject IPresencePubSub PresencePubSub
+@inject IdentityUsersApiClient IdentityUsers
+@inject ChatsApiClient ChatsApi
+@inject MessagingApiClient MessagingApi
+@inject PresenceApiClient PresenceApi
+@inject NotificationsApiClient NotificationsApi
+@inject TypingPubSub TypingPubSub
+@inject NewMessagePubSub NewMessagePubSub
+@inject ChatChangedPubSub ChatChangedPubSub
+@inject PresencePubSub PresencePubSub
 @inject CurrentUserAccessor CurrentUser
 @inject NavigationManager Navigation
 @implements IAsyncDisposable

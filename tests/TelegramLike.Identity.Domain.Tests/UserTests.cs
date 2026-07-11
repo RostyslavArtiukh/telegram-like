@@ -18,7 +18,7 @@ public class UserTests
         user.Status.Should().Be(AccountStatus.Active);
         user.IsPremium.Should().BeFalse();
         user.BlockedUserIds.Should().BeEmpty();
-        user.DomainEvents.OfType<UserRegisteredEvent>().Should().ContainSingle();
+        user.PendingEvents.OfType<UserRegisteredEvent>().Should().ContainSingle();
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class UserTests
         user.Block(target);
 
         user.HasBlocked(target).Should().BeTrue();
-        user.DomainEvents.OfType<UserBlockedEvent>()
+        user.PendingEvents.OfType<UserBlockedEvent>()
             .Should().ContainSingle(e => e.BlockedUserId == target);
     }
 
@@ -44,7 +44,7 @@ public class UserTests
         user.Block(target);
 
         user.BlockedUserIds.Count(id => id == target).Should().Be(1);
-        user.DomainEvents.OfType<UserBlockedEvent>().Should().HaveCount(1);
+        user.PendingEvents.OfType<UserBlockedEvent>().Should().HaveCount(1);
     }
 
     [Fact]

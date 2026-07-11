@@ -20,7 +20,7 @@ public sealed class FanoutChatNotificationCommandHandler(
     public async Task Handle(FanoutChatNotificationCommand request, CancellationToken cancellationToken)
     {
         var recipients = request.Recipients
-            .Where(r => r != request.ActorId)
+            .Where(r => r != request.TriggeredByUserId)
             .Distinct()
             .ToList();
 
@@ -30,10 +30,10 @@ public sealed class FanoutChatNotificationCommandHandler(
         {
             DomainNotificationType.NewMessage or DomainNotificationType.MentionInGroup
                 when request.MessageId.HasValue
-                => NotificationPayload.ForNewMessage(request.ChatId, request.MessageId.Value, request.ActorId),
+                => NotificationPayload.ForNewMessage(request.ChatId, request.MessageId.Value, request.TriggeredByUserId),
 
-            DomainNotificationType.MemberJoined => NotificationPayload.ForMemberJoined(request.ChatId, request.ActorId),
-            DomainNotificationType.MemberKicked => NotificationPayload.ForMemberKicked(request.ChatId, request.ActorId),
+            DomainNotificationType.MemberJoined => NotificationPayload.ForMemberJoined(request.ChatId, request.TriggeredByUserId),
+            DomainNotificationType.MemberKicked => NotificationPayload.ForMemberKicked(request.ChatId, request.TriggeredByUserId),
 
             _ => throw new InvalidOperationException(
                 $"Notification type {request.Type} requires a MessageId.")

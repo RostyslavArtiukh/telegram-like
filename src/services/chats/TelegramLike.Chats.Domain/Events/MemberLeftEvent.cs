@@ -1,8 +1,8 @@
-using TelegramLike.Chats.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 
 namespace TelegramLike.Chats.Domain.Events;
 
-public sealed record MemberLeftEvent(Guid ChatId, Guid UserId) : IDomainEvent
+public sealed record MemberLeftEvent(Guid ChatId, Guid UserId) : IChangeEvent
 {
     public Guid EventId { get; } = Guid.NewGuid();
     public DateTime OccurredAt { get; } = DateTime.UtcNow;

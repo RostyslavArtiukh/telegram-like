@@ -33,8 +33,8 @@ public class DirectChatTests
 
         chat.FindActiveMember(initiatorId)!.Role.Should().Be(MemberRole.Member);
         chat.FindActiveMember(peerId)!.Role.Should().Be(MemberRole.Member);
-        chat.DomainEvents.OfType<MemberJoinedEvent>().Should().HaveCount(2);
-        chat.DomainEvents.OfType<ChatCreatedEvent>().Should().ContainSingle(e => e.Type == ChatType.Direct);
+        chat.PendingEvents.OfType<MemberJoinedEvent>().Should().HaveCount(2);
+        chat.PendingEvents.OfType<ChatCreatedEvent>().Should().ContainSingle(e => e.Type == ChatType.Direct);
     }
 
     [Fact]

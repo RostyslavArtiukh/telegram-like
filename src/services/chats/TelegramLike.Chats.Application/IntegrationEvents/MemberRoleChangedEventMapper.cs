@@ -1,8 +1,8 @@
-using TelegramLike.Chats.Application.Common.IntegrationEvents;
+using TelegramLike.Application.ServiceDefaults;
 using TelegramLike.Contracts.Chats;
 using TelegramLike.Contracts.Common;
 using TelegramLike.Chats.Domain.Events;
-using TelegramLike.Chats.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 
 namespace TelegramLike.Chats.Application.IntegrationEvents;
 
@@ -11,9 +11,9 @@ namespace TelegramLike.Chats.Application.IntegrationEvents;
 // keeps a downstream role read-model current for every role transition.
 public sealed class MemberRoleChangedEventMapper : IIntegrationEventMapper
 {
-    public Type DomainEventType => typeof(MemberRoleChangedEvent);
+    public Type ChangeEventType => typeof(MemberRoleChangedEvent);
 
-    public IIntegrationEvent Map(IDomainEvent domainEvent)
+    public IIntegrationEvent Map(IChangeEvent domainEvent)
     {
         var e = (MemberRoleChangedEvent)domainEvent;
         return new MemberRoleChangedIntegrationEvent(

@@ -12,7 +12,7 @@ internal sealed class MemberKickedConsumer(IMediator mediator) : IConsumer<Membe
         mediator.Send(
             new FanoutChatNotificationCommand(
                 ChatId: context.Message.ChatId,
-                ActorId: context.Message.KickedBy,
+                TriggeredByUserId: context.Message.KickedBy,
                 Type: NotificationType.MemberKicked,
                 Recipients: context.Message.Recipients,
                 SourceEventId: context.Message.EventId),

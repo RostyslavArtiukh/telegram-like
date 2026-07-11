@@ -7,7 +7,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using TelegramLike.Identity.Api.Filters;
 using TelegramLike.Identity.Application.Commands.RegisterUser;
-using TelegramLike.Identity.Application.Common.Behaviors;
+using TelegramLike.Application.ServiceDefaults;
 using TelegramLike.Identity.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,7 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(RegisterUserCommand).Assembly);
-    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+    cfg.AddOpenBehavior(typeof(ValidateRequestBeforeHandling<,>));
 });
 builder.Services.AddValidatorsFromAssembly(typeof(RegisterUserCommand).Assembly);
 

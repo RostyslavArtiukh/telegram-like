@@ -27,7 +27,7 @@ Step 27 (2026-05-31): додано distributed tracing.
 **Що НЕ покрито (поки):**
 - MongoDB driver — треба `MongoDB.Driver.Core.Extensions.DiagnosticSources` package.
 - StackExchange.Redis — треба `OpenTelemetry.Instrumentation.StackExchangeRedis`.
-- Outbox-publisher loop (`OutboxPublisherHostedService`) — створює свій `ActivitySource` не зареєстровано. Якщо хочеш бачити "outbox.publish" окремим span — додай `private static readonly ActivitySource Source = new("TelegramLike.Outbox"); using var a = Source.StartActivity("publish")` і `.AddSource("TelegramLike.Outbox")` у Web Program.cs. Span MassTransit publish все одно з'явиться як дочірній.
+- Outbox-publisher loop (`OutgoingEventsSender`) — створює свій `ActivitySource` не зареєстровано. Якщо хочеш бачити "outbox.publish" окремим span — додай `private static readonly ActivitySource Source = new("TelegramLike.Outbox"); using var a = Source.StartActivity("publish")` і `.AddSource("TelegramLike.Outbox")` у Web Program.cs. Span MassTransit publish все одно з'явиться як дочірній.
 
 **Trace context propagation:**
 - HTTP: автоматично через `traceparent` header (W3C Trace Context).

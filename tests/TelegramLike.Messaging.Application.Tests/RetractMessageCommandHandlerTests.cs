@@ -3,7 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TelegramLike.Messaging.Application.Commands.RetractMessage;
-using TelegramLike.Messaging.Application.Common.Interfaces;
+using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Aggregates;
 using TelegramLike.Messaging.Domain.Repositories;
 using TelegramLike.Messaging.Domain.ValueObjects;
@@ -31,7 +31,7 @@ public class RetractMessageCommandHandlerTests
         _membership.IsActiveMemberAsync(chatId, authorId, Arg.Any<CancellationToken>()).Returns(true);
         _membership.IsModeratorAsync(chatId, authorId, Arg.Any<CancellationToken>()).Returns(false);
 
-        await Handler.Handle(new RetractMessageCommand(message.Id, authorId, ActorIsModerator: false), CancellationToken.None);
+        await Handler.Handle(new RetractMessageCommand(message.Id, authorId, RetractedByModerator: false), CancellationToken.None);
 
         message.IsRetracted.Should().BeTrue();
         await _messageRepository.Received(1).UpdateAsync(message, Arg.Any<CancellationToken>());
@@ -48,7 +48,7 @@ public class RetractMessageCommandHandlerTests
         _membership.IsActiveMemberAsync(chatId, moderatorId, Arg.Any<CancellationToken>()).Returns(true);
         _membership.IsModeratorAsync(chatId, moderatorId, Arg.Any<CancellationToken>()).Returns(true);
 
-        await Handler.Handle(new RetractMessageCommand(message.Id, moderatorId, ActorIsModerator: false), CancellationToken.None);
+        await Handler.Handle(new RetractMessageCommand(message.Id, moderatorId, RetractedByModerator: false), CancellationToken.None);
 
         message.IsRetracted.Should().BeTrue();
     }
@@ -56,7 +56,7 @@ public class RetractMessageCommandHandlerTests
     [Fact]
     public async Task Non_author_non_moderator_is_rejected_even_when_client_flag_claims_moderator()
     {
-        // Regression: ActorIsModerator is a client-supplied flag and must be ignored —
+        // Regression: RetractedByModerator is a client-supplied flag and must be ignored —
         // authority comes from IChatMembershipReadModel.IsModeratorAsync only.
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -67,7 +67,7 @@ public class RetractMessageCommandHandlerTests
         _membership.IsModeratorAsync(chatId, attackerId, Arg.Any<CancellationToken>()).Returns(false);
 
         var act = () => Handler.Handle(
-            new RetractMessageCommand(message.Id, attackerId, ActorIsModerator: true), CancellationToken.None);
+            new RetractMessageCommand(message.Id, attackerId, RetractedByModerator: true), CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>();
         message.IsRetracted.Should().BeFalse();
@@ -80,7 +80,7 @@ public class RetractMessageCommandHandlerTests
         _messageRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Message?)null);
 
         var act = () => Handler.Handle(
-            new RetractMessageCommand(Guid.NewGuid(), Guid.NewGuid(), ActorIsModerator: false), CancellationToken.None);
+            new RetractMessageCommand(Guid.NewGuid(), Guid.NewGuid(), RetractedByModerator: false), CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>().WithMessage("*not found*");
     }
@@ -100,7 +100,7 @@ public class RetractMessageCommandHandlerTests
         _membership.IsModeratorAsync(chatId, strangerId, Arg.Any<CancellationToken>()).Returns(false);
 
         var act = () => Handler.Handle(
-            new RetractMessageCommand(message.Id, strangerId, ActorIsModerator: false), CancellationToken.None);
+            new RetractMessageCommand(message.Id, strangerId, RetractedByModerator: false), CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>();
     }

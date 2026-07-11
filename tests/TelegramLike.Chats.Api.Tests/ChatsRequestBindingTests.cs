@@ -22,11 +22,11 @@ namespace TelegramLike.Chats.Api.Tests;
 public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
     : IClassFixture<ChatsApiFactory>
 {
-    private static readonly Guid ActorId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private static readonly Guid CurrentUserId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private static readonly Guid ChatId  = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
     private static readonly Guid PeerId  = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
 
-    private HttpClient Auth() => factory.CreateAuthenticatedClient(ActorId);
+    private HttpClient Auth() => factory.CreateAuthenticatedClient(CurrentUserId);
 
     private static StringContent Json(object body)
         => new(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
@@ -44,7 +44,7 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
 
         await factory.Mediator.Received(1).Send(
             Arg.Is<CreateDirectChatCommand>(c =>
-                c.InitiatorUserId == ActorId && c.PeerUserId == PeerId),
+                c.InitiatorUserId == CurrentUserId && c.PeerUserId == PeerId),
             Arg.Any<CancellationToken>());
     }
 
@@ -61,7 +61,7 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
 
         await factory.Mediator.Received(1).Send(
             Arg.Is<CreateGroupChatCommand>(c =>
-                c.OwnerUserId == ActorId && c.Name == "Devs Group"),
+                c.OwnerUserId == CurrentUserId && c.Name == "Devs Group"),
             Arg.Any<CancellationToken>());
     }
 
@@ -78,7 +78,7 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
 
         await factory.Mediator.Received(1).Send(
             Arg.Is<CreateBroadcastChannelCommand>(c =>
-                c.OwnerUserId == ActorId && c.Name == "News Channel"),
+                c.OwnerUserId == CurrentUserId && c.Name == "News Channel"),
             Arg.Any<CancellationToken>());
     }
 
@@ -97,21 +97,21 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
             Headers =
             {
                 Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
-                    "Bearer", factory.MintToken(ActorId))
+                    "Bearer", factory.MintToken(CurrentUserId))
             }
         };
         await factory.CreateClient().SendAsync(req);
 
         await factory.Mediator.Received(1).Send(
             Arg.Is<RenameChatCommand>(c =>
-                c.ChatId == ChatId && c.NewName == "Renamed" && c.ActorUserId == ActorId),
+                c.ChatId == ChatId && c.NewName == "Renamed" && c.RenamedByUserId == CurrentUserId),
             Arg.Any<CancellationToken>());
     }
 
     // ── KickMember binds both route GUIDs + actor from JWT ────────────────
 
     [Fact]
-    public async Task Kick_BindsChatIdAndTargetUserId()
+    public async Task Kick_BindsChatIdAndMemberToKickUserId()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -121,7 +121,7 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
 
         await factory.Mediator.Received(1).Send(
             Arg.Is<KickMemberCommand>(c =>
-                c.ChatId == ChatId && c.TargetUserId == PeerId && c.ActorUserId == ActorId),
+                c.ChatId == ChatId && c.MemberToKickUserId == PeerId && c.KickedByUserId == CurrentUserId),
             Arg.Any<CancellationToken>());
     }
 
@@ -142,9 +142,9 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
         await factory.Mediator.Received(1).Send(
             Arg.Is<ChangeMemberRoleCommand>(c =>
                 c.ChatId == ChatId &&
-                c.TargetUserId == PeerId &&
+                c.MemberToChangeUserId == PeerId &&
                 c.NewRole == MemberRole.Admin &&
-                c.ActorUserId == ActorId),
+                c.ChangedByUserId == CurrentUserId),
             Arg.Any<CancellationToken>());
     }
 
@@ -165,7 +165,7 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
             Arg.Is<TransferOwnershipCommand>(c =>
                 c.ChatId == ChatId &&
                 c.NewOwnerUserId == PeerId &&
-                c.CurrentOwnerUserId == ActorId),
+                c.CurrentOwnerUserId == CurrentUserId),
             Arg.Any<CancellationToken>());
     }
 }

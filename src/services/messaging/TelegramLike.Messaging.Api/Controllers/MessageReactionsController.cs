@@ -10,7 +10,7 @@ namespace TelegramLike.Messaging.Api.Controllers;
 
 /// <summary>
 /// Reactions on a message (embedded sub-resource, atomic <c>$push</c>/<c>$pull</c>):
-/// add and remove. <c>actorIsPremium</c> is a BFF-enriched input carried in the add body.
+/// add and remove. <c>userIsPremium</c> is a BFF-enriched input carried in the add body.
 /// </summary>
 [Authorize]
 [Route("messages")]
@@ -20,7 +20,7 @@ public sealed class MessageReactionsController(IMediator mediator) : ApiControll
     public async Task<IActionResult> Add(
         Guid messageId, [FromBody] AddReactionRequest body, CancellationToken cancellationToken)
     {
-        await mediator.Send(new AddReactionCommand(messageId, CurrentUserId, body.Emoji, body.ActorIsPremium), cancellationToken);
+        await mediator.Send(new AddReactionCommand(messageId, CurrentUserId, body.Emoji, body.UserIsPremium), cancellationToken);
         return NoContent();
     }
 

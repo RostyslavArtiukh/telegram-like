@@ -2,7 +2,11 @@ using System.Collections.Concurrent;
 
 namespace TelegramLike.Web.Services.Typing;
 
-internal sealed class TypingPubSub : ITypingPubSub
+/// Bridges cross-service typing events to Blazor Server circuits. The consumer
+/// (driven by RabbitMQ via MassTransit) calls Publish; Razor components subscribe
+/// on init and unsubscribe on dispose. Each component's callback is invoked on
+/// the publishing thread — use InvokeAsync(StateHasChanged) to marshal back.
+internal sealed class TypingPubSub
 {
     private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, Func<Guid, Task>>> _subs = new();
 

@@ -16,13 +16,13 @@ public sealed class ChangeMemberRoleCommandHandler(IChatRepository chatRepositor
         switch (chat)
         {
             case GroupChat group:
-                group.ChangeMemberRole(request.TargetUserId, request.NewRole, request.ActorUserId);
+                group.ChangeMemberRole(request.MemberToChangeUserId, request.NewRole, request.ChangedByUserId);
                 break;
             case BroadcastChannel broadcast:
                 if (request.NewRole == MemberRole.Admin)
-                    broadcast.PromoteToAdmin(request.TargetUserId, request.ActorUserId);
+                    broadcast.PromoteToAdmin(request.MemberToChangeUserId, request.ChangedByUserId);
                 else if (request.NewRole == MemberRole.Viewer)
-                    broadcast.DemoteToViewer(request.TargetUserId, request.ActorUserId);
+                    broadcast.DemoteToViewer(request.MemberToChangeUserId, request.ChangedByUserId);
                 else
                     throw new DomainException(
                         $"BroadcastChannel supports only Admin/Viewer role changes, got {request.NewRole}.");

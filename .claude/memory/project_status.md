@@ -32,7 +32,7 @@ Pet-проект — месенджер подібний до Telegram, розр
 - День 12 (2026-05-24): Notifications як окремий мікросервіс ✅ — 4 нових проекти у `src/services/notifications/`, власна БД `telegramlike_notifications`, ASP.NET Core Api на :8081, Web BFF з `INotificationsApi` HttpClient. Зв'язок з monolith тільки через RabbitMQ + HTTP, [[microservices-migration]]
 - День 14 (2026-05-30): JWT auth між сервісами ✅ — Web підписує HMAC-SHA256 JWT (5хв exp), Notifications валідує через `AddJwtBearer` + `RequireAuthorization()`. Замість довіри `X-User-Id` header, [[service-auth-jwt]]
 - День 15 (2026-05-30): Presence як другий мікросервіс ✅ — 4 проекти у `src/services/presence/`, власна БД `telegramlike_presence`, API на :8082, JWT auth reused з Day 14, `IPresenceApi` BFF, `MainLayout.razor` шле heartbeat по HTTP. Cross-context check у StartTyping прибрано (trust JWT caller), [[microservices-migration]]
-- День 17 (2026-05-30): Real-time typing + UX polish ✅ — `UserTypingIntegrationEvent` через RabbitMQ → `UserTypingConsumer` у Web → `ITypingPubSub` → Blazor circuit пушить UI. Username показ замість GUID (`GetUsernamesByIdsQuery`). Batch presence endpoint. Typing indicator у chat header, [[realtime-blazor-pubsub]]
+- День 17 (2026-05-30): Real-time typing + UX polish ✅ — `UserTypingIntegrationEvent` через RabbitMQ → `UserTypingConsumer` у Web → `TypingPubSub` → Blazor circuit пушить UI. Username показ замість GUID (`GetUsernamesByIdsQuery`). Batch presence endpoint. Typing indicator у chat header, [[realtime-blazor-pubsub]]
 - День 18 (2026-05-30): Auto-mark notifications as read for active chat ✅ — новий endpoint `POST /notifications/chats/{chatId}/read` + `MarkAllForChatAsReadAsync` у repo. ChatView викликає на init + при появі нових повідомлень. Прибрано UX-баг де badge зростав поки юзер у чаті.
 
 ## Docker deploy (День 8)
@@ -110,12 +110,12 @@ Pet-проект — месенджер подібний до Telegram, розр
 ## День 9: Integration Events через RabbitMQ
 - docker-compose: додано `rabbitmq:3-management` (5672, 15672), healthcheck `rabbitmq-diagnostics ping`.
 - NuGet (Infrastructure): `MassTransit` 8.3 + `MassTransit.RabbitMQ` + Hosting/Logging abstractions.
-- **Outbox** у Mongo: колекція `outbox` з полями `{Id, EventType, Payload (JSON), OccurredAt, SentAt?, Retries}`.
-- `MessageRepository.AddAsync/UpdateAsync` тепер у Mongo-транзакції (`WithTransactionAsync`): save messages + `IDomainEventDispatcher.DispatchAsync(events, session)` → atomic.
+- **Outbox** у Mongo: колекція `outgoing_events` з полями `{Id, EventType, Payload (JSON), OccurredAt, SentAt?, Retries}`.
+- `MessageRepository.AddAsync/UpdateAsync` тепер у Mongo-транзакції (`WithTransactionAsync`): save messages + `IOutgoingEventsWriter.DispatchAsync(events, session)` → atomic.
 - `OutboxDomainEventDispatcher`: `Dictionary<Type, IIntegrationEventMapper>`, серіалізує через `System.Text.Json`, записує batch в outbox.
-- `OutboxPublisherHostedService` (BackgroundService): кожні `Outbox:PollIntervalSeconds` (default 2с) тягне `SentAt == null`, `Type.GetType(EventType)` → deserialize → `IPublishEndpoint.Publish(payload, type)` → `MarkSentAsync`. На fail — `IncrementRetryAsync` + log.
+- `OutgoingEventsSender` (BackgroundService): кожні `OutgoingEvents:PollIntervalSeconds` (default 2с) тягне `SentAt == null`, `Type.GetType(EventType)` → deserialize → `IPublishEndpoint.Publish(payload, type)` → `MarkSentAsync`. На fail — `IncrementRetryAsync` + log.
 - `MessageSentConsumer` (Infrastructure/Messaging/Consumers) — `IConsumer<MessageSentIntegrationEvent>`, делегує `IMediator.Send(FanoutChatNotificationCommand)`.
-- DI: `AddOutbox` (mappers, store, dispatcher, hosted service) + `AddIntegrationMessaging` (`AddMassTransit` з `UsingRabbitMq`, `ConfigureEndpoints`).
+- DI: `AddOutgoingEvents` (mappers, store, dispatcher, hosted service) + `AddIntegrationMessaging` (`AddMassTransit` з `UsingRabbitMq`, `ConfigureEndpoints`).
 - Тести: `MessageSentEventMapperTests` (unit) + `OutboxIntegrationTests` (Testcontainers Mongo, 3 тести).
 
 ## Файли

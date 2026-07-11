@@ -1,5 +1,5 @@
 using StackExchange.Redis;
-using TelegramLike.Presence.Application.Abstractions;
+using TelegramLike.Presence.Application.Storage;
 
 namespace TelegramLike.Presence.Infrastructure.Caching;
 

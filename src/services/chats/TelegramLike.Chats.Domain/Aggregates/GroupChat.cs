@@ -13,18 +13,18 @@ public sealed class GroupChat : Chat
 
     public static GroupChat Create(Guid id, ChatName name, Guid ownerUserId)
     {
-        // Caller-supplied id doubles as the idempotency key (see ChatRepository.AddAsync).
+        // Caller-supplied id doubles as the duplicate-protection key (see ChatRepository.AddAsync).
         if (id == Guid.Empty) throw new DomainException("Chat id cannot be empty.");
         var chat = new GroupChat(id, name, ownerUserId, DateTime.UtcNow);
         var owner = Member.Join(ownerUserId, MemberRole.Owner);
         chat._members.Add(owner);
 
-        chat.RaiseDomainEvent(new ChatCreatedEvent(chat.Id, ChatType.Group, ownerUserId));
-        chat.RaiseDomainEvent(new MemberJoinedEvent(chat.Id, ownerUserId, MemberRole.Owner, chat.RecipientsExcept(ownerUserId)));
+        chat.RecordEvent(new ChatCreatedEvent(chat.Id, ChatType.Group, ownerUserId));
+        chat.RecordEvent(new MemberJoinedEvent(chat.Id, ownerUserId, MemberRole.Owner, chat.RecipientsExcept(ownerUserId)));
         return chat;
     }
 
-    public static GroupChat Reconstitute(
+    public static GroupChat FromStorage(
         Guid id, ChatName name, Guid createdBy, DateTime createdAt, DateTime? deletedAt, IEnumerable<Member> members)
     {
         var chat = new GroupChat(id, name, createdBy, createdAt) { DeletedAt = deletedAt };
@@ -47,7 +47,7 @@ public sealed class GroupChat : Chat
 
         var member = Member.Join(userId, MemberRole.Member);
         _members.Add(member);
-        RaiseDomainEvent(new MemberJoinedEvent(Id, userId, MemberRole.Member, RecipientsExcept(userId)));
+        RecordEvent(new MemberJoinedEvent(Id, userId, MemberRole.Member, RecipientsExcept(userId)));
     }
 
     public override void Leave(Guid userId)
@@ -58,47 +58,47 @@ public sealed class GroupChat : Chat
             throw new DomainException("Owner must transfer ownership before leaving.");
 
         member.Leave();
-        RaiseDomainEvent(new MemberLeftEvent(Id, userId));
+        RecordEvent(new MemberLeftEvent(Id, userId));
     }
 
-    public override void Kick(Guid targetUserId, Guid kickedBy)
+    public override void Kick(Guid memberUserId, Guid kickedBy)
     {
         EnsureNotDeleted();
-        var actor = RequireActiveMember(kickedBy);
-        var target = RequireActiveMember(targetUserId);
+        var actingMember = RequireActiveMember(kickedBy);
+        var affectedMember = RequireActiveMember(memberUserId);
 
-        if (actor.Role != MemberRole.Owner && actor.Role != MemberRole.Admin)
+        if (actingMember.Role != MemberRole.Owner && actingMember.Role != MemberRole.Admin)
             throw new DomainException("Only Owner or Admin can kick.");
-        if (target.Role == MemberRole.Owner)
+        if (affectedMember.Role == MemberRole.Owner)
             throw new DomainException("Cannot kick the Owner.");
-        if (target.Role == MemberRole.Admin && actor.Role != MemberRole.Owner)
+        if (affectedMember.Role == MemberRole.Admin && actingMember.Role != MemberRole.Owner)
             throw new DomainException("Only Owner can kick an Admin.");
 
-        target.Kick(kickedBy);
-        RaiseDomainEvent(new MemberKickedEvent(Id, targetUserId, kickedBy, RecipientsExcept(kickedBy)));
+        affectedMember.Kick(kickedBy);
+        RecordEvent(new MemberKickedEvent(Id, memberUserId, kickedBy, RecipientsExcept(kickedBy)));
     }
 
-    public void Ban(Guid targetUserId, Guid bannedBy, string? reason)
+    public void Ban(Guid memberUserId, Guid bannedBy, string? reason)
     {
         EnsureNotDeleted();
-        var actor = RequireActiveMember(bannedBy);
+        var actingMember = RequireActiveMember(bannedBy);
 
-        if (actor.Role != MemberRole.Owner && actor.Role != MemberRole.Admin)
+        if (actingMember.Role != MemberRole.Owner && actingMember.Role != MemberRole.Admin)
             throw new DomainException("Only Owner or Admin can ban.");
 
-        var target = FindAnyMember(targetUserId)
+        var affectedMember = FindAnyMember(memberUserId)
                      ?? throw new DomainException("Target user is not part of this chat.");
 
-        if (target.Role == MemberRole.Owner)
+        if (affectedMember.Role == MemberRole.Owner)
             throw new DomainException("Cannot ban the Owner.");
-        if (target.Role == MemberRole.Admin && actor.Role != MemberRole.Owner)
+        if (affectedMember.Role == MemberRole.Admin && actingMember.Role != MemberRole.Owner)
             throw new DomainException("Only Owner can ban an Admin.");
 
-        target.Ban(bannedBy, reason);
-        RaiseDomainEvent(new MemberBannedEvent(Id, targetUserId, bannedBy, reason));
+        affectedMember.Ban(bannedBy, reason);
+        RecordEvent(new MemberBannedEvent(Id, memberUserId, bannedBy, reason));
     }
 
-    public void ChangeMemberRole(Guid targetUserId, MemberRole newRole, Guid changedBy)
+    public void ChangeMemberRole(Guid memberUserId, MemberRole newRole, Guid changedBy)
     {
         EnsureNotDeleted();
         if (newRole == MemberRole.Owner)
@@ -106,19 +106,19 @@ public sealed class GroupChat : Chat
         if (newRole == MemberRole.Viewer)
             throw new DomainException("Viewer role is only valid in BroadcastChannel.");
 
-        var actor = RequireActiveMember(changedBy);
-        var target = RequireActiveMember(targetUserId);
+        var actingMember = RequireActiveMember(changedBy);
+        var affectedMember = RequireActiveMember(memberUserId);
 
-        if (actor.Role != MemberRole.Owner)
+        if (actingMember.Role != MemberRole.Owner)
             throw new DomainException("Only Owner can change roles.");
-        if (target.Role == MemberRole.Owner)
+        if (affectedMember.Role == MemberRole.Owner)
             throw new DomainException("Cannot change Owner's role directly.");
-        if (target.Role == newRole)
+        if (affectedMember.Role == newRole)
             return;
 
-        var oldRole = target.Role;
-        target.ChangeRole(newRole);
-        RaiseDomainEvent(new MemberRoleChangedEvent(Id, targetUserId, oldRole, newRole, changedBy));
+        var oldRole = affectedMember.Role;
+        affectedMember.ChangeRole(newRole);
+        RecordEvent(new MemberRoleChangedEvent(Id, memberUserId, oldRole, newRole, changedBy));
     }
 
     public void TransferOwnership(Guid newOwnerUserId, Guid currentOwnerUserId)
@@ -138,8 +138,8 @@ public sealed class GroupChat : Chat
         currentOwner.ChangeRole(MemberRole.Admin);
         newOwner.ChangeRole(MemberRole.Owner);
 
-        RaiseDomainEvent(new MemberRoleChangedEvent(Id, currentOwnerUserId, previousOwnerOldRole, MemberRole.Admin, currentOwnerUserId));
-        RaiseDomainEvent(new MemberRoleChangedEvent(Id, newOwnerUserId, newOwnerOldRole, MemberRole.Owner, currentOwnerUserId));
-        RaiseDomainEvent(new OwnershipTransferredEvent(Id, currentOwnerUserId, newOwnerUserId));
+        RecordEvent(new MemberRoleChangedEvent(Id, currentOwnerUserId, previousOwnerOldRole, MemberRole.Admin, currentOwnerUserId));
+        RecordEvent(new MemberRoleChangedEvent(Id, newOwnerUserId, newOwnerOldRole, MemberRole.Owner, currentOwnerUserId));
+        RecordEvent(new OwnershipTransferredEvent(Id, currentOwnerUserId, newOwnerUserId));
     }
 }

@@ -5,7 +5,10 @@ using TelegramLike.Client.Auth;
 
 namespace TelegramLike.Client.Identity;
 
-internal sealed class IdentityUsersApiClient(HttpClient http, IAccessTokenProvider tokenProvider) : IIdentityUsersApi
+/// <summary>
+/// Authenticated Identity user queries — calls carry an Identity-issued access JWT.
+/// </summary>
+public sealed class IdentityUsersApiClient(HttpClient http, IAccessTokenProvider tokenProvider)
 {
     public async Task<IdentityUser?> GetUserByIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {

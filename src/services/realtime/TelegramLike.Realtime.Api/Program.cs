@@ -14,7 +14,7 @@ using TelegramLike.Realtime.Api.Observability;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSignalR();
-builder.Services.AddSingleton<IChatMembershipTracker, ChatMembershipTracker>();
+builder.Services.AddSingleton<ChatMembershipTracker>();
 
 var jwtSecret = builder.Configuration["ServiceAuth:JwtSecret"]
                 ?? throw new InvalidOperationException("ServiceAuth:JwtSecret is not configured.");

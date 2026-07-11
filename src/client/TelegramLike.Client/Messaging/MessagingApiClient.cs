@@ -5,7 +5,7 @@ using TelegramLike.Client.Auth;
 
 namespace TelegramLike.Client.Messaging;
 
-internal sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider tokenProvider) : IMessagingApi
+public sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider tokenProvider)
 {
     public async Task<Guid> SendMessageAsync(
         Guid authorUserId,
@@ -19,7 +19,7 @@ internal sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider t
         Guid? forwardOriginalChatId = null,
         CancellationToken cancellationToken = default)
     {
-        // Client-generated id doubles as the idempotency key. The Idempotency-Key header
+        // Client-generated id doubles as the duplicate-protection key. The Idempotency-Key header
         // signals the resilience pipeline that this POST is safe to retry; the Messaging
         // service dedupes on the same id, so a retried send never duplicates the message.
         var messageId = Guid.NewGuid();
@@ -72,16 +72,16 @@ internal sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider t
                ?? new ChatMessagePage([], null);
     }
 
-    public Task AddReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, bool actorIsPremium, CancellationToken cancellationToken = default)
+    public Task AddReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, bool userIsPremium, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Post, $"/messages/{messageId}/reactions",
-            JsonContent.Create(new { emoji = emoji.ToString(), actorIsPremium }), cancellationToken);
+            JsonContent.Create(new { emoji = emoji.ToString(), userIsPremium }), cancellationToken);
 
     public Task RemoveReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Delete, $"/messages/{messageId}/reactions/{emoji}", content: null, cancellationToken);
 
-    public Task RetractMessageAsync(Guid actorUserId, Guid messageId, bool actorIsModerator, CancellationToken cancellationToken = default)
+    public Task RetractMessageAsync(Guid retractedByUserId, Guid messageId, bool retractedByModerator, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Post, $"/messages/{messageId}/retract",
-            JsonContent.Create(new { actorIsModerator }), cancellationToken);
+            JsonContent.Create(new { retractedByModerator }), cancellationToken);
 
     public Task MarkAsReadAsync(Guid userId, Guid messageId, bool isBroadcast, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Post, $"/messages/{messageId}/read",

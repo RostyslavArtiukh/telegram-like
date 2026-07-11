@@ -7,7 +7,7 @@ namespace TelegramLike.Notifications.Application.Commands.FanoutChatNotification
 /// by the publishing context so Notifications has no cross-context queries.
 public sealed record FanoutChatNotificationCommand(
     Guid ChatId,
-    Guid ActorId,
+    Guid TriggeredByUserId,
     NotificationType Type,
     IReadOnlyList<Guid> Recipients,
     Guid SourceEventId,

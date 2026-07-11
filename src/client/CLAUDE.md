@@ -3,10 +3,10 @@
 Typed .NET SDK every client app uses to talk to the backend **through the YARP gateway** (one base URL, e.g. `http://localhost:8090`). Consumed by the Web BFF (project reference) and by future MAUI/console apps (project reference or `dotnet pack` → NuGet). References only `TelegramLike.Contracts` + `Microsoft.Extensions.Http.Resilience` — no domain, no ASP.NET Core.
 
 ## Layout
-- `Identity/ Chats/ Messaging/ Notifications/ Presence/` — one typed client per service (`I<Name>Api` + internal `<Name>ApiClient`) with its wire DTOs (`*Contract` records; Notifications DTOs live in Contracts).
+- `Identity/ Chats/ Messaging/ Notifications/ Presence/` — one typed client per service (public `<Name>ApiClient`; лише `IIdentityAuthApi` зберіг інтерфейс — його мокають тести `TelegramLikeSession`) with its wire DTOs (`*Contract` records; Notifications DTOs live in Contracts).
 - `Http/` — `ServicePrefixHandler` (prepends `/chats` etc., gateway strips it) + shared resilience pipeline (timeout/retry/circuit-breaker; POSTs retried only with `Idempotency-Key`).
 - `Auth/` — `IAccessTokenProvider` (per-request JWT resolution), `ISessionStore` (where the opaque session token persists), `TelegramLikeSession` (standalone login/exchange/caching, implements the provider).
-- `Realtime/` — `ITelegramLikeRealtimeClient` over SignalR (`{gateway}/realtime/hub`): connect after login, `JoinChatAsync` per open chat, C# events per push type (shapes/names from `Contracts/Realtime`). Re-joins chat groups on reconnect. Events fire on background threads — UI must marshal.
+- `Realtime/` — `TelegramLikeRealtimeClient` over SignalR (`{gateway}/realtime/hub`): connect after login, `JoinChatAsync` per open chat, C# events per push type (shapes/names from `Contracts/Realtime`). Re-joins chat groups on reconnect. Events fire on background threads — UI must marshal.
 - `TelegramLikeClientExtensions` — DI entry points.
 
 ## Rules

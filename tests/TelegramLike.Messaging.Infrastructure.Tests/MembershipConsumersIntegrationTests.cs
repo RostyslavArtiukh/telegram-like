@@ -3,7 +3,7 @@ using MassTransit;
 using NSubstitute;
 using TelegramLike.Contracts.Chats;
 using TelegramLike.Messaging.Infrastructure.Messaging.Consumers;
-using TelegramLike.Messaging.Infrastructure.Persistence;
+using TelegramLike.Messaging.Infrastructure.Storage;
 using TelegramLike.Messaging.Infrastructure.Tests.Fixtures;
 
 namespace TelegramLike.Messaging.Infrastructure.Tests;

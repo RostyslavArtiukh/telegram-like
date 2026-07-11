@@ -5,6 +5,6 @@ namespace TelegramLike.Chats.Application.Commands.ChangeMemberRole;
 
 public sealed record ChangeMemberRoleCommand(
     Guid ChatId,
-    Guid TargetUserId,
+    Guid MemberToChangeUserId,
     MemberRole NewRole,
-    Guid ActorUserId) : IRequest;
+    Guid ChangedByUserId) : IRequest;

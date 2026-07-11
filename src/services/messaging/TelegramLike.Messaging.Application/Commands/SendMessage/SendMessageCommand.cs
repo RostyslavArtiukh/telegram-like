@@ -6,7 +6,7 @@ namespace TelegramLike.Messaging.Application.Commands.SendMessage;
 public sealed record SendMessageAttachment(AttachmentType Type, string Url, long SizeBytes, string? FileName);
 
 public sealed record SendMessageCommand(
-    // Client-supplied message id = idempotency key. Empty => the handler mints one
+    // Client-supplied message id = duplicate-protection key. Empty => the handler mints one
     // (a non-idempotent send, e.g. a caller that predates this).
     Guid MessageId,
     Guid ChatId,

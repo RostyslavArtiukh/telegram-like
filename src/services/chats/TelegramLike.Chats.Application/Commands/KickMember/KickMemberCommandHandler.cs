@@ -11,7 +11,7 @@ public sealed class KickMemberCommandHandler(IChatRepository chatRepository)
         var chat = await chatRepository.GetByIdAsync(request.ChatId, cancellationToken)
                    ?? throw new DomainException("Chat not found.");
 
-        chat.Kick(request.TargetUserId, request.ActorUserId);
+        chat.Kick(request.MemberToKickUserId, request.KickedByUserId);
         await chatRepository.UpdateAsync(chat, cancellationToken);
     }
 }

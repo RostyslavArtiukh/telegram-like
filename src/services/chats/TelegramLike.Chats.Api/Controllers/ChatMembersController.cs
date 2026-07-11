@@ -36,18 +36,18 @@ public sealed class ChatMembersController(IMediator mediator) : ApiControllerBas
         return NoContent();
     }
 
-    [HttpPost("{chatId:guid}/members/{targetUserId:guid}/kick")]
-    public async Task<IActionResult> KickMember(Guid chatId, Guid targetUserId, CancellationToken cancellationToken)
+    [HttpPost("{chatId:guid}/members/{memberUserId:guid}/kick")]
+    public async Task<IActionResult> KickMember(Guid chatId, Guid memberUserId, CancellationToken cancellationToken)
     {
-        await mediator.Send(new KickMemberCommand(chatId, targetUserId, CurrentUserId), cancellationToken);
+        await mediator.Send(new KickMemberCommand(chatId, memberUserId, CurrentUserId), cancellationToken);
         return NoContent();
     }
 
-    [HttpPost("{chatId:guid}/members/{targetUserId:guid}/role")]
+    [HttpPost("{chatId:guid}/members/{memberUserId:guid}/role")]
     public async Task<IActionResult> ChangeMemberRole(
-        Guid chatId, Guid targetUserId, [FromBody] ChangeMemberRoleRequest body, CancellationToken cancellationToken)
+        Guid chatId, Guid memberUserId, [FromBody] ChangeMemberRoleRequest body, CancellationToken cancellationToken)
     {
-        await mediator.Send(new ChangeMemberRoleCommand(chatId, targetUserId, body.NewRole, CurrentUserId), cancellationToken);
+        await mediator.Send(new ChangeMemberRoleCommand(chatId, memberUserId, body.NewRole, CurrentUserId), cancellationToken);
         return NoContent();
     }
 

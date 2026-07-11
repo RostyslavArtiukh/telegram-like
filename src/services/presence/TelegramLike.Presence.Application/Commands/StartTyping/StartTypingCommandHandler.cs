@@ -2,7 +2,7 @@ using MassTransit;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using TelegramLike.Contracts.Presence;
-using TelegramLike.Presence.Application.Abstractions;
+using TelegramLike.Presence.Application.Storage;
 
 namespace TelegramLike.Presence.Application.Commands.StartTyping;
 

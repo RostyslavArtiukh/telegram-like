@@ -8,7 +8,7 @@ namespace TelegramLike.App.Services;
 /// 20s heartbeat keeps it alive (same cadence as the Web BFF's PresenceHeartbeat
 /// component). Started after login, stopped on sign-out.
 /// </summary>
-public sealed class PresenceHeartbeat(IPresenceApi presence, TelegramLikeSession session) : IAsyncDisposable
+public sealed class PresenceHeartbeat(PresenceApiClient presence, TelegramLikeSession session) : IAsyncDisposable
 {
     private Timer? _timer;
 

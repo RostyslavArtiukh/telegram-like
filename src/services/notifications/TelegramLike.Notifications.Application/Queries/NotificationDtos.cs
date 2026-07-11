@@ -8,7 +8,7 @@ public sealed record NotificationDto(
     NotificationType Type,
     Guid ChatId,
     Guid? MessageId,
-    Guid? ActorId,
+    Guid? TriggeredByUserId,
     NotificationStatus Status,
     DateTime CreatedAt,
     DateTime? ReadAt);

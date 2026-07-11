@@ -23,4 +23,8 @@
     <ProjectReference Include="..\..\src\services\identity\TelegramLike.Identity.Domain\TelegramLike.Identity.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="TelegramLike.Domain.ServiceDefaults" />
+  </ItemGroup>
+
 </Project>

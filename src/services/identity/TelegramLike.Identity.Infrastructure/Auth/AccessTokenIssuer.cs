@@ -2,7 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
-using TelegramLike.Identity.Application.Common.Interfaces;
+using TelegramLike.Identity.Application.Security;
 
 namespace TelegramLike.Identity.Infrastructure.Auth;
 

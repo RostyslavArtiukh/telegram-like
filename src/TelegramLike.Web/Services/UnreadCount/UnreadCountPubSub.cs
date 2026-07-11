@@ -2,7 +2,10 @@ using System.Collections.Concurrent;
 
 namespace TelegramLike.Web.Services.UnreadCount;
 
-internal sealed class UnreadCountPubSub : IUnreadCountPubSub
+/// Notifies NavMenu (per-user) that unread count for the user changed —
+/// pushed by the Notifications service via RabbitMQ. NavMenu subscribes for
+/// the current authenticated user's id and refetches its badge.
+internal sealed class UnreadCountPubSub
 {
     private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, Func<Task>>> _subs = new();
 

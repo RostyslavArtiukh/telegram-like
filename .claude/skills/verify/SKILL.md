@@ -52,7 +52,7 @@ app live. Kill with `Stop-Process -Name TelegramLike.App`.
 For SDK or Realtime-service changes, drive the **package boundary** instead: a scratch
 console app referencing `src/client/TelegramLike.Client.csproj`, using
 `AddTelegramLikeClient(new Uri("http://localhost:8090"))` (the gateway). Flow:
-`session.RegisterAsync/LoginAsync` → `ITelegramLikeRealtimeClient.ConnectAsync` +
-`JoinChatAsync` → act over HTTP (`IChatsApi`/`IMessagingApi`/`IPresenceApi`) → assert
+`session.RegisterAsync/LoginAsync` → `TelegramLikeRealtimeClient.ConnectAsync` +
+`JoinChatAsync` → act over HTTP (`ChatsApiClient`/`MessagingApiClient`/`PresenceApiClient`) → assert
 hub pushes arrive (TaskCompletionSource + timeout). Probes that matter: anonymous hub
 connect must 401; after `LeaveChatAsync` chat-group pushes must stop.

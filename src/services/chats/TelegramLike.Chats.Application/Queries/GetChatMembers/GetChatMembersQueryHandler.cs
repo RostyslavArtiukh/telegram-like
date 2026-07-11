@@ -1,5 +1,5 @@
 using MediatR;
-using TelegramLike.Chats.Application.Common.Interfaces;
+using TelegramLike.Chats.Application.Queries;
 
 namespace TelegramLike.Chats.Application.Queries.GetChatMembers;
 

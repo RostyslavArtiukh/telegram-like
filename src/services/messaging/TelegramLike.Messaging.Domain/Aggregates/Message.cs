@@ -1,11 +1,11 @@
-using TelegramLike.Messaging.Domain.Common;
+using TelegramLike.Domain.ServiceDefaults;
 using TelegramLike.Messaging.Domain.Entities;
 using TelegramLike.Messaging.Domain.Events;
 using TelegramLike.Messaging.Domain.ValueObjects;
 
 namespace TelegramLike.Messaging.Domain.Aggregates;
 
-public sealed class Message : AggregateRoot
+public sealed class Message : ObjectWithEvents
 {
     public const int FreeUserReactionLimit = 1;
     public const int PremiumUserReactionLimit = 2;
@@ -65,7 +65,7 @@ public sealed class Message : AggregateRoot
         ForwardReference? forwardFrom = null,
         bool isBroadcast = false)
     {
-        // Caller-supplied id doubles as the idempotency key: a retried send reuses the
+        // Caller-supplied id doubles as the duplicate-protection key: a retried send reuses the
         // same id, so the unique _id insert dedupes it (see MessageRepository.AddAsync).
         if (messageId == Guid.Empty) throw new DomainException("MessageId cannot be empty.");
         if (chatId == Guid.Empty) throw new DomainException("ChatId cannot be empty.");
@@ -83,7 +83,7 @@ public sealed class Message : AggregateRoot
             DateTime.UtcNow,
             isBroadcast ? 0 : null);
 
-        message.RaiseDomainEvent(new MessageSentEvent(
+        message.RecordEvent(new MessageSentEvent(
             message.Id, chatId, authorId,
             replyTo?.ReplyToMessageId,
             forwardFrom?.OriginalMessageId,
@@ -92,7 +92,7 @@ public sealed class Message : AggregateRoot
         return message;
     }
 
-    public static Message Reconstitute(
+    public static Message FromStorage(
         Guid id,
         Guid chatId,
         Guid authorId,
@@ -119,7 +119,7 @@ public sealed class Message : AggregateRoot
 
         Status = MessageStatus.Retracted(retractedBy, DateTime.UtcNow);
         Content = MessageContent.Create("[retracted]");
-        RaiseDomainEvent(new MessageRetractedEvent(Id, ChatId, retractedBy));
+        RecordEvent(new MessageRetractedEvent(Id, ChatId, retractedBy));
     }
 
     public void AddReaction(Guid userId, Emoji emoji, bool isPremium)
@@ -137,7 +137,7 @@ public sealed class Message : AggregateRoot
                 $"User has reached the maximum number of reactions ({limit}) for this message.");
 
         _reactions.Add(Reaction.Add(userId, emoji));
-        RaiseDomainEvent(new ReactionAddedEvent(Id, ChatId, userId, emoji));
+        RecordEvent(new ReactionAddedEvent(Id, ChatId, userId, emoji));
     }
 
     public void RemoveReaction(Guid userId, Emoji emoji)
@@ -146,7 +146,7 @@ public sealed class Message : AggregateRoot
             ?? throw new DomainException("Reaction not found.");
 
         _reactions.Remove(reaction);
-        RaiseDomainEvent(new ReactionRemovedEvent(Id, ChatId, userId, emoji));
+        RecordEvent(new ReactionRemovedEvent(Id, ChatId, userId, emoji));
     }
 
     public void IncrementBroadcastReadCount()

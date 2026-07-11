@@ -12,16 +12,6 @@ public interface IIdentityAuthApi
     Task<SessionExchangeResult?> ExchangeAsync(string sessionToken, CancellationToken cancellationToken = default);
 }
 
-/// <summary>
-/// Authenticated Identity user queries — calls carry an Identity-issued access JWT.
-/// </summary>
-public interface IIdentityUsersApi
-{
-    Task<IdentityUser?> GetUserByIdAsync(Guid userId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyDictionary<Guid, string>> GetUsernamesByIdsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
-    Task<Guid?> GetUserIdByUsernameAsync(string username, CancellationToken cancellationToken = default);
-}
-
 public sealed record IdentityUser(
     Guid Id, string Email, string Username, string DisplayName, string? AvatarUrl, bool IsPremium, DateTime CreatedAt);
 

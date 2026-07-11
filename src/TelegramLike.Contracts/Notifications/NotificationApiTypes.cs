@@ -21,7 +21,7 @@ public sealed record NotificationApiDto(
     NotificationType Type,
     Guid ChatId,
     Guid? MessageId,
-    Guid? ActorId,
+    Guid? TriggeredByUserId,
     NotificationStatus Status,
     DateTime CreatedAt,
     DateTime? ReadAt);

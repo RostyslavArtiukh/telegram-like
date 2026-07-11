@@ -1,5 +1,6 @@
 # Memory Index — TelegramLike
 
+- [shared_projects_naming.md](shared_projects_naming.md) — Shared-проєкти по шарах + людський неймінг (мапа старе→нове: ObjectWithEvents/IChangeEvent/FromStorage/Storage/OutgoingEvents) + правило видалення одноразових інтерфейсів
 - [project_status.md](project_status.md) — ЗАСТАРІЛО (стан ~День 18); архітектура — у CLAUDE.md, прогрес — microservices_migration + quality_audit_done
 - [quality_audit_done.md](quality_audit_done.md) — Наскрізний аудит якості 9 агентами + фікси [TL-71..82] ЗРОБЛЕНО; що виправлено/відкладено, 156→343 тести
 - [chats_persistence.md](chats_persistence.md) — Дві колекції + MongoDB транзакція для агрегату Chat

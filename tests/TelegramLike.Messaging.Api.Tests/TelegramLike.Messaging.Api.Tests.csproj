@@ -27,4 +27,8 @@
     <ProjectReference Include="..\..\src\services\messaging\TelegramLike.Messaging.Api\TelegramLike.Messaging.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="TelegramLike.Domain.ServiceDefaults" />
+  </ItemGroup>
+
 </Project>

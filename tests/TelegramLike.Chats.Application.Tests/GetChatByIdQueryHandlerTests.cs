@@ -1,6 +1,5 @@
 using FluentAssertions;
 using NSubstitute;
-using TelegramLike.Chats.Application.Common.Interfaces;
 using TelegramLike.Chats.Application.Queries;
 using TelegramLike.Chats.Application.Queries.GetChatById;
 using TelegramLike.Chats.Domain.ValueObjects;

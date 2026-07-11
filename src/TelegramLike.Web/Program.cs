@@ -89,11 +89,11 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUserAccessor>();
 
-builder.Services.AddSingleton<ITypingPubSub, TypingPubSub>();
-builder.Services.AddSingleton<INewMessagePubSub, NewMessagePubSub>();
-builder.Services.AddSingleton<IUnreadCountPubSub, UnreadCountPubSub>();
-builder.Services.AddSingleton<IChatChangedPubSub, ChatChangedPubSub>();
-builder.Services.AddSingleton<IPresencePubSub, PresencePubSub>();
+builder.Services.AddSingleton<TypingPubSub>();
+builder.Services.AddSingleton<NewMessagePubSub>();
+builder.Services.AddSingleton<UnreadCountPubSub>();
+builder.Services.AddSingleton<ChatChangedPubSub>();
+builder.Services.AddSingleton<PresencePubSub>();
 
 // The monolith is gone — the Web BFF now hosts its own MassTransit bus purely so the
 // real-time pubsub consumers (typing, new-message, chat-changed, presence,

@@ -11,7 +11,7 @@ internal sealed class IdentityAuthApiClient(HttpClient http) : IIdentityAuthApi
     public async Task<Guid> RegisterAsync(
         string email, string username, string displayName, string password, CancellationToken cancellationToken = default)
     {
-        // Client-generated id doubles as the idempotency key: the Idempotency-Key header
+        // Client-generated id doubles as the duplicate-protection key: the Idempotency-Key header
         // lets the resilience pipeline retry this POST, and Identity returns the same id
         // for a retry instead of a spurious "email already taken".
         var userId = Guid.NewGuid();

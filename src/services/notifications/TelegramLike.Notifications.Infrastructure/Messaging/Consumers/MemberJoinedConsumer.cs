@@ -12,7 +12,7 @@ internal sealed class MemberJoinedConsumer(IMediator mediator) : IConsumer<Membe
         mediator.Send(
             new FanoutChatNotificationCommand(
                 ChatId: context.Message.ChatId,
-                ActorId: context.Message.UserId,
+                TriggeredByUserId: context.Message.UserId,
                 Type: NotificationType.MemberJoined,
                 Recipients: context.Message.Recipients,
                 SourceEventId: context.Message.EventId),

@@ -24,4 +24,8 @@
     <InternalsVisibleTo Include="TelegramLike.Identity.Infrastructure.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../../shared/TelegramLike.Infrastructure.ServiceDefaults/TelegramLike.Infrastructure.ServiceDefaults.csproj" />
+  </ItemGroup>
+
 </Project>

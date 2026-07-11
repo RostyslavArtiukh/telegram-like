@@ -52,7 +52,7 @@ public sealed class MessagesController(IMediator mediator) : ApiControllerBase
     public async Task<IActionResult> Retract(
         Guid messageId, [FromBody] RetractMessageRequest body, CancellationToken cancellationToken)
     {
-        await mediator.Send(new RetractMessageCommand(messageId, CurrentUserId, body.ActorIsModerator), cancellationToken);
+        await mediator.Send(new RetractMessageCommand(messageId, CurrentUserId, body.RetractedByModerator), cancellationToken);
         return NoContent();
     }
 

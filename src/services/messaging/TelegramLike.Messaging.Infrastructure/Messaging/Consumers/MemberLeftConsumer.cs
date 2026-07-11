@@ -1,6 +1,6 @@
 using MassTransit;
 using TelegramLike.Contracts.Chats;
-using TelegramLike.Messaging.Application.Common.Interfaces;
+using TelegramLike.Messaging.Application.Storage;
 
 namespace TelegramLike.Messaging.Infrastructure.Messaging.Consumers;
 

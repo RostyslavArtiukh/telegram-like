@@ -2,7 +2,10 @@ using System.Collections.Concurrent;
 
 namespace TelegramLike.Web.Services.NewMessage;
 
-internal sealed class NewMessagePubSub : INewMessagePubSub
+/// Bridges MessageSentIntegrationEvent (RabbitMQ) to Blazor Server circuits.
+/// ChatView subscribes per ChatId and reloads its message list when notified —
+/// replaces the previous 3-second polling.
+internal sealed class NewMessagePubSub
 {
     private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, Func<Guid, Task>>> _subs = new();
 

@@ -2,7 +2,7 @@ using FluentAssertions;
 using MassTransit;
 using NSubstitute;
 using TelegramLike.Contracts.Presence;
-using TelegramLike.Presence.Application.Abstractions;
+using TelegramLike.Presence.Application.Storage;
 using TelegramLike.Presence.Application.Commands.GoOffline;
 using TelegramLike.Presence.Domain.Aggregates;
 using TelegramLike.Presence.Domain.Repositories;
