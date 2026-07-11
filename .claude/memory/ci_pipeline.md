@@ -14,6 +14,6 @@ metadata:
 
 **Green baseline:** 140 tests / 9 test projects.
 
-**Known non-blocking annotations:** Node-20 deprecation on `actions/*` (auto-run on Node 24; wait for action updates); Testcontainers obsolete-ctor warnings (`MongoDbBuilder()`/`RedisBuilder()` in Presence.Infrastructure.Tests fixtures) — trivial fix, not yet done.
+**Known non-blocking annotations:** Node-20 deprecation on `actions/*` (auto-run on Node 24; wait for action updates); Testcontainers obsolete-ctor warnings — виправлено ([TL-95] прибрав останній у Notifications MongoFixture); build тепер 0 warnings.
 
 **Next planned (this track):** optional fast/Docker job split (TL-53, low value while run is ~90s), then BFF resilience via `Microsoft.Extensions.Http.Resilience` (TL-54). See [[microservices-migration]].

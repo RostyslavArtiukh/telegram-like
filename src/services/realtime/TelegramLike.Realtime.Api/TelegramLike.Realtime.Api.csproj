@@ -5,7 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="TelegramLike.Realtime.Api.Tests" />
+    <InternalsVisibleTo Include="TelegramLike.Realtime.Tests" />
   </ItemGroup>
 
   <ItemGroup>

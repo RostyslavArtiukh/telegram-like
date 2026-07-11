@@ -11,7 +11,7 @@ public class TelegramLikeSessionTests
         => new(userId, username, $"{username}@example.com", accessToken, expiresIn);
 
     [Fact]
-    public async Task LoginAsync_StoresSessionToken_AndEagerlyExchanges()
+    public async Task LoginAsync_stores_session_token_and_eagerly_exchanges()
     {
         var userId = Guid.NewGuid();
         var identityAuth = Substitute.For<IIdentityAuthApi>();
@@ -31,7 +31,7 @@ public class TelegramLikeSessionTests
     }
 
     [Fact]
-    public async Task LoginAsync_WhenExchangeFails_ThrowsAndClearsStoredToken()
+    public async Task LoginAsync_when_exchange_fails_throws_and_clears_stored_token()
     {
         var identityAuth = Substitute.For<IIdentityAuthApi>();
         identityAuth.LoginAsync("a@b.com", "pw", Arg.Any<CancellationToken>()).Returns("session-token-2");
@@ -49,7 +49,7 @@ public class TelegramLikeSessionTests
     }
 
     [Fact]
-    public async Task GetAccessTokenAsync_WhenNoSessionToken_ReturnsNullWithoutCallingExchange()
+    public async Task GetAccessTokenAsync_with_no_session_token_returns_null_without_calling_exchange()
     {
         var identityAuth = Substitute.For<IIdentityAuthApi>();
         var session = new TelegramLikeSession(identityAuth, new InMemorySessionStore());
@@ -61,7 +61,7 @@ public class TelegramLikeSessionTests
     }
 
     [Fact]
-    public async Task GetAccessTokenAsync_WhenExchangeReturnsNull_ClearsStoredTokenAndReturnsNull()
+    public async Task GetAccessTokenAsync_when_exchange_returns_null_clears_stored_token_and_returns_null()
     {
         var identityAuth = Substitute.For<IIdentityAuthApi>();
         identityAuth.ExchangeAsync("stale-token", Arg.Any<CancellationToken>())
@@ -78,7 +78,7 @@ public class TelegramLikeSessionTests
     }
 
     [Fact]
-    public async Task GetAccessTokenAsync_CachesAcrossConcurrentCalls_ExchangesOnlyOnce()
+    public async Task GetAccessTokenAsync_caches_across_concurrent_calls_and_exchanges_only_once()
     {
         var userId = Guid.NewGuid();
         var identityAuth = Substitute.For<IIdentityAuthApi>();
@@ -105,7 +105,7 @@ public class TelegramLikeSessionTests
     }
 
     [Fact]
-    public async Task LogoutAsync_ClearsStoredTokenAndCachedAccessToken()
+    public async Task LogoutAsync_clears_stored_token_and_cached_access_token()
     {
         var userId = Guid.NewGuid();
         var identityAuth = Substitute.For<IIdentityAuthApi>();
@@ -130,7 +130,7 @@ public class TelegramLikeSessionTests
     }
 
     [Fact]
-    public async Task IsAuthenticatedAsync_ReflectsWhetherASessionTokenIsStored()
+    public async Task IsAuthenticatedAsync_reflects_whether_a_session_token_is_stored()
     {
         var identityAuth = Substitute.For<IIdentityAuthApi>();
         identityAuth.LoginAsync("a@b.com", "pw", Arg.Any<CancellationToken>()).Returns("session-token-4");

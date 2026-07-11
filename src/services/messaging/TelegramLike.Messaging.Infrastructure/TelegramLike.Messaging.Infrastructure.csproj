@@ -5,7 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="TelegramLike.Messaging.Infrastructure.Tests" />
+    <InternalsVisibleTo Include="TelegramLike.Messaging.Tests" />
   </ItemGroup>
 
   <ItemGroup>

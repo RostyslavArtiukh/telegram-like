@@ -20,7 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="TelegramLike.Notifications.Infrastructure.Tests" />
+    <InternalsVisibleTo Include="TelegramLike.Notifications.Tests" />
   </ItemGroup>
 
   <ItemGroup>

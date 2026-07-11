@@ -21,7 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="TelegramLike.Identity.Infrastructure.Tests" />
+    <InternalsVisibleTo Include="TelegramLike.Identity.Tests" />
   </ItemGroup>
 
   <ItemGroup>
