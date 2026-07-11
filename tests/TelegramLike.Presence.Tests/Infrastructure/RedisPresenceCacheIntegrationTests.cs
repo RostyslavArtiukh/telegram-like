@@ -10,7 +10,7 @@ public class RedisPresenceCacheIntegrationTests(RedisFixture fx)
     private RedisPresenceCache NewCache(TimeSpan ttl) => new(fx.Redis, ttl);
 
     [Fact]
-    public async Task Touch_then_IsOnline_returns_true()
+    public async Task Touch_ThenIsOnline_ReturnsTrue()
     {
         var cache = NewCache(TimeSpan.FromSeconds(30));
         var userId = Guid.NewGuid();
@@ -21,7 +21,7 @@ public class RedisPresenceCacheIntegrationTests(RedisFixture fx)
     }
 
     [Fact]
-    public async Task Clear_removes_presence_key()
+    public async Task Clear_RemovesPresenceKey()
     {
         var cache = NewCache(TimeSpan.FromSeconds(30));
         var userId = Guid.NewGuid();
@@ -33,7 +33,7 @@ public class RedisPresenceCacheIntegrationTests(RedisFixture fx)
     }
 
     [Fact]
-    public async Task Touch_expires_after_ttl()
+    public async Task Touch_ExpiresAfterTtl()
     {
         var cache = NewCache(TimeSpan.FromMilliseconds(500));
         var userId = Guid.NewGuid();
@@ -46,7 +46,7 @@ public class RedisPresenceCacheIntegrationTests(RedisFixture fx)
     }
 
     [Fact]
-    public async Task AreOnline_returns_status_per_id_with_correct_alignment()
+    public async Task AreOnline_ReturnsStatusPerIdWithCorrectAlignment()
     {
         var cache = NewCache(TimeSpan.FromSeconds(30));
         var online = Guid.NewGuid();

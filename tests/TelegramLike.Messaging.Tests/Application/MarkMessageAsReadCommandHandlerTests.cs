@@ -23,7 +23,7 @@ public class MarkMessageAsReadCommandHandlerTests
         => Message.Send(Guid.NewGuid(), chatId, authorId, MessageContent.Create("hi"), [authorId], isBroadcast: isBroadcast);
 
     [Fact]
-    public async Task Self_read_is_a_noop()
+    public async Task MarkAsRead_SelfRead_IsNoop()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -38,7 +38,7 @@ public class MarkMessageAsReadCommandHandlerTests
     }
 
     [Fact]
-    public async Task Broadcast_read_increments_count_only_when_receipt_is_newly_created()
+    public async Task MarkAsRead_BroadcastRead_IncrementsCountOnlyWhenReceiptIsNew()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -55,7 +55,7 @@ public class MarkMessageAsReadCommandHandlerTests
     }
 
     [Fact]
-    public async Task Broadcast_repeat_read_does_not_increment_count_again()
+    public async Task MarkAsRead_BroadcastRepeatRead_DoesNotIncrementAgain()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -72,7 +72,7 @@ public class MarkMessageAsReadCommandHandlerTests
     }
 
     [Fact]
-    public async Task Non_broadcast_read_never_touches_broadcast_count()
+    public async Task MarkAsRead_NonBroadcastRead_NeverTouchesBroadcastCount()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -89,7 +89,7 @@ public class MarkMessageAsReadCommandHandlerTests
     }
 
     [Fact]
-    public async Task Nonexistent_message_throws()
+    public async Task MarkAsRead_NonexistentMessage_Throws()
     {
         _messageRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Message?)null);
 
@@ -100,7 +100,7 @@ public class MarkMessageAsReadCommandHandlerTests
     }
 
     [Fact]
-    public async Task Non_member_reader_still_gets_a_receipt_marked_fail_open()
+    public async Task MarkAsRead_NonMemberReader_StillGetsReceiptFailOpen()
     {
         // AddReaction/RemoveReaction/MarkMessageAsRead currently fail-open on membership
         // (log-only) — documenting current behavior per the messaging CLAUDE.md.

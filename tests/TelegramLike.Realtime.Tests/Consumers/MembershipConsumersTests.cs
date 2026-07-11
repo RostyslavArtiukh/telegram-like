@@ -14,7 +14,7 @@ namespace TelegramLike.Realtime.Tests.Consumers;
 public class MembershipConsumersTests
 {
     [Fact]
-    public async Task MemberJoinedMembershipConsumer_adds_the_user_to_the_tracker()
+    public async Task MemberJoinedMembershipConsumer_AddsUserToTracker()
     {
         var tracker = new ChatMembershipTracker();
         var chatId = Guid.NewGuid();
@@ -28,7 +28,7 @@ public class MembershipConsumersTests
     }
 
     [Fact]
-    public async Task MemberLeftMembershipConsumer_removes_the_user_from_the_tracker()
+    public async Task MemberLeftMembershipConsumer_RemovesUserFromTracker()
     {
         var tracker = new ChatMembershipTracker();
         var chatId = Guid.NewGuid();
@@ -43,7 +43,7 @@ public class MembershipConsumersTests
     }
 
     [Fact]
-    public async Task MemberKickedMembershipConsumer_removes_the_user_from_the_tracker()
+    public async Task MemberKickedMembershipConsumer_RemovesUserFromTracker()
     {
         var tracker = new ChatMembershipTracker();
         var chatId = Guid.NewGuid();
@@ -58,7 +58,7 @@ public class MembershipConsumersTests
     }
 
     [Fact]
-    public async Task Duplicate_MemberJoined_delivery_is_idempotent()
+    public async Task MemberJoinedMembershipConsumer_DuplicateDelivery_IsIdempotent()
     {
         var tracker = new ChatMembershipTracker();
         var chatId = Guid.NewGuid();

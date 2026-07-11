@@ -17,7 +17,7 @@ public class GetMessageByIdQueryHandlerTests
         messageId, chatId, Guid.NewGuid(), "hi", [], null, null, null, [], false, null, null, null, DateTime.UtcNow);
 
     [Fact]
-    public async Task Nonexistent_message_returns_null()
+    public async Task GetMessageById_NonexistentMessage_ReturnsNull()
     {
         var requesterId = Guid.NewGuid();
         _queryService.GetMessageByIdAsync(Arg.Any<Guid>(), requesterId, Arg.Any<CancellationToken>())
@@ -29,7 +29,7 @@ public class GetMessageByIdQueryHandlerTests
     }
 
     [Fact]
-    public async Task Non_member_of_a_known_chat_gets_null_not_403()
+    public async Task GetMessageById_NonMemberOfKnownChat_ReturnsNullNot403()
     {
         var chatId = Guid.NewGuid();
         var messageId = Guid.NewGuid();
@@ -45,7 +45,7 @@ public class GetMessageByIdQueryHandlerTests
     }
 
     [Fact]
-    public async Task Member_of_a_known_chat_gets_the_message()
+    public async Task GetMessageById_MemberOfKnownChat_ReturnsMessage()
     {
         var chatId = Guid.NewGuid();
         var messageId = Guid.NewGuid();
@@ -61,7 +61,7 @@ public class GetMessageByIdQueryHandlerTests
     }
 
     [Fact]
-    public async Task Unknown_chat_falls_through_and_returns_message()
+    public async Task GetMessageById_UnknownChat_FallsThroughAndReturnsMessage()
     {
         var chatId = Guid.NewGuid();
         var messageId = Guid.NewGuid();

@@ -17,7 +17,7 @@ public class MessageRepositoryIntegrationTests(MongoFixture fx)
         => Message.Send(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), MessageContent.Create("hi"), [Guid.NewGuid()], isBroadcast: isBroadcast);
 
     [Fact]
-    public async Task Add_then_GetById_round_trips_the_message()
+    public async Task Add_ThenGetById_RoundTripsMessage()
     {
         var repo = NewRepository();
         var message = NewMessage();
@@ -33,7 +33,7 @@ public class MessageRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task GetById_for_unknown_id_returns_null()
+    public async Task GetById_UnknownId_ReturnsNull()
     {
         var repo = NewRepository();
 
@@ -43,7 +43,7 @@ public class MessageRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task Add_with_duplicate_message_id_is_swallowed_idempotently()
+    public async Task Add_WithDuplicateMessageId_IsSwallowedIdempotently()
     {
         var repo = NewRepository();
         var messageId = Guid.NewGuid();
@@ -64,7 +64,7 @@ public class MessageRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task Concurrent_loads_both_mutate_second_UpdateAsync_throws_ConcurrencyConflictException()
+    public async Task UpdateAsync_ConcurrentMutations_SecondThrowsConcurrencyConflictException()
     {
         var repo = NewRepository();
         var message = NewMessage();
@@ -86,7 +86,7 @@ public class MessageRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task UpdateAsync_after_conflict_can_be_retried_by_reloading()
+    public async Task UpdateAsync_AfterConflict_CanBeRetriedByReloading()
     {
         var repo = NewRepository();
         var message = NewMessage();
@@ -107,7 +107,7 @@ public class MessageRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task IncrementBroadcastReadCountAsync_accumulates_atomically()
+    public async Task IncrementBroadcastReadCountAsync_AccumulatesAtomically()
     {
         var repo = NewRepository();
         var message = NewMessage(isBroadcast: true);

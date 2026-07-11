@@ -10,7 +10,7 @@ namespace TelegramLike.Realtime.Tests.Consumers;
 public class PresenceConsumersTests
 {
     [Fact]
-    public async Task UserTypingConsumer_sends_only_to_chat_group()
+    public async Task UserTypingConsumer_SendsOnlyToChatGroup()
     {
         var chatId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -32,7 +32,7 @@ public class PresenceConsumersTests
     }
 
     [Fact]
-    public async Task UserCameOnlineConsumer_broadcasts_to_all_clients()
+    public async Task UserCameOnlineConsumer_BroadcastsToAllClients()
     {
         var userId = Guid.NewGuid();
         var evt = new UserCameOnlineIntegrationEvent(Guid.NewGuid(), DateTime.UtcNow, userId);
@@ -52,7 +52,7 @@ public class PresenceConsumersTests
     }
 
     [Fact]
-    public async Task UserWentOfflineConsumer_broadcasts_to_all_clients()
+    public async Task UserWentOfflineConsumer_BroadcastsToAllClients()
     {
         var userId = Guid.NewGuid();
         var evt = new UserWentOfflineIntegrationEvent(Guid.NewGuid(), DateTime.UtcNow, userId);

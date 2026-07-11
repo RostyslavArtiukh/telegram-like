@@ -35,7 +35,7 @@ public sealed class MessagingEnumSerializationTests(MessagingApiFactory factory)
     // ── GET /messages/{id} response serializes Emoji as name ──────────────
 
     [Fact]
-    public async Task GetMessageById_ReactionEmoji_serializes_as_name()
+    public async Task GetMessageById_ReactionEmoji_SerializesAsName()
     {
         var reactionDto = new ReactionDto(SomeUserId, Emoji.Heart, DateTime.UtcNow);
         var messageDto = new MessageDto(
@@ -66,7 +66,7 @@ public sealed class MessagingEnumSerializationTests(MessagingApiFactory factory)
     // ── GET /messages/{id} response serializes AttachmentType as name ─────
 
     [Fact]
-    public async Task GetMessageById_AttachmentType_serializes_as_name()
+    public async Task GetMessageById_AttachmentType_SerializesAsName()
     {
         var attachmentDto = new AttachmentDto(AttachmentType.Video, "https://example.com/v.mp4", 9876, "v.mp4");
         var messageDto = new MessageDto(
@@ -96,7 +96,7 @@ public sealed class MessagingEnumSerializationTests(MessagingApiFactory factory)
     // ── POST /messages: sending AttachmentType as string name binds correctly
 
     [Fact]
-    public async Task SendMessage_AttachmentType_binds_from_string_name()
+    public async Task SendMessage_AttachmentType_StringName_Binds()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
@@ -126,7 +126,7 @@ public sealed class MessagingEnumSerializationTests(MessagingApiFactory factory)
     // ── POST /messages/reactions: sending Emoji as string name binds correctly
 
     [Fact]
-    public async Task AddReaction_Emoji_binds_from_string_name()
+    public async Task AddReaction_EmojiStringName_Binds()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -145,7 +145,7 @@ public sealed class MessagingEnumSerializationTests(MessagingApiFactory factory)
     // ── GET /messages/{id} response body property names are camelCase ──────
 
     [Fact]
-    public async Task GetMessageById_response_body_has_camelCase_property_names()
+    public async Task GetMessageById_ResponseBody_HasCamelCasePropertyNames()
     {
         var messageDto = new MessageDto(
             SomeMessageId, SomeChatId, SomeUserId, "hello",
@@ -170,7 +170,7 @@ public sealed class MessagingEnumSerializationTests(MessagingApiFactory factory)
     // ── POST /messages: Created response body has messageId property ───────
 
     [Fact]
-    public async Task SendMessage_created_body_has_MessageId()
+    public async Task SendMessage_CreatedBody_HasMessageId()
     {
         var newId = Guid.NewGuid();
         factory.Mediator

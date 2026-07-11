@@ -17,7 +17,7 @@ public class RegisterUserCommandHandlerTests
     private RegisterUserCommandHandler Handler => new(_userRepository, _passwordHasher);
 
     [Fact]
-    public async Task Idempotent_retry_with_an_existing_user_id_returns_that_id_without_uniqueness_checks()
+    public async Task Register_RetryWithExistingUserId_ReturnsIdWithoutUniquenessChecks()
     {
         var existingId = Guid.NewGuid();
         var existing = User.Register(existingId, "a@b.com", "someuser", "Some User", "hash");
@@ -33,7 +33,7 @@ public class RegisterUserCommandHandlerTests
     }
 
     [Fact]
-    public async Task Duplicate_email_throws()
+    public async Task Register_DuplicateEmail_Throws()
     {
         _userRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((User?)null);
         _userRepository.ExistsByEmailAsync(Arg.Any<Email>(), Arg.Any<CancellationToken>()).Returns(true);
@@ -46,7 +46,7 @@ public class RegisterUserCommandHandlerTests
     }
 
     [Fact]
-    public async Task Duplicate_username_throws()
+    public async Task Register_DuplicateUsername_Throws()
     {
         _userRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((User?)null);
         _userRepository.ExistsByEmailAsync(Arg.Any<Email>(), Arg.Any<CancellationToken>()).Returns(false);
@@ -60,7 +60,7 @@ public class RegisterUserCommandHandlerTests
     }
 
     [Fact]
-    public async Task Fresh_registration_hashes_password_and_persists_the_user()
+    public async Task Register_FreshRegistration_HashesPasswordAndPersistsUser()
     {
         _userRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((User?)null);
         _userRepository.ExistsByEmailAsync(Arg.Any<Email>(), Arg.Any<CancellationToken>()).Returns(false);
@@ -81,7 +81,7 @@ public class RegisterUserCommandHandlerTests
     }
 
     [Fact]
-    public async Task Empty_UserId_mints_a_new_one()
+    public async Task Register_EmptyUserId_MintsNewOne()
     {
         _userRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((User?)null);
         _userRepository.ExistsByEmailAsync(Arg.Any<Email>(), Arg.Any<CancellationToken>()).Returns(false);

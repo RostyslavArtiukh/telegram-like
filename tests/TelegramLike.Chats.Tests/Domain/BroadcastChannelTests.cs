@@ -10,7 +10,7 @@ public class BroadcastChannelTests
     private static ChatName Name(string s = "Channel") => ChatName.Create(s);
 
     [Fact]
-    public void Create_adds_creator_as_owner()
+    public void Create_AddsCreatorAsOwner()
     {
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
@@ -20,7 +20,7 @@ public class BroadcastChannelTests
     }
 
     [Fact]
-    public void Join_defaults_new_member_to_Viewer_role()
+    public void Join_NewMember_DefaultsToViewerRole()
     {
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), Guid.NewGuid());
         var userId = Guid.NewGuid();
@@ -32,7 +32,7 @@ public class BroadcastChannelTests
     }
 
     [Fact]
-    public void Join_after_being_kicked_re_adds_as_a_fresh_Viewer()
+    public void Join_AfterBeingKicked_ReAddsAsFreshViewer()
     {
         // BroadcastChannel has no Ban (unlike GroupChat); a kicked member's row is
         // replaced on rejoin rather than permanently blocked.
@@ -48,7 +48,7 @@ public class BroadcastChannelTests
     }
 
     [Fact]
-    public void PromoteToAdmin_by_non_owner_throws()
+    public void PromoteToAdmin_ByNonOwner_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
@@ -63,7 +63,7 @@ public class BroadcastChannelTests
     }
 
     [Fact]
-    public void PromoteToAdmin_the_owner_throws()
+    public void PromoteToAdmin_OnOwner_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
@@ -74,7 +74,7 @@ public class BroadcastChannelTests
     }
 
     [Fact]
-    public void PromoteToAdmin_raises_MemberRoleChangedEvent()
+    public void PromoteToAdmin_RaisesMemberRoleChangedEvent()
     {
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
@@ -90,7 +90,7 @@ public class BroadcastChannelTests
     }
 
     [Fact]
-    public void DemoteToViewer_the_owner_throws()
+    public void DemoteToViewer_OnOwner_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
@@ -101,7 +101,7 @@ public class BroadcastChannelTests
     }
 
     [Fact]
-    public void DemoteToViewer_by_non_owner_throws()
+    public void DemoteToViewer_ByNonOwner_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
@@ -115,7 +115,7 @@ public class BroadcastChannelTests
     }
 
     [Fact]
-    public void DemoteToViewer_raises_MemberRoleChangedEvent()
+    public void DemoteToViewer_RaisesMemberRoleChangedEvent()
     {
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
@@ -132,7 +132,7 @@ public class BroadcastChannelTests
     }
 
     [Fact]
-    public void Kick_hierarchy_matches_group_chat_only_owner_can_kick_admin()
+    public void Kick_AdminTarget_OnlyOwnerSucceeds()
     {
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
@@ -149,7 +149,7 @@ public class BroadcastChannelTests
     }
 
     [Fact]
-    public void TransferOwnership_swaps_roles_and_raises_events_for_both_members()
+    public void TransferOwnership_SwapsRolesAndRaisesEventsForBothMembers()
     {
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
@@ -167,7 +167,7 @@ public class BroadcastChannelTests
     }
 
     [Fact]
-    public void Leave_by_owner_throws()
+    public void Leave_ByOwner_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);

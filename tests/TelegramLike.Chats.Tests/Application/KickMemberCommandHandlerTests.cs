@@ -14,7 +14,7 @@ public class KickMemberCommandHandlerTests
     private KickMemberCommandHandler Handler => new(_repo);
 
     [Fact]
-    public async Task Owner_kicks_a_member_and_persists()
+    public async Task KickMember_ByOwner_RemovesMemberAndPersists()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), ChatName.Create("g"), ownerId);
@@ -29,7 +29,7 @@ public class KickMemberCommandHandlerTests
     }
 
     [Fact]
-    public async Task Regular_member_cannot_kick()
+    public async Task KickMember_ByRegularMember_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), ChatName.Create("g"), ownerId);
@@ -46,7 +46,7 @@ public class KickMemberCommandHandlerTests
     }
 
     [Fact]
-    public async Task Nonexistent_chat_throws()
+    public async Task KickMember_WhenChatNotFound_Throws()
     {
         _repo.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Chat?)null);
 

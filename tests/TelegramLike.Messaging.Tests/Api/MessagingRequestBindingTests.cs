@@ -38,7 +38,7 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
     // ── SendMessage: BFF-enriched recipients + isBroadcast ────────────────
 
     [Fact]
-    public async Task SendMessage_binds_BFF_enriched_Recipients()
+    public async Task SendMessage_BindsBffEnrichedRecipients()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
@@ -68,7 +68,7 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
     // ── SendMessage: AttachmentType binds as enum name string ─────────────
 
     [Fact]
-    public async Task SendMessage_AttachmentType_binds_as_enum_name()
+    public async Task SendMessage_AttachmentType_BindsAsEnumName()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
@@ -101,7 +101,7 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
     // ── AddReaction: Emoji binds as enum name string, userIsPremium binds ─
 
     [Fact]
-    public async Task AddReaction_binds_Emoji_and_UserIsPremium()
+    public async Task AddReaction_BindsEmojiAndUserIsPremium()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -123,7 +123,7 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
     // ── RemoveReaction: emoji name in route segment reaches mediator ───────
 
     [Fact]
-    public async Task RemoveReaction_valid_Emoji_binds_enum()
+    public async Task RemoveReaction_ValidEmoji_BindsEnum()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -142,7 +142,7 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
     // ── RetractMessage: retractedByModerator (BFF-enriched) binds ─────────────
 
     [Fact]
-    public async Task Retract_binds_RetractedByModerator()
+    public async Task Retract_BindsRetractedByModerator()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -162,7 +162,7 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
     // ── MarkAsRead: isBroadcast (BFF-enriched) binds ──────────────────────
 
     [Fact]
-    public async Task MarkAsRead_binds_IsBroadcast()
+    public async Task MarkAsRead_BindsIsBroadcast()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -182,7 +182,7 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
     // ── HideMessage: binds messageId from route + actor from JWT ──────────
 
     [Fact]
-    public async Task HideMessage_binds_MessageId_and_actor()
+    public async Task HideMessage_BindsMessageIdAndActor()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())

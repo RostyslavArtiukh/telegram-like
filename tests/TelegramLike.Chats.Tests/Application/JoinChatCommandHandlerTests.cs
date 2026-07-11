@@ -14,7 +14,7 @@ public class JoinChatCommandHandlerTests
     private JoinChatCommandHandler Handler => new(_repo);
 
     [Fact]
-    public async Task Nonexistent_chat_throws()
+    public async Task JoinChat_WhenChatNotFound_Throws()
     {
         _repo.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Chat?)null);
 
@@ -24,7 +24,7 @@ public class JoinChatCommandHandlerTests
     }
 
     [Fact]
-    public async Task Join_a_group_chat_adds_the_user_as_Member_and_persists()
+    public async Task JoinChat_GroupChat_AddsUserAsMemberAndPersists()
     {
         var chat = GroupChat.Create(Guid.NewGuid(), ChatName.Create("g"), Guid.NewGuid());
         var userId = Guid.NewGuid();
@@ -37,7 +37,7 @@ public class JoinChatCommandHandlerTests
     }
 
     [Fact]
-    public async Task Join_a_direct_chat_throws()
+    public async Task JoinChat_DirectChat_Throws()
     {
         var chat = DirectChat.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         _repo.GetByIdAsync(chat.Id, Arg.Any<CancellationToken>()).Returns(chat);

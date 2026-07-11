@@ -8,7 +8,7 @@ public class ChatMembershipTrackerTests
     private static ChatMembershipTracker NewTracker() => new();
 
     [Fact]
-    public void Unknown_chat_is_not_known_and_has_no_members()
+    public void UnknownChat_IsNotKnownAndHasNoMembers()
     {
         var tracker = NewTracker();
 
@@ -17,7 +17,7 @@ public class ChatMembershipTrackerTests
     }
 
     [Fact]
-    public void Join_makes_the_chat_known_and_the_user_a_member()
+    public void Join_MakesChatKnownAndUserAMember()
     {
         var tracker = NewTracker();
         var chatId = Guid.NewGuid();
@@ -30,7 +30,7 @@ public class ChatMembershipTrackerTests
     }
 
     [Fact]
-    public void Join_does_not_make_other_users_members_of_the_same_chat()
+    public void Join_DoesNotMakeOtherUsersMembers()
     {
         var tracker = NewTracker();
         var chatId = Guid.NewGuid();
@@ -40,7 +40,7 @@ public class ChatMembershipTrackerTests
     }
 
     [Fact]
-    public void Duplicate_Join_is_idempotent()
+    public void Join_Duplicate_IsIdempotent()
     {
         var tracker = NewTracker();
         var chatId = Guid.NewGuid();
@@ -53,7 +53,7 @@ public class ChatMembershipTrackerTests
     }
 
     [Fact]
-    public void Leave_removes_membership_but_the_chat_stays_known()
+    public void Leave_RemovesMembershipButChatStaysKnown()
     {
         var tracker = NewTracker();
         var chatId = Guid.NewGuid();
@@ -67,7 +67,7 @@ public class ChatMembershipTrackerTests
     }
 
     [Fact]
-    public void Leave_on_an_unknown_chat_does_not_throw()
+    public void Leave_OnUnknownChat_DoesNotThrow()
     {
         var tracker = NewTracker();
 
@@ -77,7 +77,7 @@ public class ChatMembershipTrackerTests
     }
 
     [Fact]
-    public void Leave_for_a_user_who_never_joined_is_a_noop()
+    public void Leave_UserWhoNeverJoined_IsNoop()
     {
         var tracker = NewTracker();
         var chatId = Guid.NewGuid();
@@ -89,7 +89,7 @@ public class ChatMembershipTrackerTests
     }
 
     [Fact]
-    public void Different_chats_are_isolated()
+    public void DifferentChats_AreIsolated()
     {
         var tracker = NewTracker();
         var userId = Guid.NewGuid();
@@ -104,7 +104,7 @@ public class ChatMembershipTrackerTests
     }
 
     [Fact]
-    public void Rejoin_after_leave_restores_membership()
+    public void Rejoin_AfterLeave_RestoresMembership()
     {
         var tracker = NewTracker();
         var chatId = Guid.NewGuid();

@@ -10,7 +10,7 @@ public class RedisTypingIndicatorIntegrationTests(RedisFixture fx)
     private RedisTypingIndicatorService NewService(TimeSpan ttl) => new(fx.Redis, ttl);
 
     [Fact]
-    public async Task StartTyping_then_GetTypingUserIds_returns_user()
+    public async Task StartTyping_ThenGetTypingUserIds_ReturnsUser()
     {
         var svc = NewService(TimeSpan.FromSeconds(5));
         var chat = Guid.NewGuid();
@@ -22,7 +22,7 @@ public class RedisTypingIndicatorIntegrationTests(RedisFixture fx)
     }
 
     [Fact]
-    public async Task StopTyping_removes_user_from_set()
+    public async Task StopTyping_RemovesUserFromSet()
     {
         var svc = NewService(TimeSpan.FromSeconds(5));
         var chat = Guid.NewGuid();
@@ -35,7 +35,7 @@ public class RedisTypingIndicatorIntegrationTests(RedisFixture fx)
     }
 
     [Fact]
-    public async Task GetTypingUserIds_isolates_by_chat()
+    public async Task GetTypingUserIds_IsolatesByChat()
     {
         var svc = NewService(TimeSpan.FromSeconds(5));
         var chatA = Guid.NewGuid();

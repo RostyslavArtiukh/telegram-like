@@ -17,7 +17,7 @@ public class StartTypingCommandHandlerTests
     private StartTypingCommandHandler Handler => new(_typing, _membership, _publish, NullLogger<StartTypingCommandHandler>.Instance);
 
     [Fact]
-    public async Task Active_member_starts_typing_and_publishes_event()
+    public async Task StartTyping_ActiveMember_PublishesEvent()
     {
         var chatId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -32,7 +32,7 @@ public class StartTypingCommandHandlerTests
     }
 
     [Fact]
-    public async Task Non_member_is_allowed_through_fail_open_until_read_model_backfilled()
+    public async Task StartTyping_NonMember_IsAllowedThroughFailOpen()
     {
         // Until the read model is fully populated for legacy chats we keep
         // letting unknown pairs through (the handler logs a warning). Lock this

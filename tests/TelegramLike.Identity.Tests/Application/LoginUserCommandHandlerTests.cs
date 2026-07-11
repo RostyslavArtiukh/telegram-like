@@ -20,7 +20,7 @@ public class LoginUserCommandHandlerTests
         => User.Register(Guid.NewGuid(), email, "someuser", "Some User", password);
 
     [Fact]
-    public async Task Unknown_email_throws_generic_invalid_credentials()
+    public async Task Login_UnknownEmail_ThrowsGenericInvalidCredentials()
     {
         _userRepository.GetByEmailAsync(Arg.Any<TelegramLike.Identity.Domain.ValueObjects.Email>(), Arg.Any<CancellationToken>())
             .Returns((User?)null);
@@ -31,7 +31,7 @@ public class LoginUserCommandHandlerTests
     }
 
     [Fact]
-    public async Task Wrong_password_throws_generic_invalid_credentials()
+    public async Task Login_WrongPassword_ThrowsGenericInvalidCredentials()
     {
         var user = NewActiveUser();
         _userRepository.GetByEmailAsync(Arg.Any<TelegramLike.Identity.Domain.ValueObjects.Email>(), Arg.Any<CancellationToken>())
@@ -47,7 +47,7 @@ public class LoginUserCommandHandlerTests
     [Theory]
     [InlineData(AccountStatus.Banned)]
     [InlineData(AccountStatus.Deleted)]
-    public async Task Non_active_account_is_rejected_even_with_correct_password(AccountStatus status)
+    public async Task Login_NonActiveAccount_ThrowsEvenWithCorrectPassword(AccountStatus status)
     {
         var user = User.FromStorage(
             Guid.NewGuid(), "a@b.com", "someuser", "Some User", "hashed",
@@ -64,7 +64,7 @@ public class LoginUserCommandHandlerTests
     }
 
     [Fact]
-    public async Task Active_account_with_correct_password_creates_a_session()
+    public async Task Login_ActiveAccountWithCorrectPassword_CreatesSession()
     {
         var user = NewActiveUser();
         _userRepository.GetByEmailAsync(Arg.Any<TelegramLike.Identity.Domain.ValueObjects.Email>(), Arg.Any<CancellationToken>())

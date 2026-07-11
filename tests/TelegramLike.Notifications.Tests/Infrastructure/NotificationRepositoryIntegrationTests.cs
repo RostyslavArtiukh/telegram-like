@@ -19,7 +19,7 @@ public class NotificationRepositoryIntegrationTests(MongoFixture fx)
         Guid.NewGuid());
 
     [Fact]
-    public async Task AddMany_then_GetUnreadCount_matches_input()
+    public async Task AddMany_ThenGetUnreadCount_MatchesInput()
     {
         var repo = NewRepo();
         var query = NewQuery();
@@ -33,7 +33,7 @@ public class NotificationRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task MarkAllAsRead_zeros_out_unread_count()
+    public async Task MarkAllAsRead_ZerosOutUnreadCount()
     {
         var repo = NewRepo();
         var query = NewQuery();
@@ -47,7 +47,7 @@ public class NotificationRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task Feed_unread_only_excludes_read_items()
+    public async Task Feed_UnreadOnly_ExcludesReadItems()
     {
         var repo = NewRepo();
         var query = NewQuery();
@@ -64,7 +64,7 @@ public class NotificationRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task MarkAsRead_via_repository_round_trips_status()
+    public async Task MarkAsRead_ViaRepository_RoundTripsStatus()
     {
         var repo = NewRepo();
         var recipient = Guid.NewGuid();
@@ -80,7 +80,7 @@ public class NotificationRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task AddManyIgnoringDuplicates_dedupes_redelivered_event_per_recipient()
+    public async Task AddManyIgnoringDuplicates_DedupesRedeliveredEventPerRecipient()
     {
         await NotificationIndexInitializer.EnsureIndexesAsync(fx.Database);
 

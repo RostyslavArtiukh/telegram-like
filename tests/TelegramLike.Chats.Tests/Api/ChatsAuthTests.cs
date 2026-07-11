@@ -25,7 +25,7 @@ public sealed class ChatsAuthTests(ChatsApiFactory factory) : IClassFixture<Chat
     [InlineData("POST", "/chats/00000000-0000-0000-0000-000000000001/members/00000000-0000-0000-0000-000000000002/kick")]
     [InlineData("POST", "/chats/00000000-0000-0000-0000-000000000001/members/00000000-0000-0000-0000-000000000002/role")]
     [InlineData("POST", "/chats/00000000-0000-0000-0000-000000000001/transfer-ownership")]
-    public async Task Anonymous_request_returns_401(string method, string path)
+    public async Task AnonymousRequest_Returns401(string method, string path)
     {
         var request = new HttpRequestMessage(new HttpMethod(method), path);
         if (method is "POST" or "PATCH")
@@ -39,7 +39,7 @@ public sealed class ChatsAuthTests(ChatsApiFactory factory) : IClassFixture<Chat
     }
 
     [Fact]
-    public async Task Invalid_token_returns_401()
+    public async Task InvalidToken_Returns401()
     {
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =

@@ -8,7 +8,7 @@ namespace TelegramLike.Presence.Tests.Domain;
 public class UserPresenceTests
 {
     [Fact]
-    public void CreateOffline_starts_with_offline_status()
+    public void CreateOffline_StartsWithOfflineStatus()
     {
         var p = UserPresence.CreateOffline(Guid.NewGuid());
 
@@ -18,14 +18,14 @@ public class UserPresenceTests
     }
 
     [Fact]
-    public void CreateOffline_with_empty_id_throws()
+    public void CreateOffline_WithEmptyId_Throws()
     {
         var act = () => UserPresence.CreateOffline(Guid.Empty);
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
-    public void GoOnline_transitions_and_raises_event()
+    public void GoOnline_TransitionsAndRaisesEvent()
     {
         var p = UserPresence.CreateOffline(Guid.NewGuid());
 
@@ -36,7 +36,7 @@ public class UserPresenceTests
     }
 
     [Fact]
-    public void GoOnline_when_already_online_is_noop()
+    public void GoOnline_WhenAlreadyOnline_IsNoop()
     {
         var p = UserPresence.CreateOffline(Guid.NewGuid());
         p.GoOnline(DateTime.UtcNow);
@@ -48,7 +48,7 @@ public class UserPresenceTests
     }
 
     [Fact]
-    public void GoOffline_records_last_seen()
+    public void GoOffline_RecordsLastSeen()
     {
         var p = UserPresence.CreateOffline(Guid.NewGuid());
         p.GoOnline(DateTime.UtcNow);
@@ -62,7 +62,7 @@ public class UserPresenceTests
     }
 
     [Fact]
-    public void GoOffline_hides_last_seen_when_HideLastSeen_is_true()
+    public void GoOffline_WhenHideLastSeenIsTrue_HidesLastSeen()
     {
         var p = UserPresence.CreateOffline(Guid.NewGuid(), hideLastSeen: true);
         p.GoOnline(DateTime.UtcNow);
@@ -73,7 +73,7 @@ public class UserPresenceTests
     }
 
     [Fact]
-    public void SetHideLastSeen_to_true_clears_existing_last_seen()
+    public void SetHideLastSeen_ToTrue_ClearsExistingLastSeen()
     {
         var p = UserPresence.CreateOffline(Guid.NewGuid());
         p.GoOnline(DateTime.UtcNow);

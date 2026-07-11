@@ -34,7 +34,7 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
     // ── CreateDirectChat binds PeerUserId and actor from JWT sub ──────────
 
     [Fact]
-    public async Task CreateDirect_binds_PeerUserId()
+    public async Task CreateDirect_BindsPeerUserId()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
@@ -51,7 +51,7 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
     // ── CreateGroupChat binds Name and actor from JWT sub ─────────────────
 
     [Fact]
-    public async Task CreateGroup_binds_Name()
+    public async Task CreateGroup_BindsName()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
@@ -68,7 +68,7 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
     // ── CreateBroadcastChannel binds Name and actor from JWT sub ──────────
 
     [Fact]
-    public async Task CreateBroadcast_binds_Name()
+    public async Task CreateBroadcast_BindsName()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
@@ -85,7 +85,7 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
     // ── RenameChat binds route chatId + body NewName + actor from JWT ──────
 
     [Fact]
-    public async Task Rename_binds_ChatId_and_NewName()
+    public async Task Rename_BindsChatIdAndNewName()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -111,7 +111,7 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
     // ── KickMember binds both route GUIDs + actor from JWT ────────────────
 
     [Fact]
-    public async Task Kick_binds_ChatId_and_MemberToKickUserId()
+    public async Task Kick_BindsChatIdAndMemberToKickUserId()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -128,7 +128,7 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
     // ── ChangeMemberRole binds NewRole enum as string (JsonStringEnumConverter) ──
 
     [Fact]
-    public async Task ChangeMemberRole_binds_enum_by_name()
+    public async Task ChangeMemberRole_BindsEnumByName()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -151,7 +151,7 @@ public sealed class ChatsRequestBindingTests(ChatsApiFactory factory)
     // ── TransferOwnership binds NewOwnerUserId + actor from JWT ───────────
 
     [Fact]
-    public async Task TransferOwnership_binds_NewOwnerId()
+    public async Task TransferOwnership_BindsNewOwnerId()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())

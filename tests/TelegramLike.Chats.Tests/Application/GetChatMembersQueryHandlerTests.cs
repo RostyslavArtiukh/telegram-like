@@ -14,7 +14,7 @@ public class GetChatMembersQueryHandlerTests
     private GetChatMembersQueryHandler Handler => new(_queryService);
 
     [Fact]
-    public async Task Non_member_is_rejected_with_403()
+    public async Task GetChatMembers_ForNonMember_ThrowsForbidden()
     {
         var chatId = Guid.NewGuid();
         var requesterId = Guid.NewGuid();
@@ -27,7 +27,7 @@ public class GetChatMembersQueryHandlerTests
     }
 
     [Fact]
-    public async Task Active_member_gets_the_roster()
+    public async Task GetChatMembers_ForActiveMember_ReturnsRoster()
     {
         var chatId = Guid.NewGuid();
         var requesterId = Guid.NewGuid();

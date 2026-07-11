@@ -10,7 +10,7 @@ public class GroupChatTests
     private static ChatName Name(string s = "Group") => ChatName.Create(s);
 
     [Fact]
-    public void Create_adds_creator_as_owner_and_raises_events()
+    public void Create_AddsCreatorAsOwnerAndRaisesEvents()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -22,14 +22,14 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Create_with_empty_id_throws()
+    public void Create_WithEmptyId_Throws()
     {
         var act = () => GroupChat.Create(Guid.Empty, Name(), Guid.NewGuid());
         act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void Join_new_user_defaults_to_Member_role()
+    public void Join_NewUser_DefaultsToMemberRole()
     {
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), Guid.NewGuid());
         var userId = Guid.NewGuid();
@@ -41,7 +41,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Join_when_already_active_is_a_noop()
+    public void Join_WhenAlreadyActive_IsNoop()
     {
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), Guid.NewGuid());
         var userId = Guid.NewGuid();
@@ -54,7 +54,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Join_when_banned_throws()
+    public void Join_WhenBanned_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -68,7 +68,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Leave_by_owner_throws()
+    public void Leave_ByOwner_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -79,7 +79,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Leave_by_regular_member_succeeds_and_raises_event()
+    public void Leave_ByRegularMember_SucceedsAndRaisesEvent()
     {
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), Guid.NewGuid());
         var userId = Guid.NewGuid();
@@ -92,7 +92,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Kick_by_regular_member_throws()
+    public void Kick_ByRegularMember_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -107,7 +107,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Kick_the_owner_throws()
+    public void Kick_OnOwner_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -121,7 +121,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Admin_cannot_kick_another_admin_only_owner_can()
+    public void Kick_AdminOnAdmin_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -138,7 +138,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Owner_can_kick_an_admin()
+    public void Kick_OwnerOnAdmin_Succeeds()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -152,7 +152,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void ChangeMemberRole_to_Owner_throws()
+    public void ChangeMemberRole_ToOwner_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -165,7 +165,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void ChangeMemberRole_to_Viewer_throws_in_group_chat()
+    public void ChangeMemberRole_ToViewerInGroupChat_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -178,7 +178,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void ChangeMemberRole_by_non_owner_throws()
+    public void ChangeMemberRole_ByNonOwner_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -194,7 +194,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void ChangeMemberRole_promotes_and_raises_MemberRoleChangedEvent()
+    public void ChangeMemberRole_Promotion_RaisesMemberRoleChangedEvent()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -210,7 +210,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void ChangeMemberRole_to_same_role_is_a_noop()
+    public void ChangeMemberRole_ToSameRole_IsNoop()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -224,7 +224,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void TransferOwnership_by_non_owner_throws()
+    public void TransferOwnership_ByNonOwner_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -239,7 +239,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void TransferOwnership_to_self_throws()
+    public void TransferOwnership_ToSelf_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -250,7 +250,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void TransferOwnership_swaps_roles_and_raises_events_for_both_members()
+    public void TransferOwnership_SwapsRolesAndRaisesEventsForBothMembers()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -268,7 +268,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Rename_by_member_throws()
+    public void Rename_ByMember_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -281,7 +281,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Rename_by_owner_succeeds_and_raises_event()
+    public void Rename_ByOwner_SucceedsAndRaisesEvent()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name("Old"), ownerId);
@@ -293,7 +293,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Delete_by_non_owner_throws()
+    public void Delete_ByNonOwner_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -307,7 +307,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Delete_by_owner_marks_deleted_and_raises_event()
+    public void Delete_ByOwner_MarksDeletedAndRaisesEvent()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
@@ -319,7 +319,7 @@ public class GroupChatTests
     }
 
     [Fact]
-    public void Operations_on_a_deleted_chat_throw()
+    public void Operations_OnDeletedChat_Throw()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);

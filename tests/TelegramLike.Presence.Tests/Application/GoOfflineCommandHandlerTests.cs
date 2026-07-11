@@ -19,7 +19,7 @@ public class GoOfflineCommandHandlerTests
     private GoOfflineCommandHandler Handler => new(_repo, _cache, _publish);
 
     [Fact]
-    public async Task Online_user_transitions_to_offline_and_publishes_event()
+    public async Task GoOffline_OnlineUser_TransitionsAndPublishesEvent()
     {
         var userId = Guid.NewGuid();
         var existing = UserPresence.CreateOffline(userId);
@@ -38,7 +38,7 @@ public class GoOfflineCommandHandlerTests
     }
 
     [Fact]
-    public async Task Already_offline_does_not_publish()
+    public async Task GoOffline_AlreadyOffline_DoesNotPublish()
     {
         var userId = Guid.NewGuid();
         var existing = UserPresence.CreateOffline(userId);
@@ -56,7 +56,7 @@ public class GoOfflineCommandHandlerTests
     }
 
     [Fact]
-    public async Task Empty_user_id_throws()
+    public async Task GoOffline_EmptyUserId_Throws()
     {
         var act = () => Handler.Handle(new GoOfflineCommand(Guid.Empty), CancellationToken.None);
         await act.Should().ThrowAsync<ArgumentException>();

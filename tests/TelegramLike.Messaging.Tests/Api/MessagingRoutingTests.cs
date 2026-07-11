@@ -33,7 +33,7 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     // ── 404 for truly unknown paths ────────────────────────────────────────
 
     [Fact]
-    public async Task Unknown_path_returns_404()
+    public async Task UnknownPath_Returns404()
     {
         var response = await Auth().GetAsync("/messages/unknown-route-segment");
         // "unknown-route-segment" fails the :guid constraint → 404
@@ -43,14 +43,14 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     // ── 405 for wrong verb on known paths ──────────────────────────────────
 
     [Fact]
-    public async Task DELETE_on_the_POST_only_messages_route_returns_405()
+    public async Task DeleteOnPostMessages_Returns405()
     {
         var response = await Auth().DeleteAsync("/messages");
         response.StatusCode.Should().Be(HttpStatusCode.MethodNotAllowed);
     }
 
     [Fact]
-    public async Task POST_on_the_GET_only_message_route_returns_405()
+    public async Task PostOnGetMessageById_Returns405()
     {
         // GET /messages/{id} exists; POST on that same path is not defined
         // The framework should return 405.
@@ -61,14 +61,14 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     // ── non-guid route segment → 404 (constraint rejects) ─────────────────
 
     [Fact]
-    public async Task Non_guid_message_id_returns_404()
+    public async Task NonGuidMessageId_Returns404()
     {
         var response = await Auth().GetAsync("/messages/not-a-guid");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
-    public async Task Non_guid_chat_id_returns_404()
+    public async Task NonGuidChatId_Returns404()
     {
         var response = await Auth().GetAsync("/chats/not-a-guid/messages");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -77,7 +77,7 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     // ── POST /messages → 201 Created ──────────────────────────────────────
 
     [Fact]
-    public async Task SendMessage_returns_201_Created()
+    public async Task SendMessage_Returns201Created()
     {
         var newId = Guid.NewGuid();
         factory.Mediator
@@ -100,7 +100,7 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     // ── GET /messages/{id} → 200 when found, 404 when null ────────────────
 
     [Fact]
-    public async Task GetMessageById_when_found_returns_200()
+    public async Task GetMessageById_WhenFound_Returns200()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<MessageDto?>>(), Arg.Any<CancellationToken>())
@@ -112,7 +112,7 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     }
 
     [Fact]
-    public async Task GetMessageById_when_not_found_returns_404()
+    public async Task GetMessageById_WhenNotFound_Returns404()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<MessageDto?>>(), Arg.Any<CancellationToken>())
@@ -126,7 +126,7 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     // ── POST /messages/{id}/retract → 204 ─────────────────────────────────
 
     [Fact]
-    public async Task Retract_returns_204()
+    public async Task Retract_Returns204()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -142,7 +142,7 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     // ── POST /messages/{id}/hide → 204 ────────────────────────────────────
 
     [Fact]
-    public async Task Hide_returns_204()
+    public async Task Hide_Returns204()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -158,7 +158,7 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     // ── GET /chats/{id}/messages → 200 ────────────────────────────────────
 
     [Fact]
-    public async Task GetChatMessages_returns_200()
+    public async Task GetChatMessages_Returns200()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<MessagePageDto>>(), Arg.Any<CancellationToken>())
@@ -172,7 +172,7 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     // ── POST /messages/{id}/reactions → 204 ───────────────────────────────
 
     [Fact]
-    public async Task AddReaction_returns_204()
+    public async Task AddReaction_Returns204()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -187,7 +187,7 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     // ── DELETE /messages/{id}/reactions/{emoji} → 204 for valid emoji ─────
 
     [Fact]
-    public async Task RemoveReaction_valid_emoji_returns_204()
+    public async Task RemoveReaction_ValidEmoji_Returns204()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -201,7 +201,7 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     // ── DELETE /messages/{id}/reactions/{emoji} → 400 for unknown emoji ───
 
     [Fact]
-    public async Task RemoveReaction_unknown_emoji_returns_400()
+    public async Task RemoveReaction_UnknownEmoji_Returns400()
     {
         var response = await Auth().DeleteAsync(
             $"/messages/{SomeMessageId}/reactions/NotARealEmoji");
@@ -212,7 +212,7 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
     // ── POST /messages/{id}/read → 204 ────────────────────────────────────
 
     [Fact]
-    public async Task MarkAsRead_returns_204()
+    public async Task MarkAsRead_Returns204()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())

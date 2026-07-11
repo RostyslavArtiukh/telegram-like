@@ -25,7 +25,7 @@ public class MessageTests
             isBroadcast);
 
     [Fact]
-    public void Send_with_empty_messageId_throws()
+    public void Send_WithEmptyMessageId_Throws()
     {
         var act = () => Message.Send(
             Guid.Empty, Guid.NewGuid(), Guid.NewGuid(), MessageContent.Create("hi"), [Guid.NewGuid()]);
@@ -34,7 +34,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void Send_with_empty_chatId_throws()
+    public void Send_WithEmptyChatId_Throws()
     {
         var act = () => Message.Send(
             Guid.NewGuid(), Guid.Empty, Guid.NewGuid(), MessageContent.Create("hi"), [Guid.NewGuid()]);
@@ -43,7 +43,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void Send_with_empty_authorId_throws()
+    public void Send_WithEmptyAuthorId_Throws()
     {
         var act = () => Message.Send(
             Guid.NewGuid(), Guid.NewGuid(), Guid.Empty, MessageContent.Create("hi"), [Guid.NewGuid()]);
@@ -52,7 +52,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void Send_with_null_recipients_throws()
+    public void Send_WithNullRecipients_Throws()
     {
         var act = () => Message.Send(
             Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), MessageContent.Create("hi"), null!);
@@ -61,7 +61,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void Send_raises_MessageSentEvent_with_recipients()
+    public void Send_RaisesMessageSentEventWithRecipients()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -76,7 +76,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void Send_non_broadcast_has_null_broadcast_read_count()
+    public void Send_NonBroadcast_HasNullBroadcastReadCount()
     {
         var message = NewMessage(isBroadcast: false);
 
@@ -84,7 +84,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void Send_broadcast_starts_broadcast_read_count_at_zero()
+    public void Send_Broadcast_StartsBroadcastReadCountAtZero()
     {
         var message = NewMessage(isBroadcast: true);
 
@@ -92,7 +92,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void Send_with_reply_carries_reply_reference_in_event()
+    public void Send_WithReply_CarriesReplyReferenceInEvent()
     {
         var replyToId = Guid.NewGuid();
         var message = NewMessage(replyTo: ReplyReference.To(replyToId));
@@ -102,7 +102,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void Send_with_forward_carries_forward_reference_in_event()
+    public void Send_WithForward_CarriesForwardReferenceInEvent()
     {
         var originalMessageId = Guid.NewGuid();
         var originalChatId = Guid.NewGuid();
@@ -114,21 +114,21 @@ public class MessageTests
     }
 
     [Fact]
-    public void ReplyReference_To_with_empty_id_throws()
+    public void ReplyReferenceTo_WithEmptyId_Throws()
     {
         var act = () => ReplyReference.To(Guid.Empty);
         act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void ForwardReference_From_with_empty_messageId_throws()
+    public void ForwardReferenceFrom_WithEmptyMessageId_Throws()
     {
         var act = () => ForwardReference.From(Guid.Empty, Guid.NewGuid());
         act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void ForwardReference_From_with_empty_chatId_throws()
+    public void ForwardReferenceFrom_WithEmptyChatId_Throws()
     {
         var act = () => ForwardReference.From(Guid.NewGuid(), Guid.Empty);
         act.Should().Throw<DomainException>();
@@ -137,7 +137,7 @@ public class MessageTests
     // ---- Retract ----
 
     [Fact]
-    public void Retract_by_author_or_moderator_marks_retracted_and_raises_event()
+    public void Retract_ByAuthorOrModerator_MarksRetractedAndRaisesEvent()
     {
         var message = NewMessage();
         var retractedBy = Guid.NewGuid();
@@ -151,7 +151,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void Retract_without_authorization_throws_and_does_not_mutate()
+    public void Retract_WithoutAuthorization_ThrowsAndDoesNotMutate()
     {
         var message = NewMessage();
 
@@ -163,7 +163,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void Retract_twice_throws_on_second_call()
+    public void Retract_Twice_ThrowsOnSecondCall()
     {
         var message = NewMessage();
         message.Retract(Guid.NewGuid(), isAuthorOrModerator: true);
@@ -174,7 +174,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void AddReaction_on_retracted_message_throws()
+    public void AddReaction_OnRetractedMessage_Throws()
     {
         var message = NewMessage();
         message.Retract(Guid.NewGuid(), isAuthorOrModerator: true);
@@ -185,7 +185,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void RemoveReaction_on_retracted_message_still_works_since_it_has_no_guard()
+    public void RemoveReaction_OnRetractedMessage_StillWorksSinceItHasNoGuard()
     {
         // RemoveReaction has no EnsureNotRetracted guard; removing a nonexistent reaction throws "Reaction not found".
         var message = NewMessage();
@@ -199,7 +199,7 @@ public class MessageTests
     // ---- Reactions ----
 
     [Fact]
-    public void AddReaction_free_user_can_add_up_to_limit()
+    public void AddReaction_FreeUser_CanAddUpToLimit()
     {
         var message = NewMessage();
         var userId = Guid.NewGuid();
@@ -210,7 +210,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void AddReaction_free_user_beyond_limit_throws()
+    public void AddReaction_FreeUserBeyondLimit_Throws()
     {
         var message = NewMessage();
         var userId = Guid.NewGuid();
@@ -222,7 +222,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void AddReaction_premium_user_can_add_up_to_premium_limit()
+    public void AddReaction_PremiumUser_CanAddUpToPremiumLimit()
     {
         var message = NewMessage();
         var userId = Guid.NewGuid();
@@ -234,7 +234,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void AddReaction_premium_user_beyond_premium_limit_throws()
+    public void AddReaction_PremiumUserBeyondPremiumLimit_Throws()
     {
         var message = NewMessage();
         var userId = Guid.NewGuid();
@@ -247,7 +247,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void AddReaction_duplicate_emoji_from_same_user_throws()
+    public void AddReaction_DuplicateEmojiFromSameUser_Throws()
     {
         var message = NewMessage();
         var userId = Guid.NewGuid();
@@ -259,7 +259,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void AddReaction_different_users_can_use_same_emoji()
+    public void AddReaction_DifferentUsers_CanUseSameEmoji()
     {
         var message = NewMessage();
 
@@ -270,7 +270,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void AddReaction_raises_ReactionAddedEvent()
+    public void AddReaction_RaisesReactionAddedEvent()
     {
         var message = NewMessage();
         var userId = Guid.NewGuid();
@@ -282,7 +282,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void RemoveReaction_removes_existing_reaction_and_raises_event()
+    public void RemoveReaction_RemovesExistingReactionAndRaisesEvent()
     {
         var message = NewMessage();
         var userId = Guid.NewGuid();
@@ -295,7 +295,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void RemoveReaction_nonexistent_throws()
+    public void RemoveReaction_Nonexistent_Throws()
     {
         var message = NewMessage();
 
@@ -307,7 +307,7 @@ public class MessageTests
     // ---- Broadcast read count ----
 
     [Fact]
-    public void IncrementBroadcastReadCount_on_broadcast_message_increments()
+    public void IncrementBroadcastReadCount_OnBroadcastMessage_Increments()
     {
         var message = NewMessage(isBroadcast: true);
 
@@ -318,7 +318,7 @@ public class MessageTests
     }
 
     [Fact]
-    public void IncrementBroadcastReadCount_on_non_broadcast_message_throws()
+    public void IncrementBroadcastReadCount_OnNonBroadcastMessage_Throws()
     {
         var message = NewMessage(isBroadcast: false);
 

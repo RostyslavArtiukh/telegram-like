@@ -10,7 +10,7 @@ public class MessageReadReceiptRepositoryIntegrationTests(MongoFixture fx)
     private MessageReadReceiptRepository NewRepository() => new(fx.Database);
 
     [Fact]
-    public async Task First_MarkAsRead_for_a_reader_returns_true_and_is_recorded()
+    public async Task MarkAsRead_FirstForReader_ReturnsTrueAndIsRecorded()
     {
         var repo = NewRepository();
         var messageId = Guid.NewGuid();
@@ -23,7 +23,7 @@ public class MessageReadReceiptRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task Repeat_MarkAsRead_for_the_same_reader_returns_false_idempotently()
+    public async Task MarkAsRead_RepeatForSameReader_ReturnsFalseIdempotently()
     {
         var repo = NewRepository();
         var messageId = Guid.NewGuid();
@@ -37,7 +37,7 @@ public class MessageReadReceiptRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task Concurrent_MarkAsRead_for_the_same_reader_only_one_wins()
+    public async Task MarkAsRead_ConcurrentForSameReader_OnlyOneWins()
     {
         var repo = NewRepository();
         var messageId = Guid.NewGuid();
@@ -50,7 +50,7 @@ public class MessageReadReceiptRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task Different_readers_of_the_same_message_each_get_their_own_receipt()
+    public async Task MarkAsRead_DifferentReadersOfSameMessage_EachGetOwnReceipt()
     {
         var repo = NewRepository();
         var messageId = Guid.NewGuid();
@@ -63,7 +63,7 @@ public class MessageReadReceiptRepositoryIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task HasReceipt_for_unknown_pair_returns_false()
+    public async Task HasReceipt_UnknownPair_ReturnsFalse()
     {
         var repo = NewRepository();
 

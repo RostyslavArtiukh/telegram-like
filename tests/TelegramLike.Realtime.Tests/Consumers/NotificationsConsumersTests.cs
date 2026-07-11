@@ -10,7 +10,7 @@ namespace TelegramLike.Realtime.Tests.Consumers;
 public class NotificationsConsumersTests
 {
     [Fact]
-    public async Task UnreadCountChangedConsumer_signals_each_users_group_with_no_payload()
+    public async Task UnreadCountChangedConsumer_SignalsEachUsersGroup_WithNoPayload()
     {
         var user1 = Guid.NewGuid();
         var user2 = Guid.NewGuid();

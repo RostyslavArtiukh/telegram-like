@@ -8,7 +8,7 @@ namespace TelegramLike.Chats.Tests.Domain;
 public class DirectChatTests
 {
     [Fact]
-    public void Create_with_same_user_twice_throws()
+    public void Create_WithSameUserTwice_Throws()
     {
         var userId = Guid.NewGuid();
         var act = () => DirectChat.Create(Guid.NewGuid(), userId, userId);
@@ -17,14 +17,14 @@ public class DirectChatTests
     }
 
     [Fact]
-    public void Create_with_empty_id_throws()
+    public void Create_WithEmptyId_Throws()
     {
         var act = () => DirectChat.Create(Guid.Empty, Guid.NewGuid(), Guid.NewGuid());
         act.Should().Throw<DomainException>();
     }
 
     [Fact]
-    public void Create_adds_both_users_as_Member_role()
+    public void Create_AddsBothUsersAsMembers()
     {
         var initiatorId = Guid.NewGuid();
         var peerId = Guid.NewGuid();
@@ -38,7 +38,7 @@ public class DirectChatTests
     }
 
     [Fact]
-    public void Rename_throws()
+    public void Rename_Throws()
     {
         var chat = DirectChat.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
 
@@ -48,7 +48,7 @@ public class DirectChatTests
     }
 
     [Fact]
-    public void Delete_throws()
+    public void Delete_Throws()
     {
         var chat = DirectChat.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
 
@@ -58,7 +58,7 @@ public class DirectChatTests
     }
 
     [Fact]
-    public void Leave_throws()
+    public void Leave_Throws()
     {
         var initiatorId = Guid.NewGuid();
         var chat = DirectChat.Create(Guid.NewGuid(), initiatorId, Guid.NewGuid());
@@ -69,7 +69,7 @@ public class DirectChatTests
     }
 
     [Fact]
-    public void Kick_throws()
+    public void Kick_Throws()
     {
         var initiatorId = Guid.NewGuid();
         var peerId = Guid.NewGuid();

@@ -17,7 +17,7 @@ public class GetChatMessagesQueryHandlerTests
     private static readonly MessagePageDto EmptyPage = new([], null);
 
     [Fact]
-    public async Task Non_member_of_a_known_chat_is_rejected()
+    public async Task GetChatMessages_NonMemberOfKnownChat_Throws()
     {
         var chatId = Guid.NewGuid();
         var requesterId = Guid.NewGuid();
@@ -32,7 +32,7 @@ public class GetChatMessagesQueryHandlerTests
     }
 
     [Fact]
-    public async Task Member_of_a_known_chat_is_allowed()
+    public async Task GetChatMessages_MemberOfKnownChat_IsAllowed()
     {
         var chatId = Guid.NewGuid();
         var requesterId = Guid.NewGuid();
@@ -47,7 +47,7 @@ public class GetChatMessagesQueryHandlerTests
     }
 
     [Fact]
-    public async Task Unknown_chat_falls_through_to_query_service()
+    public async Task GetChatMessages_UnknownChat_FallsThroughToQueryService()
     {
         var chatId = Guid.NewGuid();
         var requesterId = Guid.NewGuid();
@@ -66,7 +66,7 @@ public class GetChatMessagesQueryHandlerTests
     [InlineData(201, 50)]
     [InlineData(-5, 50)]
     [InlineData(100, 100)]
-    public async Task PageSize_out_of_range_falls_back_to_default_50(int requested, int expected)
+    public async Task GetChatMessages_PageSizeOutOfRange_FallsBackToDefault50(int requested, int expected)
     {
         var chatId = Guid.NewGuid();
         var requesterId = Guid.NewGuid();

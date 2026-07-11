@@ -28,7 +28,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── 404 for unknown paths ───────────────────────────────────────────────
 
     [Fact]
-    public async Task Unknown_path_returns_404()
+    public async Task UnknownPath_Returns404()
     {
         var response = await Auth().GetAsync("/chats/does-not-exist-route");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -37,14 +37,14 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── 405 for wrong verb on known paths ──────────────────────────────────
 
     [Fact]
-    public async Task GET_on_the_POST_only_direct_route_returns_405()
+    public async Task GetOnPostDirect_Returns405()
     {
         var response = await Auth().GetAsync("/chats/direct");
         response.StatusCode.Should().Be(HttpStatusCode.MethodNotAllowed);
     }
 
     [Fact]
-    public async Task DELETE_on_the_GET_only_my_route_returns_405()
+    public async Task DeleteOnGetMy_Returns405()
     {
         var response = await Auth().DeleteAsync("/chats/my");
         response.StatusCode.Should().Be(HttpStatusCode.MethodNotAllowed);
@@ -53,14 +53,14 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── non-guid route segment → 404 (constraint rejects) ─────────────────
 
     [Fact]
-    public async Task Non_guid_chat_id_returns_404()
+    public async Task NonGuidChatId_Returns404()
     {
         var response = await Auth().GetAsync("/chats/not-a-guid");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
-    public async Task Non_guid_chat_id_for_members_returns_404()
+    public async Task NonGuidChatIdForMembers_Returns404()
     {
         var response = await Auth().GetAsync("/chats/not-a-guid/members");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -69,7 +69,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── GET /chats/my → 200 OK ─────────────────────────────────────────────
 
     [Fact]
-    public async Task GetMyChats_returns_200()
+    public async Task GetMyChats_Returns200()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<IReadOnlyList<ChatSummaryDto>>>(), Arg.Any<CancellationToken>())
@@ -83,7 +83,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── GET /chats/{id} → 200 when found, 404 when null ───────────────────
 
     [Fact]
-    public async Task GetChatById_when_found_returns_200()
+    public async Task GetChatById_WhenFound_Returns200()
     {
         var dto = new TelegramLike.Chats.Application.Queries.ChatDetailsDto(
             SomeChatId,
@@ -104,7 +104,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     }
 
     [Fact]
-    public async Task GetChatById_when_not_found_returns_404()
+    public async Task GetChatById_WhenNotFound_Returns404()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<TelegramLike.Chats.Application.Queries.ChatDetailsDto?>>(), Arg.Any<CancellationToken>())
@@ -118,7 +118,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── GET /chats/{id}/members → 200 ─────────────────────────────────────
 
     [Fact]
-    public async Task GetChatMembers_returns_200()
+    public async Task GetChatMembers_Returns200()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<IReadOnlyList<ChatMemberDto>>>(), Arg.Any<CancellationToken>())
@@ -132,7 +132,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── POST /chats/direct → 201 Created ──────────────────────────────────
 
     [Fact]
-    public async Task CreateDirect_returns_201_Created()
+    public async Task CreateDirect_Returns201Created()
     {
         var newId = Guid.NewGuid();
         factory.Mediator
@@ -149,7 +149,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── POST /chats/group → 201 Created ───────────────────────────────────
 
     [Fact]
-    public async Task CreateGroup_returns_201_Created()
+    public async Task CreateGroup_Returns201Created()
     {
         var newId = Guid.NewGuid();
         factory.Mediator
@@ -166,7 +166,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── POST /chats/broadcast → 201 Created ───────────────────────────────
 
     [Fact]
-    public async Task CreateBroadcast_returns_201_Created()
+    public async Task CreateBroadcast_Returns201Created()
     {
         var newId = Guid.NewGuid();
         factory.Mediator
@@ -183,7 +183,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── PATCH /chats/{id} → 204 NoContent ─────────────────────────────────
 
     [Fact]
-    public async Task RenameChat_returns_204()
+    public async Task RenameChat_Returns204()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -204,7 +204,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── POST /chats/{id}/join → 204 NoContent ─────────────────────────────
 
     [Fact]
-    public async Task JoinChat_returns_204()
+    public async Task JoinChat_Returns204()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -218,7 +218,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── POST /chats/{id}/leave → 204 NoContent ────────────────────────────
 
     [Fact]
-    public async Task LeaveChat_returns_204()
+    public async Task LeaveChat_Returns204()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -232,7 +232,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── POST /chats/{chatId}/members/{targetUserId}/kick → 204 ────────────
 
     [Fact]
-    public async Task KickMember_returns_204()
+    public async Task KickMember_Returns204()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -247,7 +247,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── POST /chats/{chatId}/members/{targetUserId}/role → 204 ────────────
 
     [Fact]
-    public async Task ChangeMemberRole_returns_204()
+    public async Task ChangeMemberRole_Returns204()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
@@ -263,7 +263,7 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
     // ── POST /chats/{id}/transfer-ownership → 204 ─────────────────────────
 
     [Fact]
-    public async Task TransferOwnership_returns_204()
+    public async Task TransferOwnership_Returns204()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())

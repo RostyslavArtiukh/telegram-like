@@ -28,7 +28,7 @@ public class SendMessageCommandHandlerTests
             isBroadcast);
 
     [Fact]
-    public async Task Known_chat_member_sends_and_recipients_are_derived_from_read_model()
+    public async Task Send_KnownChatMember_DerivesRecipientsFromReadModel()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -50,7 +50,7 @@ public class SendMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Known_chat_non_member_throws_unauthorized()
+    public async Task Send_KnownChatNonMember_ThrowsUnauthorized()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -64,7 +64,7 @@ public class SendMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Unknown_chat_fails_open_and_uses_caller_supplied_recipients()
+    public async Task Send_UnknownChat_FailsOpenWithCallerSuppliedRecipients()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -83,7 +83,7 @@ public class SendMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Reply_to_a_message_from_a_different_chat_throws()
+    public async Task Send_ReplyToMessageFromDifferentChat_Throws()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -103,7 +103,7 @@ public class SendMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Reply_to_a_retracted_message_throws()
+    public async Task Send_ReplyToRetractedMessage_Throws()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -124,7 +124,7 @@ public class SendMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Reply_to_nonexistent_message_throws()
+    public async Task Send_ReplyToNonexistentMessage_Throws()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -140,7 +140,7 @@ public class SendMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Client_supplied_message_id_is_reused_as_duplicate_protection_key()
+    public async Task Send_ClientSuppliedMessageId_IsReusedAsDuplicateProtectionKey()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -154,7 +154,7 @@ public class SendMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Empty_message_id_mints_a_new_one()
+    public async Task Send_EmptyMessageId_MintsNewOne()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();

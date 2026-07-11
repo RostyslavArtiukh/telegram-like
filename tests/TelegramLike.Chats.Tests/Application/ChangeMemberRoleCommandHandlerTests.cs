@@ -14,7 +14,7 @@ public class ChangeMemberRoleCommandHandlerTests
     private ChangeMemberRoleCommandHandler Handler => new(_repo);
 
     [Fact]
-    public async Task Owner_promotes_a_group_member_to_admin_and_persists()
+    public async Task ChangeMemberRole_OwnerPromotesGroupMemberToAdmin_Persists()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), ChatName.Create("g"), ownerId);
@@ -29,7 +29,7 @@ public class ChangeMemberRoleCommandHandlerTests
     }
 
     [Fact]
-    public async Task Non_owner_cannot_change_roles_in_a_group_chat()
+    public async Task ChangeMemberRole_ByNonOwnerInGroupChat_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = GroupChat.Create(Guid.NewGuid(), ChatName.Create("g"), ownerId);
@@ -46,7 +46,7 @@ public class ChangeMemberRoleCommandHandlerTests
     }
 
     [Fact]
-    public async Task Owner_promotes_a_broadcast_viewer_to_admin()
+    public async Task ChangeMemberRole_OwnerPromotesBroadcastViewerToAdmin_Succeeds()
     {
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), ChatName.Create("c"), ownerId);
@@ -60,7 +60,7 @@ public class ChangeMemberRoleCommandHandlerTests
     }
 
     [Fact]
-    public async Task Broadcast_channel_rejects_a_Member_role_change()
+    public async Task ChangeMemberRole_ToMemberInBroadcastChannel_Throws()
     {
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), ChatName.Create("c"), ownerId);
@@ -75,7 +75,7 @@ public class ChangeMemberRoleCommandHandlerTests
     }
 
     [Fact]
-    public async Task Direct_chat_rejects_role_changes()
+    public async Task ChangeMemberRole_InDirectChat_Throws()
     {
         var chat = DirectChat.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         _repo.GetByIdAsync(chat.Id, Arg.Any<CancellationToken>()).Returns(chat);

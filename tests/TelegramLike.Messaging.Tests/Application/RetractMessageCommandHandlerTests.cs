@@ -22,7 +22,7 @@ public class RetractMessageCommandHandlerTests
         => Message.Send(Guid.NewGuid(), chatId, authorId, MessageContent.Create("hi"), [authorId]);
 
     [Fact]
-    public async Task Author_can_retract_own_message()
+    public async Task Retract_ByAuthor_Succeeds()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -38,7 +38,7 @@ public class RetractMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Server_verified_moderator_can_retract_others_message()
+    public async Task Retract_ByServerVerifiedModerator_SucceedsOnOthersMessage()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -54,7 +54,7 @@ public class RetractMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Non_author_non_moderator_is_rejected_even_when_client_flag_claims_moderator()
+    public async Task Retract_NonAuthorNonModerator_ThrowsEvenWhenClientFlagClaimsModerator()
     {
         // Regression: RetractedByModerator is a client-supplied flag and must be ignored —
         // authority comes from IChatMembershipReadModel.IsModeratorAsync only.
@@ -75,7 +75,7 @@ public class RetractMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Nonexistent_message_throws()
+    public async Task Retract_NonexistentMessage_Throws()
     {
         _messageRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Message?)null);
 
@@ -86,7 +86,7 @@ public class RetractMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Non_member_fails_open_but_still_needs_author_or_moderator_to_succeed()
+    public async Task Retract_NonMemberFailsOpen_StillNeedsAuthorOrModerator()
     {
         // AddReaction/RemoveReaction fail-open on membership; retract also logs-only on
         // membership but still gates on author-or-moderator, so a non-member stranger

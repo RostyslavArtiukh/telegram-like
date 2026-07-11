@@ -16,7 +16,7 @@ public class GetChatByIdQueryHandlerTests
         chatId, ChatType.Group, "name", Guid.NewGuid(), DateTime.UtcNow, false, []);
 
     [Fact]
-    public async Task Non_member_gets_null_not_the_chat_details()
+    public async Task GetChatById_ForNonMember_ReturnsNullNotDetails()
     {
         var chatId = Guid.NewGuid();
         var requesterId = Guid.NewGuid();
@@ -29,7 +29,7 @@ public class GetChatByIdQueryHandlerTests
     }
 
     [Fact]
-    public async Task Active_member_gets_the_chat_details()
+    public async Task GetChatById_ForActiveMember_ReturnsDetails()
     {
         var chatId = Guid.NewGuid();
         var requesterId = Guid.NewGuid();

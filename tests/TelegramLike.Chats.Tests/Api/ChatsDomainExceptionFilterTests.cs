@@ -37,7 +37,7 @@ public sealed class ChatsDomainExceptionFilterTests
     // ── DomainException → 400 ProblemDetails ──────────────────────────────
 
     [Fact]
-    public async Task DomainException_returns_400_with_ProblemDetails()
+    public async Task DomainException_Returns400WithProblemDetails()
     {
         await using var factory = new ChatsApiFactory();
         factory.Mediator
@@ -59,7 +59,7 @@ public sealed class ChatsDomainExceptionFilterTests
     // ── ForbiddenException → 403 ProblemDetails ───────────────────────────
 
     [Fact]
-    public async Task ForbiddenException_returns_403_with_ProblemDetails()
+    public async Task ForbiddenException_Returns403WithProblemDetails()
     {
         await using var factory = new ChatsApiFactory();
         // KickMemberCommand : IRequest (non-generic). Using When/Do on the concrete
@@ -85,7 +85,7 @@ public sealed class ChatsDomainExceptionFilterTests
     // ── framework exception is NOT mapped to 400 (bubbles as a server error) ──
 
     [Fact]
-    public async Task Framework_exception_is_not_mapped_to_400()
+    public async Task FrameworkException_IsNotMappedTo400()
     {
         await using var factory = new ChatsApiFactory();
         factory.Mediator
@@ -112,7 +112,7 @@ public sealed class ChatsDomainExceptionFilterTests
     // ── Response content-type is application/problem+json ─────────────────
 
     [Fact]
-    public async Task Error_response_has_ProblemDetails_content_type()
+    public async Task ErrorResponse_HasProblemDetailsContentType()
     {
         await using var factory = new ChatsApiFactory();
         factory.Mediator

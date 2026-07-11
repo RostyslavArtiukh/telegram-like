@@ -22,7 +22,7 @@ public class ExchangeSessionQueryHandlerTests
             blockedUserIds: [], createdAt: DateTime.UtcNow, updatedAt: DateTime.UtcNow);
 
     [Fact]
-    public async Task Empty_session_token_returns_null()
+    public async Task Exchange_EmptySessionToken_ReturnsNull()
     {
         var result = await Handler.Handle(new ExchangeSessionQuery(""), CancellationToken.None);
 
@@ -31,7 +31,7 @@ public class ExchangeSessionQueryHandlerTests
     }
 
     [Fact]
-    public async Task Unknown_session_token_returns_null()
+    public async Task Exchange_UnknownSessionToken_ReturnsNull()
     {
         _sessionService.GetUserIdAsync("tok", Arg.Any<CancellationToken>()).Returns((Guid?)null);
 
@@ -41,7 +41,7 @@ public class ExchangeSessionQueryHandlerTests
     }
 
     [Fact]
-    public async Task Session_for_a_deleted_user_returns_null()
+    public async Task Exchange_SessionForDeletedUser_ReturnsNull()
     {
         var user = NewUser(AccountStatus.Deleted);
         _sessionService.GetUserIdAsync("tok", Arg.Any<CancellationToken>()).Returns(user.Id);
@@ -54,7 +54,7 @@ public class ExchangeSessionQueryHandlerTests
     }
 
     [Fact]
-    public async Task Session_for_a_banned_user_returns_null()
+    public async Task Exchange_SessionForBannedUser_ReturnsNull()
     {
         var user = NewUser(AccountStatus.Banned);
         _sessionService.GetUserIdAsync("tok", Arg.Any<CancellationToken>()).Returns(user.Id);
@@ -66,7 +66,7 @@ public class ExchangeSessionQueryHandlerTests
     }
 
     [Fact]
-    public async Task Valid_session_for_an_active_user_mints_an_access_token()
+    public async Task Exchange_ValidSessionForActiveUser_MintsAccessToken()
     {
         var user = NewUser();
         _sessionService.GetUserIdAsync("tok", Arg.Any<CancellationToken>()).Returns(user.Id);
@@ -82,7 +82,7 @@ public class ExchangeSessionQueryHandlerTests
     }
 
     [Fact]
-    public async Task User_deleted_after_session_created_still_has_the_session_but_lookup_fails_returns_null()
+    public async Task Exchange_UserDeletedAfterSessionCreated_ReturnsNull()
     {
         _sessionService.GetUserIdAsync("tok", Arg.Any<CancellationToken>()).Returns(Guid.NewGuid());
         _userRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((User?)null);

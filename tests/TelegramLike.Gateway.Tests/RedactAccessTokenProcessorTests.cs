@@ -11,7 +11,7 @@ public class RedactAccessTokenProcessorTests
     [InlineData("url.query")]
     [InlineData("url.full")]
     [InlineData("http.url")]
-    public void Scrubs_access_token_from_known_url_tags(string tag)
+    public void KnownUrlTags_AccessTokenIsScrubbed(string tag)
     {
         using var activity = NewActivity();
         activity.SetTag(tag, "https://gw/realtime/hub?access_token=super-secret-jwt&other=1");
@@ -26,7 +26,7 @@ public class RedactAccessTokenProcessorTests
     }
 
     [Fact]
-    public void Token_at_end_of_query_string_is_fully_redacted()
+    public void TokenAtEndOfQueryString_IsFullyRedacted()
     {
         using var activity = NewActivity();
         activity.SetTag("url.query", "?access_token=super-secret-jwt");
@@ -39,7 +39,7 @@ public class RedactAccessTokenProcessorTests
     }
 
     [Fact]
-    public void Tag_without_access_token_is_left_untouched()
+    public void TagWithoutAccessToken_IsLeftUntouched()
     {
         using var activity = NewActivity();
         activity.SetTag("url.query", "?foo=bar&baz=qux");
@@ -51,7 +51,7 @@ public class RedactAccessTokenProcessorTests
     }
 
     [Fact]
-    public void Unrelated_tags_are_never_touched()
+    public void UnrelatedTags_AreNeverTouched()
     {
         using var activity = NewActivity();
         activity.SetTag("http.method", "GET");
@@ -64,7 +64,7 @@ public class RedactAccessTokenProcessorTests
     }
 
     [Fact]
-    public void Missing_tags_do_not_throw()
+    public void MissingTags_DoNotThrow()
     {
         using var activity = NewActivity();
         var processor = new RedactAccessTokenProcessor();
@@ -75,7 +75,7 @@ public class RedactAccessTokenProcessorTests
     }
 
     [Fact]
-    public void Non_string_tag_value_is_left_untouched()
+    public void NonStringTagValue_IsLeftUntouched()
     {
         using var activity = NewActivity();
         activity.SetTag("url.query", 12345); // not a string

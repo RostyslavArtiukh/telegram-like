@@ -11,7 +11,7 @@ public class NotificationTests
         NotificationPayload.ForNewMessage(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
 
     [Fact]
-    public void Create_starts_in_pending_status_and_raises_event()
+    public void Create_StartsInPendingStatusAndRaisesEvent()
     {
         var recipient = Guid.NewGuid();
 
@@ -24,21 +24,21 @@ public class NotificationTests
     }
 
     [Fact]
-    public void Create_with_empty_recipient_throws()
+    public void Create_WithEmptyRecipient_Throws()
     {
         var act = () => Notification.Create(Guid.Empty, NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
-    public void Create_with_empty_source_event_id_throws()
+    public void Create_WithEmptySourceEventId_Throws()
     {
         var act = () => Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), Guid.Empty);
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
-    public void Create_persists_source_event_id_for_idempotency()
+    public void Create_PersistsSourceEventIdForIdempotency()
     {
         var sourceEventId = Guid.NewGuid();
 
@@ -48,7 +48,7 @@ public class NotificationTests
     }
 
     [Fact]
-    public void MarkAsDelivered_transitions_pending_to_delivered()
+    public void MarkAsDelivered_TransitionsPendingToDelivered()
     {
         var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
 
@@ -58,7 +58,7 @@ public class NotificationTests
     }
 
     [Fact]
-    public void MarkAsDelivered_after_read_is_noop()
+    public void MarkAsDelivered_AfterRead_IsNoop()
     {
         var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
         n.MarkAsRead();
@@ -69,7 +69,7 @@ public class NotificationTests
     }
 
     [Fact]
-    public void MarkAsRead_sets_read_at_and_raises_event()
+    public void MarkAsRead_SetsReadAtAndRaisesEvent()
     {
         var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
 
@@ -81,7 +81,7 @@ public class NotificationTests
     }
 
     [Fact]
-    public void MarkAsRead_twice_does_not_raise_extra_event()
+    public void MarkAsRead_Twice_DoesNotRaiseExtraEvent()
     {
         var n = Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
         n.MarkAsRead();
@@ -93,7 +93,7 @@ public class NotificationTests
     }
 
     [Fact]
-    public void Payload_for_member_joined_has_no_message_id()
+    public void Payload_ForMemberJoined_HasNoMessageId()
     {
         var payload = NotificationPayload.ForMemberJoined(Guid.NewGuid(), Guid.NewGuid());
 
@@ -102,7 +102,7 @@ public class NotificationTests
     }
 
     [Fact]
-    public void Payload_for_new_message_requires_non_empty_message_id()
+    public void Payload_ForNewMessage_RequiresNonEmptyMessageId()
     {
         var act = () => NotificationPayload.ForNewMessage(Guid.NewGuid(), Guid.Empty, Guid.NewGuid());
         act.Should().Throw<ArgumentException>();

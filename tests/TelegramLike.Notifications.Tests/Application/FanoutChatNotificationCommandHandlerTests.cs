@@ -27,7 +27,7 @@ public class FanoutChatNotificationCommandHandlerTests
             .Returns(call => ((IReadOnlyCollection<Notification>)call[0]).Count);
 
     [Fact]
-    public async Task Creates_one_notification_per_recipient_except_actor()
+    public async Task Fanout_CreatesOneNotificationPerRecipientExceptActor()
     {
         var chatId = Guid.NewGuid();
         var actor = Guid.NewGuid();
@@ -54,7 +54,7 @@ public class FanoutChatNotificationCommandHandlerTests
     }
 
     [Fact]
-    public async Task Excludes_actor_even_if_present_in_recipients()
+    public async Task Fanout_ActorInRecipients_IsExcluded()
     {
         var actor = Guid.NewGuid();
         var other = Guid.NewGuid();
@@ -78,7 +78,7 @@ public class FanoutChatNotificationCommandHandlerTests
     }
 
     [Fact]
-    public async Task Empty_recipients_does_not_persist()
+    public async Task Fanout_EmptyRecipients_DoesNotPersist()
     {
         await Handler.Handle(
             new FanoutChatNotificationCommand(
@@ -95,7 +95,7 @@ public class FanoutChatNotificationCommandHandlerTests
     }
 
     [Fact]
-    public async Task NewMessage_without_message_id_throws()
+    public async Task Fanout_NewMessageWithoutMessageId_Throws()
     {
         var act = () => Handler.Handle(
             new FanoutChatNotificationCommand(
@@ -111,7 +111,7 @@ public class FanoutChatNotificationCommandHandlerTests
     }
 
     [Fact]
-    public async Task MemberJoined_without_message_id_succeeds()
+    public async Task Fanout_MemberJoinedWithoutMessageId_Succeeds()
     {
         StubAcceptAll();
 
@@ -129,7 +129,7 @@ public class FanoutChatNotificationCommandHandlerTests
     }
 
     [Fact]
-    public async Task Republishes_unread_count_on_redelivery_even_when_all_were_duplicates()
+    public async Task Fanout_OnRedeliveryWithAllDuplicates_RepublishesUnreadCount()
     {
         // B11: inserted==0 (pure redelivery, or a fail-after-insert retry) must still
         // publish. Gating on inserted>0 loses the signal for good in the latter case,

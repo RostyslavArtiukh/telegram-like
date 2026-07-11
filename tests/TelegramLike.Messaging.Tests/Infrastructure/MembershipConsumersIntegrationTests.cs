@@ -29,7 +29,7 @@ public class MembershipConsumersIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task MemberJoinedConsumer_duplicate_delivery_leaves_member_active_once()
+    public async Task MemberJoinedConsumer_DuplicateDelivery_LeavesMemberActiveOnce()
     {
         var readModel = NewReadModel();
         var consumer = new MemberJoinedConsumer(readModel);
@@ -45,7 +45,7 @@ public class MembershipConsumersIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task MemberLeftConsumer_duplicate_delivery_leaves_member_inactive_once()
+    public async Task MemberLeftConsumer_DuplicateDelivery_LeavesMemberInactiveOnce()
     {
         var readModel = NewReadModel();
         await readModel.UpsertActiveAsync(Guid.NewGuid(), Guid.NewGuid(), "Member", T0); // noise
@@ -63,7 +63,7 @@ public class MembershipConsumersIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task MemberKickedConsumer_duplicate_delivery_leaves_member_inactive_once()
+    public async Task MemberKickedConsumer_DuplicateDelivery_LeavesMemberInactiveOnce()
     {
         var readModel = NewReadModel();
         var chatId = Guid.NewGuid();
@@ -80,7 +80,7 @@ public class MembershipConsumersIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task MemberRoleChangedConsumer_duplicate_delivery_leaves_role_applied_once()
+    public async Task MemberRoleChangedConsumer_DuplicateDelivery_LeavesRoleAppliedOnce()
     {
         var readModel = NewReadModel();
         var chatId = Guid.NewGuid();
@@ -97,7 +97,7 @@ public class MembershipConsumersIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task MemberRoleChangedConsumer_stale_redelivery_does_not_revert_a_newer_role()
+    public async Task MemberRoleChangedConsumer_StaleRedelivery_DoesNotRevertNewerRole()
     {
         var readModel = NewReadModel();
         var chatId = Guid.NewGuid();

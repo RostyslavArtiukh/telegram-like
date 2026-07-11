@@ -19,14 +19,14 @@ public class HeartbeatCommandHandlerTests
     private HeartbeatCommandHandler Handler => new(_repo, _cache, _publish);
 
     [Fact]
-    public async Task Empty_user_id_throws()
+    public async Task Heartbeat_EmptyUserId_Throws()
     {
         var act = () => Handler.Handle(new HeartbeatCommand(Guid.Empty), CancellationToken.None);
         await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
-    public async Task First_heartbeat_creates_presence_and_transitions_to_online()
+    public async Task Heartbeat_First_CreatesPresenceAndTransitionsToOnline()
     {
         var userId = Guid.NewGuid();
         _repo.GetByUserIdAsync(userId, Arg.Any<CancellationToken>()).Returns((UserPresence?)null);
@@ -42,7 +42,7 @@ public class HeartbeatCommandHandlerTests
     }
 
     [Fact]
-    public async Task Still_online_per_redis_only_touches_cache_and_does_not_publish()
+    public async Task Heartbeat_StillOnlinePerRedis_OnlyTouchesCacheWithoutPublishing()
     {
         // "Online" is decided by the Redis heartbeat key, not the durable Mongo Status.
         var userId = Guid.NewGuid();
@@ -58,7 +58,7 @@ public class HeartbeatCommandHandlerTests
     }
 
     [Fact]
-    public async Task Was_offline_transitions_back_to_online_and_publishes_event()
+    public async Task Heartbeat_WasOffline_TransitionsBackToOnlineAndPublishesEvent()
     {
         var userId = Guid.NewGuid();
         var existing = UserPresence.CreateOffline(userId);
@@ -76,7 +76,7 @@ public class HeartbeatCommandHandlerTests
     }
 
     [Fact]
-    public async Task Reconnect_after_ttl_expiry_republishes_even_when_mongo_status_is_stale_online()
+    public async Task Heartbeat_ReconnectAfterTtlExpiry_RepublishesEvenWhenMongoStatusIsStaleOnline()
     {
         // B5: the heartbeat key lapsed (browser close) but Mongo Status was never
         // reconciled and still reads Online. Redis is offline, so this heartbeat is a

@@ -10,7 +10,7 @@ public class UserTests
         User.Register(Guid.NewGuid(), "alice@example.com", "alice", "Alice", "hash");
 
     [Fact]
-    public void Register_sets_default_state_and_raises_event()
+    public void Register_SetsDefaultStateAndRaisesEvent()
     {
         var user = NewUser();
 
@@ -22,7 +22,7 @@ public class UserTests
     }
 
     [Fact]
-    public void Block_adds_target_to_blocked_list_and_raises_event()
+    public void Block_AddsTargetToBlockedListAndRaisesEvent()
     {
         var user = NewUser();
         var target = Guid.NewGuid();
@@ -35,7 +35,7 @@ public class UserTests
     }
 
     [Fact]
-    public void Block_is_idempotent()
+    public void Block_IsIdempotent()
     {
         var user = NewUser();
         var target = Guid.NewGuid();
@@ -48,7 +48,7 @@ public class UserTests
     }
 
     [Fact]
-    public void Block_self_throws()
+    public void Block_Self_Throws()
     {
         var user = NewUser();
         var act = () => user.Block(user.Id);
@@ -56,7 +56,7 @@ public class UserTests
     }
 
     [Fact]
-    public void Unblock_removes_target()
+    public void Unblock_RemovesTarget()
     {
         var user = NewUser();
         var target = Guid.NewGuid();
@@ -68,7 +68,7 @@ public class UserTests
     }
 
     [Fact]
-    public void CheckPremiumExpiry_disables_premium_when_expired()
+    public void CheckPremiumExpiry_WhenExpired_DisablesPremium()
     {
         var user = NewUser();
         user.ActivatePremium(DateTime.UtcNow.AddDays(-1));
@@ -80,7 +80,7 @@ public class UserTests
     }
 
     [Fact]
-    public void CheckPremiumExpiry_keeps_premium_when_not_expired()
+    public void CheckPremiumExpiry_WhenNotExpired_KeepsPremium()
     {
         var user = NewUser();
         user.ActivatePremium(DateTime.UtcNow.AddDays(7));

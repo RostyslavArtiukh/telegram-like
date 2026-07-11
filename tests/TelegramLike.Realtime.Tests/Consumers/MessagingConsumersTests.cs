@@ -11,7 +11,7 @@ namespace TelegramLike.Realtime.Tests.Consumers;
 public class MessagingConsumersTests
 {
     [Fact]
-    public async Task MessageSentConsumer_sends_to_chat_group_and_chat_activity_to_recipients_plus_author()
+    public async Task MessageSentConsumer_SendsToChatGroup_AndChatActivityToRecipientsPlusAuthor()
     {
         var chatId = Guid.NewGuid();
         var messageId = Guid.NewGuid();
@@ -51,7 +51,7 @@ public class MessagingConsumersTests
     }
 
     [Fact]
-    public async Task MessageSentConsumer_dedupes_user_groups_when_author_is_also_a_recipient()
+    public async Task MessageSentConsumer_WhenAuthorIsAlsoARecipient_DedupesUserGroups()
     {
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
@@ -77,7 +77,7 @@ public class MessagingConsumersTests
     }
 
     [Fact]
-    public async Task MessageRetractedConsumer_sends_only_to_chat_group()
+    public async Task MessageRetractedConsumer_SendsOnlyToChatGroup()
     {
         var chatId = Guid.NewGuid();
         var messageId = Guid.NewGuid();
@@ -101,7 +101,7 @@ public class MessagingConsumersTests
     }
 
     [Fact]
-    public async Task ReactionAddedConsumer_sends_only_to_chat_group()
+    public async Task ReactionAddedConsumer_SendsOnlyToChatGroup()
     {
         var chatId = Guid.NewGuid();
         var messageId = Guid.NewGuid();
@@ -124,7 +124,7 @@ public class MessagingConsumersTests
     }
 
     [Fact]
-    public async Task ReactionRemovedConsumer_sends_only_to_chat_group()
+    public async Task ReactionRemovedConsumer_SendsOnlyToChatGroup()
     {
         var chatId = Guid.NewGuid();
         var messageId = Guid.NewGuid();

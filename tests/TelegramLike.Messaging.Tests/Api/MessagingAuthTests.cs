@@ -21,7 +21,7 @@ public sealed class MessagingAuthTests(MessagingApiFactory factory) : IClassFixt
     [InlineData("DELETE", "/messages/00000000-0000-0000-0000-000000000001/reactions/Like")]
     [InlineData("POST",   "/messages/00000000-0000-0000-0000-000000000001/read")]
     [InlineData("GET",    "/chats/00000000-0000-0000-0000-000000000001/messages")]
-    public async Task Anonymous_request_returns_401(string method, string path)
+    public async Task AnonymousRequest_Returns401(string method, string path)
     {
         var request = new HttpRequestMessage(new HttpMethod(method), path);
         if (method is "POST")
@@ -35,7 +35,7 @@ public sealed class MessagingAuthTests(MessagingApiFactory factory) : IClassFixt
     }
 
     [Fact]
-    public async Task Invalid_token_returns_401()
+    public async Task InvalidToken_Returns401()
     {
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =

@@ -14,7 +14,7 @@ public class MongoChatMembershipReadModelIntegrationTests(MongoFixture fx)
     private MongoChatMembershipReadModel NewReadModel() => new(fx.Database);
 
     [Fact]
-    public async Task UpsertActive_then_IsActiveMember_returns_true()
+    public async Task UpsertActive_ThenIsActiveMember_ReturnsTrue()
     {
         var sut = NewReadModel();
         var chatId = Guid.NewGuid();
@@ -26,7 +26,7 @@ public class MongoChatMembershipReadModelIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task GetActiveMemberIds_returns_only_active_members_of_the_chat()
+    public async Task GetActiveMemberIds_ReturnsOnlyActiveMembersOfChat()
     {
         var sut = NewReadModel();
         var chatId = Guid.NewGuid();
@@ -45,7 +45,7 @@ public class MongoChatMembershipReadModelIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task Stale_join_redelivered_after_leave_does_not_resurrect_membership()
+    public async Task StaleJoinRedeliveredAfterLeave_DoesNotResurrectMembership()
     {
         var sut = NewReadModel();
         var chatId = Guid.NewGuid();
@@ -60,7 +60,7 @@ public class MongoChatMembershipReadModelIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task Stale_leave_redelivered_after_rejoin_does_not_remove_member()
+    public async Task StaleLeaveRedeliveredAfterRejoin_DoesNotRemoveMember()
     {
         var sut = NewReadModel();
         var chatId = Guid.NewGuid();
@@ -79,7 +79,7 @@ public class MongoChatMembershipReadModelIntegrationTests(MongoFixture fx)
     [InlineData("Admin", true)]
     [InlineData("Member", false)]
     [InlineData("Viewer", false)]
-    public async Task IsModerator_reflects_materialized_role(string role, bool expectedModerator)
+    public async Task IsModerator_ReflectsMaterializedRole(string role, bool expectedModerator)
     {
         var sut = NewReadModel();
         var chatId = Guid.NewGuid();
@@ -90,7 +90,7 @@ public class MongoChatMembershipReadModelIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task IsModerator_is_false_for_an_inactive_member_even_if_role_is_Owner()
+    public async Task IsModerator_InactiveMemberWithOwnerRole_ReturnsFalse()
     {
         var sut = NewReadModel();
         var chatId = Guid.NewGuid();
@@ -102,7 +102,7 @@ public class MongoChatMembershipReadModelIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task SetRole_promotes_a_member_to_moderator()
+    public async Task SetRole_PromotesMemberToModerator()
     {
         var sut = NewReadModel();
         var chatId = Guid.NewGuid();
@@ -115,7 +115,7 @@ public class MongoChatMembershipReadModelIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task SetRole_is_last_writer_wins_and_ignores_a_stale_demotion()
+    public async Task SetRole_LastWriterWins_IgnoresStaleDemotion()
     {
         var sut = NewReadModel();
         var chatId = Guid.NewGuid();
@@ -130,7 +130,7 @@ public class MongoChatMembershipReadModelIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task Legacy_document_without_IsActive_or_Role_reads_as_active_and_non_moderator()
+    public async Task LegacyDocumentWithoutIsActiveOrRole_ReadsAsActiveNonModerator()
     {
         // Docs written before these fields existed have neither. IsActiveMemberAsync
         // treats a missing IsActive as active; IsModeratorAsync treats a missing Role
@@ -153,7 +153,7 @@ public class MongoChatMembershipReadModelIntegrationTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task Different_chats_are_isolated()
+    public async Task DifferentChats_AreIsolated()
     {
         var sut = NewReadModel();
         var userId = Guid.NewGuid();
