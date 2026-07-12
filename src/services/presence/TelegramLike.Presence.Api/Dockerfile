@@ -16,6 +16,9 @@ COPY ["src/services/presence/TelegramLike.Presence.Infrastructure/TelegramLike.P
 COPY ["src/services/presence/TelegramLike.Presence.Application/TelegramLike.Presence.Application.csproj", "src/services/presence/TelegramLike.Presence.Application/"]
 COPY ["src/services/presence/TelegramLike.Presence.Domain/TelegramLike.Presence.Domain.csproj", "src/services/presence/TelegramLike.Presence.Domain/"]
 COPY ["src/shared/TelegramLike.Api.ServiceDefaults/TelegramLike.Api.ServiceDefaults.csproj", "src/shared/TelegramLike.Api.ServiceDefaults/"]
+COPY ["src/shared/TelegramLike.Infrastructure.ServiceDefaults/TelegramLike.Infrastructure.ServiceDefaults.csproj", "src/shared/TelegramLike.Infrastructure.ServiceDefaults/"]
+COPY ["src/shared/TelegramLike.Application.ServiceDefaults/TelegramLike.Application.ServiceDefaults.csproj", "src/shared/TelegramLike.Application.ServiceDefaults/"]
+COPY ["src/shared/TelegramLike.Domain.ServiceDefaults/TelegramLike.Domain.ServiceDefaults.csproj", "src/shared/TelegramLike.Domain.ServiceDefaults/"]
 COPY ["src/TelegramLike.Contracts/TelegramLike.Contracts.csproj", "src/TelegramLike.Contracts/"]
 RUN dotnet restore "src/services/presence/TelegramLike.Presence.Api/TelegramLike.Presence.Api.csproj"
 
