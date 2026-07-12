@@ -109,7 +109,7 @@ services:
     container_name: telegramlike-notifications
     restart: unless-stopped
     ports:
-      - "8081:8080"
+      - "18081:8080"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -141,7 +141,7 @@ services:
     container_name: telegramlike-presence
     restart: unless-stopped
     ports:
-      - "8082:8080"
+      - "18082:8080"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -176,7 +176,7 @@ services:
     container_name: telegramlike-chats
     restart: unless-stopped
     ports:
-      - "8083:8080"
+      - "18083:8080"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -208,7 +208,7 @@ services:
     container_name: telegramlike-messaging
     restart: unless-stopped
     ports:
-      - "8084:8080"
+      - "18084:8080"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -240,7 +240,7 @@ services:
     container_name: telegramlike-identity
     restart: unless-stopped
     ports:
-      - "8085:8080"
+      - "18085:8080"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -273,7 +273,7 @@ services:
     container_name: telegramlike-realtime
     restart: unless-stopped
     ports:
-      - "8086:8080"
+      - "18086:8080"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -301,7 +301,7 @@ services:
     container_name: telegramlike-gateway
     restart: unless-stopped
     ports:
-      - "8090:8080"
+      - "18090:8080"
     depends_on:
       notifications:
         condition: service_healthy
@@ -338,7 +338,7 @@ services:
     container_name: telegramlike-web
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "18080:8080"
     depends_on:
       rabbitmq:
         condition: service_healthy

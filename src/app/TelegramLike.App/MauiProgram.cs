@@ -46,12 +46,12 @@ public static class AppConfig
 {
 #if ANDROID
 	// The phone reaches the compose stack over Wi-Fi via the PC's LAN address
-	// (both must be on the same network; Windows Firewall must allow 8090 in).
+	// (both must be on the same network; Windows Firewall must allow 18090 in).
 	// Plain HTTP → android:usesCleartextTraffic in the manifest. Update the IP
 	// if the PC's DHCP lease changes.
-	public const string GatewayBaseUrl = "http://192.168.0.101:8090";
+	public const string GatewayBaseUrl = "http://192.168.0.101:18090";
 #else
 	// Windows desktop talks to the compose stack on the same machine.
-	public const string GatewayBaseUrl = "http://localhost:8090";
+	public const string GatewayBaseUrl = "http://localhost:18090";
 #endif
 }

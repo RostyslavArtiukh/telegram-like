@@ -118,14 +118,14 @@ Testcontainers-based tests).
 docker compose up -d --build
 ```
 
-Then open **http://localhost:8080**, register two users in two browsers, create a chat, and
+Then open **http://localhost:18080**, register two users in two browsers, create a chat, and
 watch messages/typing/presence update in real time.
 
 ### Handy endpoints
 
 | What | URL |
 |---|---|
-| Web app | http://localhost:8080 |
+| Web app | http://localhost:18080 |
 | Jaeger (traces) | http://localhost:16686 |
 | RabbitMQ management | http://localhost:15672 |
 | Grafana | http://localhost:3000 (anon view; `admin` / `admin`) |

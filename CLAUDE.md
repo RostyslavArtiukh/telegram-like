@@ -48,7 +48,7 @@ Never read another service's database. Embed needed data in integration events, 
 ## Commands
 - Build: `dotnet build TelegramLike.sln`
 - Test: `dotnet test` — Infrastructure tests use Testcontainers, so Docker must be running.
-- Run the whole stack: `docker compose up -d --build` → http://localhost:8080
+- Run the whole stack: `docker compose up -d --build` → http://localhost:18080. **Docker host ports = local-dev ports + 10000** (services 18081–18086, gateway 18090) so the compose stack never clashes with `dotnet run` or other apps; inside containers everything stays on 8080.
 - **Kubernetes** (mirror of compose): `docker compose build` then `kubectl apply -k .` (kustomization at repo root, namespace `telegramlike`) → web at http://localhost:30080 (NodePort); everything else via `kubectl port-forward`. See `k8s/README.md`.
 - Traces: http://localhost:16686 · RabbitMQ UI: http://localhost:15672 · Grafana: http://localhost:3000 (anon view; admin/admin) · Prometheus: http://localhost:9090 · Alertmanager: http://localhost:9093
 - Alert rules live in `monitoring/rules.yml` (TargetDown / HighHttp5xxRate / HighRequestLatencyP95); Alertmanager has no external notifier wired locally.

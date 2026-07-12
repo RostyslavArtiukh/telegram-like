@@ -12,7 +12,7 @@ docker compose build --no-cache web
 docker compose up -d --build
 docker compose ps   # wait for (healthy) on mongo/rabbitmq/gateway/5 services
 ```
-Web at http://localhost:8080. If a new project was added under `src/`, the Web
+Web at http://localhost:18080. If a new project was added under `src/`, the Web
 `Dockerfile` restore stage must COPY its csproj too, or the image build fails.
 
 ## Drive (Playwright via node, not `playwright test`)
@@ -51,7 +51,7 @@ app live. Kill with `Stop-Process -Name TelegramLike.App`.
 ## SDK / realtime surface (external clients)
 For SDK or Realtime-service changes, drive the **package boundary** instead: a scratch
 console app referencing `src/client/TelegramLike.Client.csproj`, using
-`AddTelegramLikeClient(new Uri("http://localhost:8090"))` (the gateway). Flow:
+`AddTelegramLikeClient(new Uri("http://localhost:18090"))` (the gateway). Flow:
 `session.RegisterAsync/LoginAsync` → `TelegramLikeRealtimeClient.ConnectAsync` +
 `JoinChatAsync` → act over HTTP (`ChatsApiClient`/`MessagingApiClient`/`PresenceApiClient`) → assert
 hub pushes arrive (TaskCompletionSource + timeout). Probes that matter: anonymous hub
