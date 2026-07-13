@@ -21,6 +21,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The SDK test project exercises the internal Http/ plumbing directly
+         (ServicePrefixHandler + the AddServiceResilience pipeline). -->
+    <InternalsVisibleTo Include="TelegramLike.Client.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
   </ItemGroup>
