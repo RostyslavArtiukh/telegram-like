@@ -9,7 +9,7 @@ metadata:
 
 Наскрізний аудит якості (баги/безпека/надійність/dead-code/дублювання/покриття) 9 агентами (reviewer×4, security, architect, tester, designer, Explore) + виправлення. Виконано 2026-07-06/07 як [TL-71..82] (16 комітів). Замінює план [[quality-audit-plan]] (той — pre-execution).
 
-**Baseline на старті:** 156 тестів. **Після:** 343 тести, 18 проєктів, зелено; повний `dotnet build` 0 warnings.
+**Baseline на старті:** 156 тестів. **Після:** 343 тести, 18 проєктів, зелено; повний `dotnet build` 0 warnings. *(Пізніше [TL-95..97] тест-проєкти злито 18→**8**, тестів ~**361**, нейминг уніфіковано.)*
 
 **Ключова рамка безпеки, яку встановив аудит:** зовнішні SDK/MAUI-клієнти б'ють у gateway **напряму**, минаючи Web BFF — тому всі «перевірка живе в BFF» перестали бути контролем. Звідси весь IDOR-кластер.
 
@@ -34,4 +34,4 @@ metadata:
 - **C13** прибирання vestigial actor-id параметрів SDK — breaking, відкладено.
 - Fail-open (deferred, документовано в messaging/CLAUDE.md): `AddReaction`/`MarkAsRead` не реджектять не-членів (log-only); `isBroadcast`/`isPremium` ще caller-supplied (нема type/premium у read-model). Presence typing fail-open.
 
-**origin/master:** усе закомічено локально як [TL-71..82]; статус пушу — уточнюй (наприкінці сесії питали).
+**origin/master:** усе запушено (перевірено 2026-07-13 — working tree чистий, `master` == `origin/master`).

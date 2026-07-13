@@ -2,24 +2,27 @@
 
 - [shared_projects_naming.md](shared_projects_naming.md) — Shared-проєкти по шарах + людський неймінг (мапа старе→нове: ObjectWithEvents/IChangeEvent/FromStorage/Storage/OutgoingEvents) + правило видалення одноразових інтерфейсів
 - [project_status.md](project_status.md) — ЗАСТАРІЛО (стан ~День 18); архітектура — у CLAUDE.md, прогрес — microservices_migration + quality_audit_done
-- [quality_audit_done.md](quality_audit_done.md) — Наскрізний аудит якості 9 агентами + фікси [TL-71..82] ЗРОБЛЕНО; що виправлено/відкладено, 156→343 тести
+- [quality_audit_done.md](quality_audit_done.md) — Наскрізний аудит якості 9 агентами + фікси [TL-71..82] ЗРОБЛЕНО; що виправлено/відкладено; тести 156→343 (нині ~361 у 8 проєктах після [TL-95..97])
 - [chats_persistence.md](chats_persistence.md) — Дві колекції + MongoDB транзакція для агрегату Chat
-- [notifications_fanout.md](notifications_fanout.md) — Cross-context fanout: тепер асинхронно через RabbitMQ (MessageSentIntegrationEvent → consumer → FanoutChatNotificationCommand)
-- [integration_events_rabbitmq.md](integration_events_rabbitmq.md) — RabbitMQ + MassTransit + Transactional Outbox; як додавати нові integration events
+- [notifications_fanout.md](notifications_fanout.md) — Fanout нотифікацій: асинхронно через RabbitMQ; recipients вбудовані в подію, ідемпотентно по SourceEventId; UnreadCountChanged публікується без outbox (сигнальна)
+- [integration_events_rabbitmq.md](integration_events_rabbitmq.md) — RabbitMQ + MassTransit + Transactional Outbox (chats/messaging; presence/notifications публікують напряму — свідомий виняток); як додавати нові integration events
 - [microservices_migration.md](microservices_migration.md) — Інкрементальна міграція з monolith у мікросервіси; прогрес і архітектурні рішення
 - [kubernetes_plan.md](kubernetes_plan.md) — Kubernetes-розгортання всього стека ЗРОБЛЕНО й live-verified ([TL-62]); k8s/ + kustomization.yaml у корені
-- [client_sdk_plan.md](client_sdk_plan.md) — SDK [TL-64] + hub [TL-65] + MAUI desktop [TL-66] ЗРОБЛЕНО; далі Android по USB; деплой compose
+- [client_sdk_plan.md](client_sdk_plan.md) — SDK [TL-64] + hub [TL-65] + MAUI desktop [TL-66..68] + Android-prep [TL-67] ЗРОБЛЕНО й запушено; лишились фізичні кроки Android (SDK/adb/firewall 18090/телефон)
 - [quality_audit_plan.md](quality_audit_plan.md) — ВИКОНАНО → див. quality_audit_done (це був pre-execution план)
-- [service_auth_jwt.md](service_auth_jwt.md) — JWT auth між Web BFF і downstream сервісами; рецепт додавання auth до нового сервісу
+- [service_auth_jwt.md](service_auth_jwt.md) — JWT auth: Identity — IdP (iss=telegramlike-identity), Web нічого не підписує; спільний TelegramLike.Api.ServiceDefaults (AddServiceJwtAuth + ApiControllerBase, [TL-92]); рецепт для нового сервісу
+- [error_handling_domain_exceptions.md](error_handling_domain_exceptions.md) — Кидати DomainException/ForbiddenException (не сирі BCL) у сервісах; DomainExceptionFilter мапить семантичні типи, framework-винятки → 500; +traceId/логування
+- [api_controllers.md](api_controllers.md) — Класичні [ApiController]-контролери в усіх 5 сервісах (не minimal API): thin controllers → MediatR, ApiControllerBase у shared ([TL-92]), per-service DomainExceptionFilter wire contract; Web /auth — теж контролер ([TL-90])
 - [realtime_blazor_pubsub.md](realtime_blazor_pubsub.md) — Real-time UI Web BFF через RabbitMQ → in-memory pubsub → Blazor circuit (Web НЕ юзає окремий hub; realtime-сервіс існує окремо для SDK/MAUI)
-- [observability_tracing.md](observability_tracing.md) — OpenTelemetry → Jaeger; як додавати spans і пропагація через HTTP+RabbitMQ
-- [observability_metrics.md](observability_metrics.md) — Prometheus /metrics на всіх 7 apps + Grafana dashboard; Docker publish-layer cache gotcha
+- [observability_tracing.md](observability_tracing.md) — OpenTelemetry → Jaeger на всіх 8 застосунках; як додавати spans і пропагація через HTTP+RabbitMQ
+- [observability_metrics.md](observability_metrics.md) — Prometheus /metrics на всіх 8 застосунках + Grafana dashboard; Docker publish-layer cache gotcha
 - [testing_setup.md](testing_setup.md) — xUnit + FluentAssertions + NSubstitute + Testcontainers; directConnection fix для Mongo
-- [ci_pipeline.md](ci_pipeline.md) — GitHub Actions CI: build+test усього solution на push/PR до master (ubuntu має Docker для Testcontainers)
+- [ci_pipeline.md](ci_pipeline.md) — GitHub Actions CI: build+test solution (ubuntu, Docker для Testcontainers) + MAUI compile-check (windows, [TL-77])
 - [bff_resilience.md](bff_resilience.md) — BFF HTTP resilience: timeout/retry/circuit-breaker на всіх 5 downstream клієнтах + graceful read-path degradation
-- [api_gateway.md](api_gateway.md) — YARP gateway (8090) перед 5 сервісами; BFF ходить через нього (один Gateway:BaseUrl + ServicePrefixHandler)
+- [api_gateway.md](api_gateway.md) — YARP gateway (8090) перед 6 бекендами (5 сервісів + realtime hub); BFF ходить через нього (один Gateway:BaseUrl + ServicePrefixHandler); маршрути генеруються з одного списку ([TL-91])
 - [permissions_preference.md](permissions_preference.md) — Юзер не хоче постійних prompts; широкий allowlist у settings.local.json
-- [nomenclature_step_not_day.md](nomenclature_step_not_day.md) — Маркувати нові ітерації як "Step N" а не "Day N" (продовжувати нумерацію після Day 21)
+- [nomenclature_step_not_day.md](nomenclature_step_not_day.md) — Нумерація ітерацій: Day → Step → нині єдиний лічильник [TL-N] у коміт-префіксах; housekeeping — plain docs:
 - [memory_dual_write.md](memory_dual_write.md) — Дзеркалити memory у `.claude/memory/` репо для синхронізації між машинами
 - [readable_naming_and_mudblazor.md](readable_naming_and_mudblazor.md) — Стиль: людські імена (без техно-жаргону) + UI на MudBlazor всюди по максимуму
+- [project_telegramlike.md](project_telegramlike.md) — Що це і навіщо: Telegram-clone як deliberate practice DDD/NoSQL/clean code після співбесіди; стек зафіксований користувачем
 - [user_profile.md](user_profile.md) — Профіль користувача та стиль роботи

@@ -14,7 +14,7 @@ metadata:
 **How to apply:**
 - Для **real-time UI events** з backend сервісів → не створюй SignalR Hub. Використовуй цей патерн:
   1. Backend сервіс публікує integration event у RabbitMQ
-  2. Web має MassTransit consumer (`AddInfrastructure(cfg, bus => bus.AddConsumer<...>())`)
+  2. Web має MassTransit consumer (`AddMassTransit(bus => bus.AddConsumer<...>().Endpoint(PerInstanceQueue))` у `Web/Program.cs`)
   3. Consumer викликає shared in-memory pubsub (`TypingPubSub` як приклад)
   4. Razor компонент на init підписується (`pubsub.Subscribe(key, callback)`), на dispose — відписується
   5. Callback оновлює state і робить `InvokeAsync(StateHasChanged)`
@@ -52,5 +52,5 @@ metadata:
 1. Backend service: додай integration event у `Contracts/<Context>/`, publish-нь у відповідному handler через `IPublishEndpoint`.
 2. Web: створи `IXPubSub` + impl за паттерном `TypingPubSub`.
 3. Web: створи `XConsumer : IConsumer<XIntegrationEvent>` що викликає pubsub.
-4. Реєструй у `Program.cs`: `AddSingleton<IXPubSub, XPubSub>()` + у `AddInfrastructure(..., bus => bus.AddConsumer<XConsumer>())`.
+4. Реєструй у `Program.cs`: `AddSingleton<XPubSub>()` (конкретний клас, без інтерфейсу) + `bus.AddConsumer<XConsumer>().Endpoint(PerInstanceQueue)` у `AddMassTransit`.
 5. Razor компонент: `Subscribe(key, callback)` у `OnInitializedAsync`, `Dispose` у `DisposeAsync`. Callback: оновити state + `await InvokeAsync(StateHasChanged)`.

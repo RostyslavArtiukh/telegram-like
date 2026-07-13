@@ -1,6 +1,6 @@
 ---
 name: client-sdk-plan
-description: "НАСТУПНА велика задача — TelegramLike.Client SDK (NuGet) + MAUI mobile/desktop апка; k8s відкладено, дефолтний деплой знову compose"
+description: "SDK [TL-64] + realtime hub [TL-65] + MAUI desktop [TL-66..68] + Android-prep [TL-67] — ЗРОБЛЕНО й запушено; лишились фізичні кроки Android (SDK/adb/firewall/телефон); деплой compose"
 metadata: 
   node_type: memory
   type: project
@@ -30,7 +30,7 @@ metadata:
 - `src/client/TelegramLike.Client/` (net9.0, packable, `dotnet pack` → `artifacts/packages/`): всі 6 typed clients переїхали з Web (namespaces `TelegramLike.Client.<Context>`), `Http/` (ServicePrefixHandler + resilience), `Auth/` — нова абстракція **`IAccessTokenProvider`** (клієнти беруть токен через неї), `ISessionStore` + `TelegramLikeSession` (standalone login→exchange→cache, для MAUI/console; сесія singleton на процес).
 - DI: `AddTelegramLikeApiClients(uri)` (хост дає свій provider) vs `AddTelegramLikeClient(uri)` (standalone + session). Web тепер референсить SDK; його `ServiceTokenProvider` імплементує `IAccessTokenProvider` (scoped, cookie-based). Дублікати у `Web/Services/*Api|Resilience` видалені (~900 рядків).
 - **Гочі:** Web Dockerfile restore-stage мусить COPY новий csproj (`src/client/...`), інакше образ не збирається. Playwright-верифікація повного флоу записана у проектний skill `.claude/skills/verify/SKILL.md` (Blazor prerender-trap, hidden inputs, navigate-on-create).
-- **Далі:** SignalR Hub для зовнішніх клієнтів (дірка №1) → MAUI Blazor Hybrid desktop → Android. Дірка №2 (enrichment) поки НЕ закрита server-side: `IChatsApi` enrichment-хелпери переїхали в SDK, standalone-апка робитиме enrichment клієнтом SDK (fail-open у messaging лишається — кандидат на окремий [TL-N]).
+- **Далі:** SignalR Hub для зовнішніх клієнтів (дірка №1) → MAUI Blazor Hybrid desktop → Android. Дірка №2 (enrichment) поки НЕ закрита server-side: `IChatsApi` enrichment-хелпери переїхали в SDK, standalone-апка робитиме enrichment клієнтом SDK (fail-open у messaging: частково закрито [TL-70] — SendMessage гібридний fail-closed; `AddReaction`/`MarkAsRead` та spoofable `isBroadcast`/`isPremium` досі відкриті — кандидат на окремий [TL-N]).
 
 **Прогрес [TL-65] (2026-07-05): Фаза 2 — SignalR Hub — ЗРОБЛЕНО й live-verified.** Дірка №1 закрита.
 - Рішення hub-hosting: **окремий одно-проектний сервіс** `src/services/realtime/TelegramLike.Realtime.Api` (порт 8086, без БД/домену), НЕ у Web — бо Web cookie-authed, а hub'у треба JWT; і SDK лишається на одному gateway base URL. Hub `/hub` → через gateway `/realtime/hub` (YARP проксує WebSocket з коробки).
@@ -45,11 +45,9 @@ metadata:
 - **Верифікація — CDP-трюк:** WebView2 поважає `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333` → Playwright `connectOverCDP` водить НАТИВНУ апку. Cross-client тест: web-юзер у браузері відповідає → повідомлення/typing/presence з'являються у нативній апці live. ALL PASS.
 - **Далі (наступна сесія): Android** — встановити android workload + Android SDK, повернути android TFM, `AppConfig` → LAN IP ПК + cleartext-HTTP, SecureStorage-based `ISessionStore`, деплой по USB з фізичним телефоном.
 
-**Android-крок ([TL-67]) ПОЧАТО й ЗУПИНЕНО на півдорозі (2026-07-05, вечір) — стан для резюму:**
-- `maui-android` workload — **ВСТАНОВЛЕНО** (успішно, exit 0). **Android SDK/JDK/adb на машині НЕМАЄ** — план: `dotnet build -f net10.0-android -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=true` (авто-скачує SDK+JDK).
-- **Незакомічені зміни у working tree** (код готовий, не збирався без SDK): android TFM у csproj, `usesCleartextTraffic` у AndroidManifest, `AppConfig` → `#if ANDROID` → `http://192.168.0.101:8090` (LAN IP ПК, Wi-Fi; перевірити при резюмі — DHCP), `SecureSessionStore` (SecureStorage, реєструється `#if ANDROID` ПЕРЕД `AddTelegramLikeClient`).
-- **Firewall inbound 8090 НЕ додано** — нема admin-прав у шелі, sudo вимкнено. Або юзер запустить elevated `New-NetFirewallRule -DisplayName "TelegramLike gateway 8090" -Direction Inbound -Protocol TCP -LocalPort 8090 -Action Allow -Profile Private`, або Docker Desktop правила можуть вже пропускати — протестувати з телефона.
-- **Телефон НЕ підготовлено** (Developer options + USB debugging + той самий Wi-Fi) — юзер зупинив цей крок.
-- [TL-66] (MAUI desktop) закомічено локально, але **НЕ запушено** на origin.
+**Android-крок ([TL-67]) — код ЗАКОМІЧЕНО Й ЗАПУШЕНО (перевірено 2026-07-13, `git log`/`status`); лишилась тільки фізична частина:**
+- У репо вже є: android TFM у csproj, `usesCleartextTraffic` у AndroidManifest, `AppConfig` → `#if ANDROID` → `http://192.168.0.101:18090` (LAN IP ПК — перевірити при резюмі, DHCP; порт уже **18090** після переїзду compose host-портів на 18xxx), `SecureSessionStore` (SecureStorage, реєструється `#if ANDROID` ПЕРЕД `AddTelegramLikeClient` у `MauiProgram`). `maui-android` workload встановлено.
+- **Лишилось (потрібні дії юзера):** (1) Android SDK/JDK/adb — `dotnet build -f net10.0-android -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=true`; (2) firewall inbound **18090** elevated: `New-NetFirewallRule -DisplayName "TelegramLike gateway 18090" -Direction Inbound -Protocol TCP -LocalPort 18090 -Action Allow -Profile Private` (або перевірити, чи Docker Desktop правила вже пропускають); (3) телефон: Developer options + USB debugging + той самий Wi-Fi; (4) деплой по USB.
+- [TL-66] (MAUI desktop) — на origin разом з усім іншим.
 
 Див. [[realtime-blazor-pubsub]], [[api-gateway]], [[service-auth-jwt]], [[kubernetes-plan]], [[microservices-migration]].

@@ -1,8 +1,10 @@
 ---
 name: memory-dual-write
-description: "Memory files mirrored до .claude/memory/ у репо для синхронізації між машинами через git"
-metadata:
+description: Memory files mirrored до .claude/memory/ у репо для синхронізації між машинами через git
+metadata: 
+  node_type: memory
   type: feedback
+  originSessionId: c86df29a-c998-45fb-8ef5-72540737621d
 ---
 
 При **створенні або оновленні будь-якого memory файлу** (включно з `MEMORY.md`) — записувати у **обидва місця**:

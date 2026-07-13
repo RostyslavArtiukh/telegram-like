@@ -1,6 +1,6 @@
 ---
 name: observability-tracing
-description: OpenTelemetry tracing across all 3 services з expоrt-ом у Jaeger; як додавати нові spans і нові інструментації
+description: OpenTelemetry tracing на всіх 8 застосунках з експортом у Jaeger; як додавати нові spans і нові інструментації
 metadata: 
   node_type: memory
   type: project
@@ -8,6 +8,8 @@ metadata:
 ---
 
 Step 27 (2026-05-31): додано distributed tracing.
+
+> **Оновлення 2026-07-13:** трейсинг емітять усі **8 застосунків** — web, gateway, 5 сервісів, realtime (`telegramlike.<name>`); gateway+realtime додатково вичищають `?access_token=` зі спанів (`RedactAccessTokenProcessor`). Згадки «3 сервіси» нижче — стан на Step 27.
 
 **Why:** до цього не було способу побачити end-to-end flow Web → Notifications/Presence. Логи окремі по сервісам, кореляція ручна по timestamp. Тепер один traceId зв'язує всі spans.
 
@@ -41,7 +43,7 @@ Step 27 (2026-05-31): додано distributed tracing.
 
 **Як подивитись traces:**
 1. `docker compose up -d` (jaeger разом стартує)
-2. `http://localhost:16686` → Service dropdown → pick `telegramlike.web` (або `.notifications`/`.presence`)
+2. `http://localhost:16686` → Service dropdown → pick `telegramlike.web` (або будь-який з 8: `.gateway`/`.identity`/`.chats`/`.messaging`/`.notifications`/`.presence`/`.realtime`)
 3. "Find Traces" → клік на trace → видно span tree через сервіси.
 
 **Перевірка через API (без UI):**

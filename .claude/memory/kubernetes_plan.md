@@ -1,9 +1,10 @@
 ---
 name: kubernetes-plan
-description: Kubernetes-розгортання всього стека — ЗРОБЛЕНО й live-verified ([TL-62]); маніфести в k8s/ + kustomization.yaml у корені
-metadata:
+description: "Kubernetes-розгортання всього стека — ЗРОБЛЕНО й live-verified ([TL-62]); маніфести в k8s/ + kustomization.yaml у корені"
+metadata: 
   node_type: memory
   type: project
+  originSessionId: f9c2fad8-770d-4336-bac7-c7020e5b76d9
 ---
 
 **СТАН: ЗРОБЛЕНО (2026-07-04, [TL-62]).** Весь стек із `docker-compose.yml` перекладено в Kubernetes і **перевірено на живому кластері** (Docker Desktop k8s, node Ready v1.32.2). Раніше кластера не було — цю сесію юзер увімкнув Docker Desktop → Kubernetes.

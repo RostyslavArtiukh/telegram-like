@@ -1,68 +1,34 @@
 ---
 name: service-auth-jwt
-description: JWT auth scheme між Web BFF і downstream сервісами — як додавати новий сервіс
+description: JWT auth між клієнтами і сервісами — Identity є IdP; спільний AddServiceJwtAuth + ApiControllerBase у TelegramLike.Api.ServiceDefaults
 metadata: 
   node_type: memory
   type: project
   originSessionId: c86df29a-c998-45fb-8ef5-72540737621d
 ---
 
-> **ОНОВЛЕНО ([TL-43]…[TL-45], 2026-06-07):** Web більше **НЕ** issuer. Identity-сервіс став **IdP** і підписує access-токени (`iss=telegramlike-identity`), які валідують усі 5 сервісів. Web exchange'ить session token (cookie) на access-token через Identity (`ServiceTokenProvider`, scoped) і форвардить `Bearer`. `ServiceTokenIssuer`/`ServiceAuthHandler` у Web видалені. Деталі — [[microservices-migration]]. Нижче — історичний опис первісної схеми (Web як issuer, до екстракції Identity).
+**Актуальна схема (2026-07, після [TL-43..45] і [TL-92]):**
 
-День 14 (2026-05-30): закрита auth-діра між Web BFF і Notifications-сервісом.
+- **Identity — IdP.** Підписує короткоживучі HMAC-SHA256 JWT: `iss=telegramlike-identity`, `aud=telegramlike-services`, `sub`=userId (Guid string), lifetime ~5 хв. **Web (BFF) нічого не підписує** — тримає cookie-сесію і міняє opaque session token на access JWT в Identity (`ServiceTokenProvider`, scoped, імплементує SDK-шний `IAccessTokenProvider`), далі `Bearer` на всіх downstream викликах. Standalone-клієнти (SDK/MAUI) роблять те саме через `TelegramLikeSession` (login → session token → exchange → кешований JWT з refresh-before-expiry).
+- **Валідація — спільна ([TL-92]).** `src/shared/TelegramLike.Api.ServiceDefaults`:
+  - `ServiceAuthExtensions.AddServiceJwtAuth(IConfiguration)` — єдине джерело `AddAuthentication().AddJwtBearer(...)` + `AddAuthorization`. Читає `ServiceAuth:JwtSecret/Issuer/Audience`; `MapInboundClaims=false` (**критично** — інакше .NET переіменовує `sub` → `ClaimTypes.NameIdentifier`); `ClockSkew = 30s` (розбіжності часу між контейнерами). Раніше цей блок був дослівно скопійований у 5 `Program.cs`.
+  - `ApiControllerBase` — резолвить `CurrentUserId` через `IActionFilter` раз на запит, віддає 401 до тіла екшену; **пропускає `[AllowAnonymous]`** (`EndpointMetadata.OfType<IAllowAnonymous>()`) — без цього Identity register/login/exchange ламались 401.
+  - Підключення в сервісі: `<ProjectReference>` на shared + `<Using Include="TelegramLike.Api.ServiceDefaults" />`; JwtBearer-пакет приходить транзитивно.
+- **Realtime hub** — той самий JWT: `[Authorize]` на хабі, для WebSocket токен через `?access_token=` (`JwtBearerEvents.OnMessageReceived`, тільки на hub-шляху). **Gateway auth не робить** — форвардить `Authorization` як є; кожен сервіс валідує сам (gateway ≠ trust boundary).
 
-**Why:** до Дня 14 Web передавав `X-User-Id` header а downstream сервіси трактували як істину. У docker network будь-який контейнер міг підставити header і читати чужі нотифікації.
-
-**Схема (HMAC-signed JWT):**
-- Web (BFF) — issuer. Підписує JWT приватним секретом HMAC-SHA256.
-- Notifications (resource server) — validator. Перевіряє підпис тим же секретом, валідує issuer/audience/exp.
-- Shared secret у env var (НЕ commited на прод).
-- Token claims: `sub` = userId (Guid string), `jti` = унікальний (для логування), `iat`/`exp`/`nbf` стандартні. Lifetime = 5 хв (короткий бо per-request).
-
-**Файли:**
-- Web:
-  - [ServiceAuthOptions.cs](src/TelegramLike.Web/Services/NotificationsApi/ServiceAuthOptions.cs) — IOptions для `JwtSecret`/`Issuer`/`Audience`/`TokenLifetimeSeconds`
-  - [ServiceTokenIssuer.cs](src/TelegramLike.Web/Services/NotificationsApi/ServiceTokenIssuer.cs) — Singleton, метод `IssueForUser(Guid userId)`
-  - [ServiceAuthHandler.cs](src/TelegramLike.Web/Services/NotificationsApi/ServiceAuthHandler.cs) — DelegatingHandler, attach `Authorization: Bearer <jwt>`
-  - [Program.cs](src/TelegramLike.Web/Program.cs) — реєстрація options + issuer + handler, прив'язка handler до `INotificationsApi` HttpClient
-- Notifications.Api:
-  - [Program.cs](src/services/notifications/TelegramLike.Notifications.Api/Program.cs) — `AddAuthentication(JwtBearerDefaults).AddJwtBearer(...)`, group `/notifications` має `.RequireAuthorization()`, `TryGetUserId` читає `sub` з `httpContext.User.FindFirst(JwtRegisteredClaimNames.Sub)`
-  - **Важливо:** `options.MapInboundClaims = false` — інакше .NET автоматично переіменовує `sub` → `ClaimTypes.NameIdentifier` і код плутається.
-
-**Config (appsettings + docker env):**
+**Config (appsettings + env):**
 ```
-ServiceAuth__JwtSecret = <base64 384-bit secret>
-ServiceAuth__Issuer = "telegramlike-web"
-ServiceAuth__Audience = "telegramlike-services"
-ServiceAuth__TokenLifetimeSeconds = 300   # тільки для Web (issuer)
+ServiceAuth__JwtSecret  = <base64 секрет> ⚠️ committed dev default — прийнятий ризик (див. кореневий CLAUDE.md §Auth)
+ServiceAuth__Issuer     = "telegramlike-identity"
+ServiceAuth__Audience   = "telegramlike-services"
 ```
 
-`ClockSkew = 30s` у validation — захист від невеликих розбіжностей часу між контейнерами.
+**Рецепт для нового сервісу:** ProjectReference на `TelegramLike.Api.ServiceDefaults` → `builder.Services.AddServiceJwtAuth(builder.Configuration)` → `app.UseAuthentication(); app.UseAuthorization();` → контролери успадковують `ApiControllerBase` (актор = `CurrentUserId`) → та сама `ServiceAuth__*` секція в appsettings + compose/k8s env. Публічні endpoint-и — `[AllowAnonymous]`.
 
-**Як додати auth для нового сервісу (рецепт):**
-1. У новому сервісі (`<Service>.Api`):
-   - Додати NuGet `Microsoft.AspNetCore.Authentication.JwtBearer`
-   - У `Program.cs`: скопіювати `AddAuthentication().AddJwtBearer(...)` блок з Notifications.Api
-   - `app.UseAuthentication(); app.UseAuthorization();`
-   - На endpoint group: `.RequireAuthorization()`
-   - У endpoint: `httpContext.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value`
-   - Додати ту ж `ServiceAuth__*` секцію в appsettings.json + docker env
-2. У Web:
-   - Створити typed HttpClient для нового сервісу (за паттерном `INotificationsApi`)
-   - При реєстрації: `.AddHttpMessageHandler<ServiceAuthHandler>()` — handler **той самий**, працює з будь-яким downstream
-3. Той же shared `JwtSecret` обов'язково однаковий у Web і у новому сервісі.
+**Threat model (що дизайн НЕ покриває):**
+- Секрет симетричний (HMAC) — витік = можна підробити токен будь-якого `sub` для всіх сервісів. Для прода: secret store + rotation.
+- Немає revocation — токен живе до `exp` навіть після logout; mitigation — короткий TTL (5 хв).
 
-**Verify:**
-- `curl http://localhost:8081/notifications/unread-count` → `401` (без token)
-- `curl http://localhost:8081/health` → `200` (public endpoint)
-- Через UI — нотифікації показуються (UserAccessor → Issuer → handler → bearer → JwtBearer validate → handler reads sub)
+**Історія:** День 14 (2026-05-30) — перша версія: **Web був issuer-ом** (`iss=telegramlike-web`; `ServiceAuthOptions`/`ServiceTokenIssuer`/`ServiceAuthHandler` жили у Web) — закривала довіру до `X-User-Id` header між Web і Notifications. [TL-43..45] — Identity став IdP, issuer-файли з Web видалені. [TL-92] — валідаційний плюмбінг зведено у shared проєкт (правило «не шарити» стосується БД/домену, не інфраструктурного плюмбінгу).
 
-**Threat model (що цей дизайн НЕ покриває):**
-- Якщо secret витече — все компроментоване. Для прода: secret manager + rotation.
-- Web сам є trust boundary — якщо Blazor session compromised, attacker отримає валідні токени.
-- Немає revocation: токен дійсний до exp навіть якщо юзер логаут. Виправляється коротким TTL (5хв).
-- Service-to-service: ще не закрито інші сервіси (Presence/Identity у monolith) — додавати поетапно.
-
-**Тести (TODO):**
-- Unit на `ServiceTokenIssuer` — корректно сетить claims/exp
-- Integration на `Notifications.Api` — реальний request з/без token, з простроченим token, з невалідним підписом
+Див. [[api-controllers]], [[microservices-migration]].

@@ -14,13 +14,13 @@ Fanout нотифікацій з Messaging у Notifications відбуваєть
 2. `MessageRepository.AddAsync` у Mongo-транзакції: зберігає документ + `IOutgoingEventsWriter.DispatchAsync(message.DomainEvents, session)`.
 3. Dispatcher знаходить `MessageSentEventMapper`, мапить `MessageSentEvent` → `MessageSentIntegrationEvent`, серіалізує JSON і пише в outbox **у тій же транзакції**.
 4. `OutgoingEventsSender` (BackgroundService у Infrastructure) кожні 2 сек тягне pending і публікує через `IPublishEndpoint`.
-5. `MessageSentConsumer` (Infrastructure/Messaging/Consumers) приймає подію і викликає `mediator.Send(new FanoutChatNotificationCommand(...))`.
-6. `FanoutChatNotificationCommandHandler` — як і раніше — бере `Chat`, фільтрує `ActiveMembers != actor`, робить `notificationRepository.AddManyAsync`.
+5. `MessageSentConsumer` (Notifications-сервіс, `Infrastructure/Messaging/Consumers`) приймає подію і викликає `mediator.Send(new FanoutChatNotificationCommand(...))`.
+6. `FanoutChatNotificationCommandHandler` бере **recipients прямо з події** (embed у публікуючому контексті — після міграції Notifications не має доступу до `Chat`), пише через `AddManyIgnoringDuplicatesAsync` — **ідемпотентно** по `SourceEventId` (unique partial index `{RecipientId, SourceEventId}`), після чого публікує `UnreadCountChangedIntegrationEvent` **напряму** (у Notifications outbox-а нема — свідомо: подія сигнальна, UI робить signal-then-refetch).
 
 **Why асинхронно:** атомарність save+publish без розподілених транзакцій, ізоляція fail-доменів (RabbitMQ down ≠ send fail), правильний DDD-розділ cross-context зв'язку. Synchronous `ISender.Send(FanoutChatNotificationCommand)` з `SendMessageCommandHandler` **видалений** на День 9.
 
 **How to apply:**
 - Якщо новий handler в іншому контексті повинен спричиняти нотифікації — НЕ викликати `FanoutChatNotificationCommand` прямо з handler. Замість цього: aggregate raise domain event → mapper → outbox → consumer → command.
-- Потрібно додати: (1) domain event у aggregate, (2) `IIntegrationEventMapper` impl в Application, (3) реєстрація мапера у `AddOutgoingEvents` ([DependencyInjection.cs](src/TelegramLike.Infrastructure/DependencyInjection.cs)), (4) consumer у `Infrastructure/Messaging/Consumers/`, (5) реєстрація consumer'а через `bus.AddConsumer<T>()` у `AddIntegrationMessaging`.
-- Repository, який зберігає aggregate з domain events, мусить дренувати їх через `IOutgoingEventsWriter` всередині транзакції. Поки що це робить тільки `MessageRepository.AddAsync/UpdateAsync` — інші repositories (Chats, Notifications, Presence) ще ні. Додавати в міру потреби.
+- Потрібно додати: (1) domain event у aggregate, (2) `IIntegrationEventMapper` impl в Application, (3) реєстрація мапера у `AddOutgoingEvents` (per-service `InfrastructureSetup.cs`), (4) consumer у `Infrastructure/Messaging/Consumers/` сервісу-споживача, (5) реєстрація consumer'а через `bus.AddConsumer<T>()`.
+- Repository, який зберігає aggregate з domain events, мусить дренувати їх через `IOutgoingEventsWriter` всередині транзакції. Це роблять `MessageRepository` (Messaging) і `ChatRepository` (Chats). Notifications/Presence публікують свої сигнальні/ефемерні події напряму без outbox — **свідомий виняток** (див. Eventing rules у кореневому CLAUDE.md).
 - Для `NewMessage`/`MentionInGroup` `MessageId` обовʼязковий; для `MemberJoined`/`MemberKicked` — `null` (валідація у `NotificationPayload` factory методах).

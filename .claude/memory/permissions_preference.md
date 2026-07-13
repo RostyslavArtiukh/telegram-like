@@ -16,7 +16,7 @@ metadata:
 **Why:** pet project on his local machine; he trusts actions within this repo and was tired of approving each `dotnet test` / `docker` / `git` call.
 
 **How to apply:**
-- Don't ask permission to run commands in this project — just run them. This includes `git add`/`commit`/`push` (exercised freely this session).
+- Don't ask permission to run commands in this project — just run them. This includes `git add`/`commit`/`push` (exercised freely).
 - Still **state intent** briefly before genuinely destructive or outward-facing actions (push, force-reset, deploy, deleting things I didn't create) — surface, don't gate. He waived the *prompt*, not the *transparency*.
 - This lives in `settings.local.json` (local, gitignored) — personal to this machine, not imposed on collaborators via the checked-in `settings.json`.
 

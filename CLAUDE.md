@@ -40,9 +40,14 @@ BFF clients keep their service-relative paths (e.g. `/messages/{id}`); a `Servic
 ## Cross-service rule
 Never read another service's database. Embed needed data in integration events, or build a local materialized read-model from those events (e.g. Presence's `chat_memberships`). The Web BFF enriches commands with cross-context data (recipients, isBroadcast, isModerator, isPremium).
 
+## Eventing & consistency rules (deliberate exceptions — don't "fix" them)
+- **Transactional outbox** is required for state-carrying events — chats and messaging use it. Presence (online/offline/typing) and Notifications (`UnreadCountChanged`) **publish directly by design**: signal-only/ephemeral events where a crash-drop is benign; consumers stay idempotent either way. Identity publishes nothing.
+- **Optimistic concurrency** exists only in messaging (`Message.Version` + retry) where concurrent sub-entity edits (reactions/retract) are real; other aggregates are single-writer last-write-wins on purpose.
+- **Relay consumers** (realtime hub, Web pubsub) have no dedup on purpose — pushes are id-only signals and the UI refetches, so a redelivered event self-heals.
+
 ## Conventions
 - **Commit / iteration prefix: `[TL-N]`** — single running counter (history: Day N → Step N → [TL-N]). Housekeeping (memory/docs sync) → plain `docs:` with no number.
-- End commit messages with: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`
+- End commit messages with: `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 - New service/context = the 6-phase recipe (scaffold+Domain → Application → Infrastructure → Api → Web wiring → cleanup → compose). Details in the `microservices_migration` memory.
 
 ## Commands

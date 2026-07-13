@@ -9,7 +9,7 @@ metadata:
 
 Pet-проект — месенджер подібний до Telegram, розробляється з нуля.
 
-> ⚠️ **ЦЕЙ ФАЙЛ ЗАСТАРІВ (нижче — стан на 2026-05-30, День 18, ще майже монолітний).** Актуальна архітектура — **мікросервіси + Blazor BFF + YARP gateway + client SDK + MAUI + realtime SignalR** — описана в кореневому `CLAUDE.md` та директорних `CLAUDE.md` (джерело істини). Прогрес міграції — [[microservices-migration]]; k8s — [[kubernetes-plan]]; SDK/MAUI — [[client-sdk-plan]]. Останній великий крок — наскрізний аудит якості й фікси **[TL-71..82]**, див. [[quality-audit-done]]. origin/master після цього. Нижній текст лишено для історії; **не довіряй його file:line/стеку без перевірки**.
+> ⚠️ **ЦЕЙ ФАЙЛ ЗАСТАРІВ (нижче — стан на 2026-05-30, День 18, ще майже монолітний).** Актуальна архітектура — **мікросервіси + Blazor BFF + YARP gateway + client SDK + MAUI + realtime SignalR** — описана в кореневому `CLAUDE.md` та директорних `CLAUDE.md` (джерело істини). Прогрес міграції — [[microservices-migration]]; k8s — [[kubernetes-plan]]; SDK/MAUI — [[client-sdk-plan]]. Останні великі кроки — аудит якості **[TL-71..82]** ([[quality-audit-done]]), MudBlazor UI + людський нейминг **[TL-83..89]**, shared-проєкти по шарах + контролери **[TL-90..94]** ([[shared-projects-naming]]), консолідація тестів у 8 проєктів **[TL-95..97]**. Все на origin/master. Нижній текст лишено для історії; **не довіряй його file:line/стеку без перевірки**.
 
 **Поточний стан (2026-05-24):** Завершено Дні 1–9. День 9 — додано event-driven cross-context зв'язок через RabbitMQ + Transactional Outbox.
 

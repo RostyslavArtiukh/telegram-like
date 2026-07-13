@@ -77,8 +77,12 @@ flowchart TB
 | **Presence** | 8082 | Online status + typing indicators | MongoDB + Redis |
 | **Notifications** | 8081 | Fan-out notifications + unread counts | MongoDB |
 | **Realtime** | 8086 | SignalR hub relaying events to external clients (SDK/MAUI) | — |
-| **Gateway** | 8090 | YARP reverse proxy in front of the 5 services | — |
+| **Gateway** | 8090 | YARP reverse proxy in front of the 6 backends (5 services + realtime) | — |
 | **Web (BFF)** | 8080 | Blazor Server UI; pure BFF, no domain/DB | — |
+
+> Ports above are the apps' own (local `dotnet run` / in-container) ports. **Docker compose
+> publishes them on the host as `port + 10000`** — web `18080`, services `18081–18086`,
+> gateway `18090` — so the compose stack never clashes with locally run apps.
 
 ## Tech stack
 

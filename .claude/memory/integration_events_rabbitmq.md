@@ -18,20 +18,20 @@ metadata:
 
 **Архітектура:**
 - **Domain Events** (як було) — `MessageSentEvent`, `MemberJoinedEvent` тощо. Лежать у `aggregate.PendingEvents` після операції.
-- **Integration Events** — POCO records у `src/TelegramLike.Contracts/` (на День 11 винесено з Application, бо їх будуть шарити між сервісами після міграції на microservices, [[microservices-migration]]). Зараз: `MessageSentIntegrationEvent` (Messaging), `MemberJoinedIntegrationEvent` + `MemberKickedIntegrationEvent` (Chats). Усі мають поле `Recipients: IReadOnlyList<Guid>` — обчислюється у публікуючому контексті, embed у event, щоб consumers не робили cross-context queries.
+- **Integration Events** — POCO records у `src/TelegramLike.Contracts/` (на День 11 винесено з Application, бо їх будуть шарити між сервісами після міграції на microservices, [[microservices-migration]]). Повний набір (2026-07): Messaging — `MessageSent`, `MessageRetracted`, `ReactionAdded/Removed`; Chats — `MemberJoined/Left/Kicked`, `MemberRoleChanged`; Presence — `UserCameOnline/WentOffline`, `UserTyping`; Notifications — `UnreadCountChanged`. Стейтові події несуть `Recipients: IReadOnlyList<Guid>` — обчислюється у публікуючому контексті, embed у event, щоб consumers не робили cross-context queries.
 - **IIntegrationEventMapper** — інтерфейс в `Application/Common/IntegrationEvents/`. Один мапер на тип domain event. Реєструється як Singleton, dispatcher отримує `IEnumerable<IIntegrationEventMapper>` і будує `Dictionary<Type, IIntegrationEventMapper>`.
 - **IOutgoingEventsWriter** (internal у Infrastructure/Outbox) — приймає `IEnumerable<IChangeEvent>` + `IClientSessionHandle`, мапить, серіалізує (`System.Text.Json`), пише в outbox у тій же транзакції.
-- **Outbox**: `outgoing_events` Mongo-колекція + `OutgoingEventsStore` (internal). Поля: `Id`, `EventType` (assembly-qualified), `Payload` (JSON), `OccurredAt`, `SentAt?`, `Retries`.
+- **Outbox**: `outgoing_events` Mongo-колекція + `OutgoingEventsStore` (internal). Поля: `Id`, `EventType` (стабільне ім'я типу — не AssemblyQualifiedName, з [TL-75]), `Payload` (JSON), `OccurredAt`, `SentAt?`, `Retries`. З [TL-75] також claim/lease 60с — без дублювання publish під >1 репліку.
 - **OutgoingEventsSender** — BackgroundService, кожні `OutgoingEvents:PollIntervalSeconds` сек тягне `SentAt == null && DeadLetteredAt == null`, deserialize по `Type.GetType(EventType)`, `IPublishEndpoint.Publish(payload, type)`, `MarkSentAsync`. На exception — `RecordFailureAsync(id, error, maxRetries)` (інкрементить Retries + пише LastError + ставить DeadLetteredAt коли досягло MaxRetries, Step 23).
 - **Consumers** — у `Infrastructure/Messaging/Consumers/`. Тонкі: приймають integration event, викликають `IMediator.Send(<Command>)`. `MessageSentConsumer` викликає `FanoutChatNotificationCommand`.
 
 **How to apply (новий integration event):**
 1. Додати domain event у aggregate (якщо ще немає) — `aggregate.RecordEvent(new XEvent(...))`.
-2. Створити integration event у `Application/<Context>/IntegrationEvents/XIntegrationEvent.cs` (implements `IIntegrationEvent`).
-3. Створити мапер `XEventMapper : IIntegrationEventMapper` поруч.
-4. Зареєструвати мапер у [DependencyInjection.cs](src/TelegramLike.Infrastructure/DependencyInjection.cs) в `AddOutgoingEvents`: `services.AddSingleton<IIntegrationEventMapper, XEventMapper>();`
+2. Створити integration event у `src/TelegramLike.Contracts/<Context>/XIntegrationEvent.cs`.
+3. Створити мапер `XEventMapper : IIntegrationEventMapper` в Application сервісу-видавця.
+4. Зареєструвати мапер у per-service `InfrastructureSetup.cs` в `AddOutgoingEvents`: `services.AddSingleton<IIntegrationEventMapper, XEventMapper>();`
 5. Якщо потрібен consumer — створити в `Infrastructure/Messaging/Consumers/XConsumer.cs`, зареєструвати в `AddIntegrationMessaging` через `bus.AddConsumer<XConsumer>();`.
-6. Repository, що зберігає aggregate з цим event, **мусить дренувати domain events у транзакції** через `IOutgoingEventsWriter`. Зараз це роблять: `MessageRepository.AddAsync/UpdateAsync`, `ChatRepository.AddAsync/UpdateAsync` (з Дня 10). Для `NotificationRepository`/`UserPresenceRepository`/`UserRepository` треба додати при потребі.
+6. Repository, що зберігає aggregate з цим event, **мусить дренувати domain events у транзакції** через `IOutgoingEventsWriter`. Це роблять: `MessageRepository.AddAsync/UpdateAsync`, `ChatRepository.AddAsync/UpdateAsync` (з Дня 10). Notifications (`UnreadCountChanged`) і Presence (online/offline/typing) публікують **напряму без outbox — свідомий виняток** (сигнальні/ефемерні події, ідемпотентні консюмери; див. Eventing rules у кореневому CLAUDE.md). Identity подій не публікує.
 
 **Семантика actor у fanout-командах:**
 - `MemberJoined`: actor = joining user (він знає що приєднався, всі інші active members отримують нотифікацію).

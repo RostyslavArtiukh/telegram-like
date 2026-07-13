@@ -1,9 +1,10 @@
 ---
 name: bff-resilience
 description: BFF HTTP resilience — timeout/retry/circuit-breaker on all downstream service clients
-metadata:
+metadata: 
   node_type: memory
   type: project
+  originSessionId: 04d4d75d-4c51-4ce4-8177-ebc55969c752
 ---
 
 **[TL-54/TL-55] (2026-07-04):** The Web BFF's five typed clients (identity, notifications, presence, chats, messaging) all go through one shared resilience policy — `Services/Resilience/ResilientHttpClientExtensions.cs` `AddServiceResilience()`, chained onto each `AddHttpClient<>` in `Program.cs`.
