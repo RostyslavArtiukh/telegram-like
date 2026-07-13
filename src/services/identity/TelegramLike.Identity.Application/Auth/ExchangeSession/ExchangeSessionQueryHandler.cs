@@ -26,7 +26,7 @@ public sealed class ExchangeSessionQueryHandler(
         // Returning null makes the Web BFF treat the session as invalid.
         if (user.Status != AccountStatus.Active) return null;
 
-        var token = accessTokenIssuer.IssueForUser(user.Id);
+        var token = accessTokenIssuer.IssueForUser(user.Id, user.IsPremium);
         return new SessionExchangeDto(
             user.Id,
             user.Username.Value,

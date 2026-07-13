@@ -23,6 +23,7 @@ public static class InfrastructureSetup
         services.AddScoped<IChatMembershipBackfillReader, MongoChatMembershipBackfillReader>();
 
         services.AddOutgoingEvents(configuration);
+        services.AddSingleton<IIntegrationEventMapper, ChatCreatedEventMapper>();
         services.AddSingleton<IIntegrationEventMapper, MemberJoinedEventMapper>();
         services.AddSingleton<IIntegrationEventMapper, MemberKickedEventMapper>();
         services.AddSingleton<IIntegrationEventMapper, MemberLeftEventMapper>();

@@ -8,6 +8,8 @@ internal sealed class MongoChatMembershipBackfillReader(IMongoDatabase database)
 {
     private readonly IMongoCollection<ChatMemberDocument> _chatMembersCollection =
         database.GetCollection<ChatMemberDocument>("chat_members");
+    private readonly IMongoCollection<ChatDocument> _chatsCollection =
+        database.GetCollection<ChatDocument>("chats");
 
     public async Task<IReadOnlyList<ChatMembershipSnapshot>> GetActiveMembershipsByChatAsync(
         CancellationToken cancellationToken = default)
@@ -16,10 +18,17 @@ internal sealed class MongoChatMembershipBackfillReader(IMongoDatabase database)
             .Find(Builders<ChatMemberDocument>.Filter.Eq(d => d.Status, MemberStatus.Active))
             .ToListAsync(cancellationToken);
 
+        var chatTypes = (await _chatsCollection
+                .Find(Builders<ChatDocument>.Filter.Empty)
+                .Project(c => new { c.Id, c.Type })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(c => c.Id, c => c.Type.ToString());
+
         return active
             .GroupBy(m => m.ChatId)
             .Select(g => new ChatMembershipSnapshot(
                 g.Key,
+                chatTypes.GetValueOrDefault(g.Key, ChatType.Group.ToString()),
                 g.Select(m => new ChatMembershipSnapshotMember(m.UserId, m.Role.ToString(), m.JoinedAt)).ToList()))
             .ToList();
     }

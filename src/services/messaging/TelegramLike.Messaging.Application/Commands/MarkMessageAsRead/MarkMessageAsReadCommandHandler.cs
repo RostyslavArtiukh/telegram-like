@@ -30,7 +30,8 @@ public sealed class MarkMessageAsReadCommandHandler(
         var newlyRead = await receiptRepository.MarkAsReadAsync(
             message.Id, request.ReaderUserId, DateTime.UtcNow, cancellationToken);
 
-        if (request.IsBroadcast && newlyRead)
+        // Broadcast-ness is derived from the message itself ([TL-102]), not a client flag.
+        if (message.IsBroadcast && newlyRead)
             await messageRepository.IncrementBroadcastReadCountAsync(message.Id, cancellationToken);
     }
 }

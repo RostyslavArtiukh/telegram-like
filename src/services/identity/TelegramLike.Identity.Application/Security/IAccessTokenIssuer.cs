@@ -8,7 +8,11 @@ namespace TelegramLike.Identity.Application.Security;
 /// </summary>
 public interface IAccessTokenIssuer
 {
-    AccessToken IssueForUser(Guid userId);
+    // isPremium is embedded as a signed claim so downstream services (e.g. Messaging's
+    // reaction limit) can read premium status from the validated token instead of
+    // trusting a spoofable client-supplied flag. Premium changes take effect on the
+    // next token refresh (≤ the access-token lifetime).
+    AccessToken IssueForUser(Guid userId, bool isPremium);
 }
 
 public sealed record AccessToken(string Token, int ExpiresInSeconds);

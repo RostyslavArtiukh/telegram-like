@@ -28,12 +28,12 @@ public class BackfillChatMembershipsCommandHandlerTests
 
         _reader.GetActiveMembershipsByChatAsync(Arg.Any<CancellationToken>()).Returns(new List<ChatMembershipSnapshot>
         {
-            new(chatA,
+            new(chatA, "Group",
             [
                 new ChatMembershipSnapshotMember(owner, "Owner", t0),
                 new ChatMembershipSnapshotMember(member, "Member", t0.AddDays(1)),
             ]),
-            new(chatB, [new ChatMembershipSnapshotMember(solo, "Member", t0.AddDays(2))]),
+            new(chatB, "Broadcast", [new ChatMembershipSnapshotMember(solo, "Member", t0.AddDays(2))]),
         });
 
         var result = await Handler.Handle(new BackfillChatMembershipsCommand(), CancellationToken.None);
@@ -53,6 +53,14 @@ public class BackfillChatMembershipsCommandHandlerTests
         await _publish.Received(1).Publish(
             Arg.Is<ChatMembershipsSnapshotIntegrationEvent>(e =>
                 e.ChatId == chatB && e.Members.Count == 1 && e.Members[0].UserId == solo),
+            Arg.Any<CancellationToken>());
+
+        // Chat-type backfill ([TL-102]): one ChatCreated per chat carrying its type.
+        await _publish.Received(1).Publish(
+            Arg.Is<ChatCreatedIntegrationEvent>(e => e.ChatId == chatA && e.Type == "Group"),
+            Arg.Any<CancellationToken>());
+        await _publish.Received(1).Publish(
+            Arg.Is<ChatCreatedIntegrationEvent>(e => e.ChatId == chatB && e.Type == "Broadcast"),
             Arg.Any<CancellationToken>());
     }
 

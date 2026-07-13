@@ -12,8 +12,9 @@ public sealed record SendMessageCommand(
     Guid ChatId,
     Guid AuthorId,
     string? Text,
-    // Web BFF resolves these by querying ChatsApi before calling Messaging.
-    // Chats lives in its own service now, so Messaging can't look them up.
+    // Server-authoritative for materialized chats ([TL-70]/[TL-102]): recipients come from the
+    // membership read-model and isBroadcast from the chat-type read-model. These caller-supplied
+    // values are a fallback used only while a just-created chat isn't materialized yet, then ignored.
     IReadOnlyList<Guid> Recipients,
     bool IsBroadcast,
     IReadOnlyList<SendMessageAttachment>? Attachments = null,

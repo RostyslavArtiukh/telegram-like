@@ -20,7 +20,7 @@ public sealed class MessageReactionsController(IMediator mediator) : ApiControll
     public async Task<IActionResult> Add(
         Guid messageId, [FromBody] AddReactionRequest body, CancellationToken cancellationToken)
     {
-        await mediator.Send(new AddReactionCommand(messageId, CurrentUserId, body.Emoji, body.UserIsPremium), cancellationToken);
+        await mediator.Send(new AddReactionCommand(messageId, CurrentUserId, body.Emoji, CurrentUserIsPremium), cancellationToken);
         return NoContent();
     }
 

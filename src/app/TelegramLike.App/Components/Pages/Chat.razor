@@ -5,7 +5,6 @@
 @inject MessagingApiClient MessagingApi
 @inject PresenceApiClient PresenceApi
 @inject NotificationsApiClient NotificationsApi
-@inject IdentityUsersApiClient IdentityUsers
 @inject UsernameCache Usernames
 @inject TelegramLikeRealtimeClient Realtime
 @inject NavigationManager Navigation
@@ -392,7 +391,6 @@ else
 
     // What the current user is allowed to do in this chat.
     private bool currentUserIsModerator;
-    private bool currentUserIsPremium;
     private MemberRole? currentUserRole;
 
     // Reply.
@@ -480,13 +478,6 @@ else
             .FirstOrDefault(m => m.UserId == currentUserId && m.Status == MemberStatus.Active)?.Role;
         try { currentUserIsModerator = await ChatsApi.IsModeratorAsync(currentUserId, ChatId, currentUserId); }
         catch { currentUserIsModerator = false; }
-
-        try
-        {
-            var currentUser = await IdentityUsers.GetUserByIdAsync(currentUserId);
-            currentUserIsPremium = currentUser?.IsPremium ?? false;
-        }
-        catch { currentUserIsPremium = false; }
 
         try
         {
@@ -678,7 +669,7 @@ else
             if (alreadyReactedWithEmoji)
                 await MessagingApi.RemoveReactionAsync(currentUserId, message.MessageId, emoji);
             else
-                await MessagingApi.AddReactionAsync(currentUserId, message.MessageId, emoji, currentUserIsPremium);
+                await MessagingApi.AddReactionAsync(currentUserId, message.MessageId, emoji);
             reactionPickerMessageId = null;
             await RefreshSingleMessageAsync(message.MessageId);
         }

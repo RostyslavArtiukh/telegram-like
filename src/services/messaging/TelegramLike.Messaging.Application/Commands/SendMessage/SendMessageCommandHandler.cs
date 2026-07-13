@@ -10,6 +10,7 @@ namespace TelegramLike.Messaging.Application.Commands.SendMessage;
 public sealed class SendMessageCommandHandler(
     IMessageRepository messageRepository,
     IChatMembershipReadModel membership,
+    IChatTypeReadModel chatType,
     ILogger<SendMessageCommandHandler> logger)
     : IRequestHandler<SendMessageCommand, Guid>
 {
@@ -46,6 +47,12 @@ public sealed class SendMessageCommandHandler(
         var recipients = chatKnown
             ? activeMembers.Where(id => id != request.AuthorId).ToList()
             : request.Recipients;
+
+        // Broadcast-ness is authoritative from the chat-type read-model when the chat is
+        // materialized ([TL-102]); the client-supplied flag is used only for a not-yet-known
+        // chat (same first-send race as recipients), then ignored once the type is materialized.
+        var isBroadcast = await chatType.IsBroadcastAsync(request.ChatId, cancellationToken)
+                          ?? request.IsBroadcast;
 
         if (request.ReplyToMessageId.HasValue)
         {
@@ -85,7 +92,7 @@ public sealed class SendMessageCommandHandler(
             recipients,
             replyRef,
             forwardRef,
-            isBroadcast: request.IsBroadcast);
+            isBroadcast: isBroadcast);
 
         await messageRepository.AddAsync(message, cancellationToken);
 

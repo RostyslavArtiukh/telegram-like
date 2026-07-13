@@ -28,19 +28,14 @@ public sealed record SendMessageRequest(
     Guid MessageId = default);
 
 /// <summary>
-/// Body for <c>POST /messages/{messageId}/reactions</c>. <see cref="UserIsPremium"/> is a
-/// BFF-enriched input. <see cref="Emoji"/> serialises as its enum name.
+/// Body for <c>POST /messages/{messageId}/reactions</c>. Premium status is no longer taken from
+/// the body ([TL-102]) — it is read from the signed <c>premium</c> JWT claim server-side.
+/// <see cref="Emoji"/> serialises as its enum name.
 /// </summary>
-public sealed record AddReactionRequest(Emoji Emoji, bool UserIsPremium);
+public sealed record AddReactionRequest(Emoji Emoji);
 
 /// <summary>
 /// Body for <c>POST /messages/{messageId}/retract</c>. <see cref="RetractedByModerator"/> is a
 /// BFF-enriched input.
 /// </summary>
 public sealed record RetractMessageRequest(bool RetractedByModerator);
-
-/// <summary>
-/// Body for <c>POST /messages/{messageId}/read</c>. <see cref="IsBroadcast"/> is a
-/// BFF-enriched input.
-/// </summary>
-public sealed record MarkAsReadRequest(bool IsBroadcast);

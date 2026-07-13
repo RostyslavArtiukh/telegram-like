@@ -21,6 +21,14 @@ public abstract class ApiControllerBase : ControllerBase, IActionFilter
     /// <summary>The authenticated user's id, resolved before the action runs.</summary>
     protected Guid CurrentUserId { get; private set; }
 
+    /// <summary>
+    /// The acting user's premium status, read from the signed <c>premium</c> claim on the access
+    /// token (issued by Identity). Server-authoritative — replaces the old spoofable client flag.
+    /// Absent claim (older token) reads as non-premium.
+    /// </summary>
+    protected bool CurrentUserIsPremium =>
+        string.Equals(User.FindFirst("premium")?.Value, "true", StringComparison.OrdinalIgnoreCase);
+
     void IActionFilter.OnActionExecuting(ActionExecutingContext context)
     {
         // Public endpoints ([AllowAnonymous]) carry no subject — let them through untouched.

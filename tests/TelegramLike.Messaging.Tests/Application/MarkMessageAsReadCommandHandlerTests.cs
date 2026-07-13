@@ -30,7 +30,7 @@ public class MarkMessageAsReadCommandHandlerTests
         _messageRepository.GetByIdAsync(message.Id, Arg.Any<CancellationToken>()).Returns(message);
         _membership.IsActiveMemberAsync(chatId, authorId, Arg.Any<CancellationToken>()).Returns(true);
 
-        await Handler.Handle(new MarkMessageAsReadCommand(message.Id, authorId, IsBroadcast: false), CancellationToken.None);
+        await Handler.Handle(new MarkMessageAsReadCommand(message.Id, authorId), CancellationToken.None);
 
         await _receiptRepository.DidNotReceive().MarkAsReadAsync(
             Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
@@ -48,7 +48,7 @@ public class MarkMessageAsReadCommandHandlerTests
         _receiptRepository.MarkAsReadAsync(message.Id, readerId, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
             .Returns(true);
 
-        await Handler.Handle(new MarkMessageAsReadCommand(message.Id, readerId, IsBroadcast: true), CancellationToken.None);
+        await Handler.Handle(new MarkMessageAsReadCommand(message.Id, readerId), CancellationToken.None);
 
         await _messageRepository.Received(1).IncrementBroadcastReadCountAsync(message.Id, Arg.Any<CancellationToken>());
     }
@@ -65,7 +65,7 @@ public class MarkMessageAsReadCommandHandlerTests
         _receiptRepository.MarkAsReadAsync(message.Id, readerId, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
             .Returns(false); // already had a receipt
 
-        await Handler.Handle(new MarkMessageAsReadCommand(message.Id, readerId, IsBroadcast: true), CancellationToken.None);
+        await Handler.Handle(new MarkMessageAsReadCommand(message.Id, readerId), CancellationToken.None);
 
         await _messageRepository.DidNotReceive().IncrementBroadcastReadCountAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
@@ -82,7 +82,7 @@ public class MarkMessageAsReadCommandHandlerTests
         _receiptRepository.MarkAsReadAsync(message.Id, readerId, Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
             .Returns(true);
 
-        await Handler.Handle(new MarkMessageAsReadCommand(message.Id, readerId, IsBroadcast: false), CancellationToken.None);
+        await Handler.Handle(new MarkMessageAsReadCommand(message.Id, readerId), CancellationToken.None);
 
         await _messageRepository.DidNotReceive().IncrementBroadcastReadCountAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
@@ -93,7 +93,7 @@ public class MarkMessageAsReadCommandHandlerTests
         _messageRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Message?)null);
 
         var act = () => Handler.Handle(
-            new MarkMessageAsReadCommand(Guid.NewGuid(), Guid.NewGuid(), IsBroadcast: false), CancellationToken.None);
+            new MarkMessageAsReadCommand(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>().WithMessage("*not found*");
     }
@@ -111,7 +111,7 @@ public class MarkMessageAsReadCommandHandlerTests
         _membership.IsActiveMemberAsync(chatId, readerId, Arg.Any<CancellationToken>()).Returns(false);
 
         var act = () => Handler.Handle(
-            new MarkMessageAsReadCommand(message.Id, readerId, IsBroadcast: false), CancellationToken.None);
+            new MarkMessageAsReadCommand(message.Id, readerId), CancellationToken.None);
 
         await act.Should().ThrowAsync<ForbiddenException>();
         await _receiptRepository.DidNotReceive().MarkAsReadAsync(

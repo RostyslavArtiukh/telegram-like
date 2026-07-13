@@ -30,7 +30,7 @@ internal sealed class AccessTokenIssuer : IAccessTokenIssuer
             SecurityAlgorithms.HmacSha256);
     }
 
-    public AccessToken IssueForUser(Guid userId)
+    public AccessToken IssueForUser(Guid userId, bool isPremium)
     {
         var now = DateTime.UtcNow;
         var token = new JwtSecurityToken(
@@ -39,7 +39,9 @@ internal sealed class AccessTokenIssuer : IAccessTokenIssuer
             claims: new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                // Signed premium flag — downstream services read this instead of a client body field.
+                new Claim("premium", isPremium ? "true" : "false")
             },
             notBefore: now,
             expires: now.AddSeconds(_lifetimeSeconds),

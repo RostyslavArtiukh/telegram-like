@@ -101,13 +101,14 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
     // ── AddReaction: Emoji binds as enum name string, userIsPremium binds ─
 
     [Fact]
-    public async Task AddReaction_BindsEmojiAndUserIsPremium()
+    public async Task AddReaction_BindsEmojiFromBody_AndPremiumFromClaimNotBody()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
             .Returns(Unit.Value);
 
-        // The BFF sends the emoji name ("Heart") and userIsPremium flag.
+        // The body carries only the emoji now ([TL-102]); a spoofed userIsPremium is ignored
+        // because premium is read from the (non-premium) JWT claim — see AddReactionPremiumClaimTests.
         var body = Json(new { emoji = "Heart", userIsPremium = true });
         await Auth().PostAsync($"/messages/{MessageId}/reactions", body);
 
@@ -116,7 +117,7 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
                 c.MessageId == MessageId &&
                 c.UserId == CurrentUserId &&
                 c.Emoji == Emoji.Heart &&
-                c.UserIsPremium == true),
+                c.UserIsPremium == false),
             Arg.Any<CancellationToken>());
     }
 
@@ -162,20 +163,20 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
     // ── MarkAsRead: isBroadcast (BFF-enriched) binds ──────────────────────
 
     [Fact]
-    public async Task MarkAsRead_BindsIsBroadcast()
+    public async Task MarkAsRead_BindsMessageIdAndActor()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
             .Returns(Unit.Value);
 
-        var body = Json(new { isBroadcast = true });
-        await Auth().PostAsync($"/messages/{MessageId}/read", body);
+        // [TL-102]: broadcast-ness is derived server-side from the message, so the request
+        // has no body — only the route messageId and the JWT actor bind.
+        await Auth().PostAsync($"/messages/{MessageId}/read", new StringContent(""));
 
         await factory.Mediator.Received(1).Send(
             Arg.Is<MarkMessageAsReadCommand>(c =>
                 c.MessageId == MessageId &&
-                c.ReaderUserId == CurrentUserId &&
-                c.IsBroadcast == true),
+                c.ReaderUserId == CurrentUserId),
             Arg.Any<CancellationToken>());
     }
 

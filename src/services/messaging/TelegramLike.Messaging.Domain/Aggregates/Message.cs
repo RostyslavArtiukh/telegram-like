@@ -29,6 +29,11 @@ public sealed class Message : ObjectWithEvents
     public IReadOnlyList<Reaction> Reactions => _reactions.AsReadOnly();
     public bool IsRetracted => Status.IsRetracted;
 
+    // A broadcast message tracks an aggregate read counter (non-null); Direct/Group messages
+    // do not. Lets read-side callers derive broadcast-ness from the message itself instead of
+    // trusting a client-supplied flag ([TL-102]).
+    public bool IsBroadcast => BroadcastReadCount is not null;
+
     private Message() { }
 
     private Message(

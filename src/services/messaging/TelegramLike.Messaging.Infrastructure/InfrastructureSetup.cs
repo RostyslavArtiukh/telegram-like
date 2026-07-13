@@ -23,6 +23,7 @@ public static class InfrastructureSetup
         services.AddScoped<IHiddenMessageRepository, HiddenMessageRepository>();
         services.AddScoped<IMessageReadReceiptRepository, MessageReadReceiptRepository>();
         services.AddScoped<IChatMembershipReadModel, MongoChatMembershipReadModel>();
+        services.AddScoped<IChatTypeReadModel, MongoChatTypeReadModel>();
         services.AddHostedService<MessageIndexInitializer>();
 
         services.AddOutgoingEvents(configuration);
@@ -39,6 +40,8 @@ public static class InfrastructureSetup
             bus.AddConsumer<MemberKickedConsumer>();
             bus.AddConsumer<MemberLeftConsumer>();
             bus.AddConsumer<MemberRoleChangedConsumer>();
+            // Chat type → SendMessage derives isBroadcast server-side ([TL-102]).
+            bus.AddConsumer<ChatCreatedConsumer>();
             // One-time backfill of pre-existing chats' membership into the read-model.
             bus.AddConsumer<ChatMembershipsSnapshotConsumer>();
         });

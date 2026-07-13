@@ -21,7 +21,7 @@ public sealed class BackfillChatMembershipsCommandHandler(
         foreach (var snapshot in snapshots)
         {
             // Direct publish (not via the outbox): this is an out-of-band admin operation, the
-            // event is idempotent, and at-least-once delivery is exactly what the LWW consumers expect.
+            // events are idempotent, and at-least-once delivery is exactly what the consumers expect.
             await publishEndpoint.Publish(
                 new ChatMembershipsSnapshotIntegrationEvent(
                     EventId: Guid.NewGuid(),
@@ -30,6 +30,16 @@ public sealed class BackfillChatMembershipsCommandHandler(
                     Members: snapshot.Members
                         .Select(m => new ChatMembershipSnapshotEntry(m.UserId, m.Role, m.JoinedAt))
                         .ToList()),
+                cancellationToken);
+
+            // Chat-type backfill ([TL-102]): materialize each pre-existing chat's type so
+            // SendMessage can derive isBroadcast server-side. Set-once, idempotent.
+            await publishEndpoint.Publish(
+                new ChatCreatedIntegrationEvent(
+                    EventId: Guid.NewGuid(),
+                    OccurredAt: DateTime.UtcNow,
+                    ChatId: snapshot.ChatId,
+                    Type: snapshot.ChatType),
                 cancellationToken);
 
             members += snapshot.Members.Count;

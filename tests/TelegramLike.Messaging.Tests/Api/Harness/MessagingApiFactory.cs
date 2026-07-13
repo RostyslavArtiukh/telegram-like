@@ -55,7 +55,7 @@ public sealed class MessagingApiFactory : WebApplicationFactory<Program>
     /// <summary>
     /// Mints a real HMAC-SHA256 JWT that the production JwtBearer pipeline will validate.
     /// </summary>
-    public string MintToken(Guid userId, int expiresInSeconds = 300)
+    public string MintToken(Guid userId, int expiresInSeconds = 300, bool isPremium = false)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(TestSecret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -63,7 +63,11 @@ public sealed class MessagingApiFactory : WebApplicationFactory<Program>
         var token = new JwtSecurityToken(
             issuer: TestIssuer,
             audience: TestAudience,
-            claims: [new Claim(JwtRegisteredClaimNames.Sub, userId.ToString())],
+            claims:
+            [
+                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+                new Claim("premium", isPremium ? "true" : "false")
+            ],
             expires: DateTime.UtcNow.AddSeconds(expiresInSeconds),
             signingCredentials: creds);
 
@@ -71,12 +75,12 @@ public sealed class MessagingApiFactory : WebApplicationFactory<Program>
     }
 
     /// <summary>Creates an HttpClient with a Bearer token for the given userId.</summary>
-    public HttpClient CreateAuthenticatedClient(Guid? userId = null)
+    public HttpClient CreateAuthenticatedClient(Guid? userId = null, bool isPremium = false)
     {
         var id = userId ?? Guid.NewGuid();
         var client = CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", MintToken(id));
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", MintToken(id, isPremium: isPremium));
         return client;
     }
 }

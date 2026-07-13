@@ -15,10 +15,10 @@ public class ExchangeSessionQueryHandlerTests
 
     private ExchangeSessionQueryHandler Handler => new(_sessionService, _userRepository, _tokenIssuer);
 
-    private static User NewUser(AccountStatus status = AccountStatus.Active)
+    private static User NewUser(AccountStatus status = AccountStatus.Active, bool isPremium = false)
         => User.FromStorage(
             Guid.NewGuid(), "a@b.com", "someuser", "Some User", "hashed",
-            avatarUrl: null, status: status, isPremium: false, premiumExpiresAt: null,
+            avatarUrl: null, status: status, isPremium: isPremium, premiumExpiresAt: null,
             blockedUserIds: [], createdAt: DateTime.UtcNow, updatedAt: DateTime.UtcNow);
 
     [Fact]
@@ -50,7 +50,7 @@ public class ExchangeSessionQueryHandlerTests
         var result = await Handler.Handle(new ExchangeSessionQuery("tok"), CancellationToken.None);
 
         result.Should().BeNull();
-        _tokenIssuer.DidNotReceive().IssueForUser(Arg.Any<Guid>());
+        _tokenIssuer.DidNotReceive().IssueForUser(Arg.Any<Guid>(), Arg.Any<bool>());
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class ExchangeSessionQueryHandlerTests
         var user = NewUser();
         _sessionService.GetUserIdAsync("tok", Arg.Any<CancellationToken>()).Returns(user.Id);
         _userRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
-        _tokenIssuer.IssueForUser(user.Id).Returns(new AccessToken("jwt", 3600));
+        _tokenIssuer.IssueForUser(user.Id, Arg.Any<bool>()).Returns(new AccessToken("jwt", 3600));
 
         var result = await Handler.Handle(new ExchangeSessionQuery("tok"), CancellationToken.None);
 
@@ -79,6 +79,21 @@ public class ExchangeSessionQueryHandlerTests
         result!.UserId.Should().Be(user.Id);
         result.AccessToken.Should().Be("jwt");
         result.ExpiresInSeconds.Should().Be(3600);
+    }
+
+    [Fact]
+    public async Task Exchange_PassesUserPremiumStatusToTheIssuer()
+    {
+        // [TL-102]: premium is embedded as a signed claim, so the issuer must be told the
+        // user's real premium status (read from Identity's own store, not a client input).
+        var premiumUser = NewUser(isPremium: true);
+        _sessionService.GetUserIdAsync("tok", Arg.Any<CancellationToken>()).Returns(premiumUser.Id);
+        _userRepository.GetByIdAsync(premiumUser.Id, Arg.Any<CancellationToken>()).Returns(premiumUser);
+        _tokenIssuer.IssueForUser(premiumUser.Id, true).Returns(new AccessToken("jwt", 3600));
+
+        await Handler.Handle(new ExchangeSessionQuery("tok"), CancellationToken.None);
+
+        _tokenIssuer.Received(1).IssueForUser(premiumUser.Id, true);
     }
 
     [Fact]

@@ -10,7 +10,10 @@ public interface IChatMembershipBackfillReader
         CancellationToken cancellationToken = default);
 }
 
-/// <summary>All active members of one chat, as read from the source-of-truth.</summary>
-public sealed record ChatMembershipSnapshot(Guid ChatId, IReadOnlyList<ChatMembershipSnapshotMember> Members);
+/// <summary>
+/// All active members of one chat, plus the chat's type, as read from the source-of-truth.
+/// <see cref="ChatType"/> is the <c>ChatType</c> name; it drives the chat-type backfill.
+/// </summary>
+public sealed record ChatMembershipSnapshot(Guid ChatId, string ChatType, IReadOnlyList<ChatMembershipSnapshotMember> Members);
 
 public sealed record ChatMembershipSnapshotMember(Guid UserId, string Role, DateTime JoinedAt);

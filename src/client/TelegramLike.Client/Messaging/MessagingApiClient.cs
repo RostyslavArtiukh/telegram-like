@@ -72,9 +72,10 @@ public sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider tok
                ?? new ChatMessagePage([], null);
     }
 
-    public Task AddReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, bool userIsPremium, CancellationToken cancellationToken = default)
+    // Premium status is read server-side from the signed JWT claim ([TL-102]) — not sent here.
+    public Task AddReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Post, $"/messages/{messageId}/reactions",
-            JsonContent.Create(new { emoji = emoji.ToString(), userIsPremium }), cancellationToken);
+            JsonContent.Create(new { emoji = emoji.ToString() }), cancellationToken);
 
     public Task RemoveReactionAsync(Guid userId, Guid messageId, ReactionEmoji emoji, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Delete, $"/messages/{messageId}/reactions/{emoji}", content: null, cancellationToken);
@@ -83,9 +84,9 @@ public sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider tok
         => SendVoid(HttpMethod.Post, $"/messages/{messageId}/retract",
             JsonContent.Create(new { retractedByModerator }), cancellationToken);
 
-    public Task MarkAsReadAsync(Guid userId, Guid messageId, bool isBroadcast, CancellationToken cancellationToken = default)
-        => SendVoid(HttpMethod.Post, $"/messages/{messageId}/read",
-            JsonContent.Create(new { isBroadcast }), cancellationToken);
+    // Broadcast-ness is derived server-side from the message ([TL-102]) — no body sent.
+    public Task MarkAsReadAsync(Guid userId, Guid messageId, CancellationToken cancellationToken = default)
+        => SendVoid(HttpMethod.Post, $"/messages/{messageId}/read", content: null, cancellationToken);
 
     public Task HideMessageAsync(Guid userId, Guid messageId, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Post, $"/messages/{messageId}/hide", content: null, cancellationToken);

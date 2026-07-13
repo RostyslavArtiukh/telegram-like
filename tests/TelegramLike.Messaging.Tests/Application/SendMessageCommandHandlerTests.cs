@@ -13,9 +13,10 @@ public class SendMessageCommandHandlerTests
 {
     private readonly IMessageRepository _messageRepository = Substitute.For<IMessageRepository>();
     private readonly IChatMembershipReadModel _membership = Substitute.For<IChatMembershipReadModel>();
+    private readonly IChatTypeReadModel _chatType = Substitute.For<IChatTypeReadModel>();
 
     private SendMessageCommandHandler Handler =>
-        new(_messageRepository, _membership, NullLogger<SendMessageCommandHandler>.Instance);
+        new(_messageRepository, _membership, _chatType, NullLogger<SendMessageCommandHandler>.Instance);
 
     private static SendMessageCommand Command(
         Guid chatId, Guid authorId, IReadOnlyList<Guid>? recipients = null, bool isBroadcast = false)
@@ -47,6 +48,43 @@ public class SendMessageCommandHandlerTests
         captured.Should().NotBeNull();
         captured!.PendingEvents.OfType<TelegramLike.Messaging.Domain.Events.MessageSentEvent>()
             .Single().Recipients.Should().BeEquivalentTo([otherMember]);
+    }
+
+    [Fact]
+    public async Task Send_KnownBroadcastChat_DerivesBroadcastFromReadModel_IgnoringClientFlag()
+    {
+        var chatId = Guid.NewGuid();
+        var authorId = Guid.NewGuid();
+        _membership.GetActiveMemberIdsAsync(chatId, Arg.Any<CancellationToken>())
+            .Returns(new List<Guid> { authorId });
+        _chatType.IsBroadcastAsync(chatId, Arg.Any<CancellationToken>()).Returns(true);
+
+        Message? captured = null;
+        _messageRepository.AddAsync(Arg.Do<Message>(m => captured = m), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+
+        // Client lies that it's not a broadcast; the read-model is authoritative.
+        await Handler.Handle(Command(chatId, authorId, isBroadcast: false), CancellationToken.None);
+
+        captured!.IsBroadcast.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Send_UnknownChatType_FallsBackToClientBroadcastFlag()
+    {
+        var chatId = Guid.NewGuid();
+        var authorId = Guid.NewGuid();
+        _membership.GetActiveMemberIdsAsync(chatId, Arg.Any<CancellationToken>())
+            .Returns(new List<Guid> { authorId });
+        _chatType.IsBroadcastAsync(chatId, Arg.Any<CancellationToken>()).Returns((bool?)null); // not materialized
+
+        Message? captured = null;
+        _messageRepository.AddAsync(Arg.Do<Message>(m => captured = m), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+
+        await Handler.Handle(Command(chatId, authorId, isBroadcast: true), CancellationToken.None);
+
+        captured!.IsBroadcast.Should().BeTrue("no chat-type materialized yet → fall back to the caller flag");
     }
 
     [Fact]
