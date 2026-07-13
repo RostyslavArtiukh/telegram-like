@@ -17,7 +17,7 @@ public sealed class HeartbeatCommandHandler(
     public async Task Handle(HeartbeatCommand request, CancellationToken cancellationToken)
     {
         if (request.UserId == Guid.Empty)
-            throw new ArgumentException("UserId cannot be empty.", nameof(request));
+            throw new DomainException("UserId cannot be empty.");
 
         // Redis is authoritative for "currently online". Check it BEFORE refreshing the
         // key so a reconnect after the heartbeat TTL expired is correctly seen as an

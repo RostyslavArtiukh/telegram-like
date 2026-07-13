@@ -23,9 +23,11 @@ namespace TelegramLike.Notifications.Api.Filters;
 /// an internal message. Those now bubble up as a <c>500</c>.
 /// </para>
 /// <remarks>
-/// Unlike Chats this maps no <c>403</c>, and <see cref="ArgumentException"/> guards stay a 500 —
-/// notifications never emitted those codes from its API, and mapping them would change the wire
-/// contract. Mapped exceptions are logged and the response carries the current trace id
+/// Unlike Chats this maps no <c>403</c> — notifications never emitted it. Since [TL-98] the
+/// Domain/Application guards (empty recipient/chat ids) throw <see cref="DomainException"/> and
+/// surface as a 400; only framework-thrown exceptions stay a 500 (e.g. the enum-mapping default
+/// cases, which guard data integrity, not client input). Mapped exceptions are logged and the
+/// response carries the current trace id
 /// (<c>traceId</c> extension) so a client-reported error correlates with its Jaeger trace.
 /// </remarks>
 /// </summary>

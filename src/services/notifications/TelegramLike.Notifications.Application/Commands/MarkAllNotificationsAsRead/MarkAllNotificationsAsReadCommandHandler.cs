@@ -13,7 +13,7 @@ public sealed class MarkAllNotificationsAsReadCommandHandler(
     public async Task Handle(MarkAllNotificationsAsReadCommand request, CancellationToken cancellationToken)
     {
         if (request.RecipientId == Guid.Empty)
-            throw new ArgumentException("RecipientId cannot be empty.", nameof(request));
+            throw new DomainException("RecipientId cannot be empty.");
 
         var changed = await repository.MarkAllAsReadAsync(request.RecipientId, DateTime.UtcNow, cancellationToken);
 

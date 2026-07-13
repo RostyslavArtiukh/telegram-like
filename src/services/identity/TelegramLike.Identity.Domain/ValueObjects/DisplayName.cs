@@ -10,12 +10,12 @@ public sealed record DisplayName
     public static DisplayName Create(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new ArgumentException("Display name cannot be empty.");
+            throw new DomainException("Display name cannot be empty.");
 
         value = value.Trim();
 
         if (value.Length > MaxLength)
-            throw new ArgumentException($"Display name cannot exceed {MaxLength} characters.");
+            throw new DomainException($"Display name cannot exceed {MaxLength} characters.");
 
         return new DisplayName(value);
     }

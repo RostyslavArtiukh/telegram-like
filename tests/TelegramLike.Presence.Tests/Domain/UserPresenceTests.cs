@@ -21,7 +21,7 @@ public class UserPresenceTests
     public void CreateOffline_WithEmptyId_Throws()
     {
         var act = () => UserPresence.CreateOffline(Guid.Empty);
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]

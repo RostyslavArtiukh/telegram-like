@@ -9,7 +9,7 @@ public sealed record NotificationPayload
     private NotificationPayload(Guid chatId, Guid? messageId, Guid? triggeredByUserId)
     {
         if (chatId == Guid.Empty)
-            throw new ArgumentException("ChatId cannot be empty.", nameof(chatId));
+            throw new DomainException("ChatId cannot be empty.");
 
         ChatId = chatId;
         MessageId = messageId;
@@ -18,8 +18,8 @@ public sealed record NotificationPayload
 
     public static NotificationPayload ForNewMessage(Guid chatId, Guid messageId, Guid triggeredByUserId)
     {
-        if (messageId == Guid.Empty) throw new ArgumentException("MessageId required.", nameof(messageId));
-        if (triggeredByUserId == Guid.Empty) throw new ArgumentException("TriggeredByUserId required.", nameof(triggeredByUserId));
+        if (messageId == Guid.Empty) throw new DomainException("MessageId required.");
+        if (triggeredByUserId == Guid.Empty) throw new DomainException("TriggeredByUserId required.");
         return new NotificationPayload(chatId, messageId, triggeredByUserId);
     }
 
@@ -28,7 +28,7 @@ public sealed record NotificationPayload
 
     public static NotificationPayload ForMemberJoined(Guid chatId, Guid triggeredByUserId)
     {
-        if (triggeredByUserId == Guid.Empty) throw new ArgumentException("TriggeredByUserId required.", nameof(triggeredByUserId));
+        if (triggeredByUserId == Guid.Empty) throw new DomainException("TriggeredByUserId required.");
         return new NotificationPayload(chatId, messageId: null, triggeredByUserId);
     }
 

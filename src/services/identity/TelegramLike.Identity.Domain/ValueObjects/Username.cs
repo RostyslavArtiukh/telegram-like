@@ -14,15 +14,15 @@ public sealed record Username
     public static Username Create(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new ArgumentException("Username cannot be empty.");
+            throw new DomainException("Username cannot be empty.");
 
         value = value.Trim();
 
         if (value.Length < 3 || value.Length > MaxLength)
-            throw new ArgumentException($"Username must be between 3 and {MaxLength} characters.");
+            throw new DomainException($"Username must be between 3 and {MaxLength} characters.");
 
         if (!AllowedChars.IsMatch(value))
-            throw new ArgumentException("Username can only contain letters, digits, and underscores.");
+            throw new DomainException("Username can only contain letters, digits, and underscores.");
 
         return new Username(value);
     }

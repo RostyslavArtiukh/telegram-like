@@ -11,8 +11,8 @@ namespace TelegramLike.Notifications.Api.Controllers;
 /// Write side of the notifications API: marking notifications as read (single, all, per-chat).
 /// Mirrors the former <c>POST /notifications/{id}/read</c>, <c>POST /notifications/read-all</c>
 /// and <c>POST /notifications/chats/{chatId}/read</c> minimal-API endpoints. All three return
-/// 204 on success; <c>{id}/read</c> surfaces handler <see cref="InvalidOperationException"/> as a
-/// 400 ProblemDetails via the global <c>DomainExceptionFilter</c> (matching the old try/catch).
+/// 204 on success; handler <c>DomainException</c>s (not-found / not-yours / empty-id guards)
+/// surface as a 400 ProblemDetails via the global <c>DomainExceptionFilter</c>.
 /// </summary>
 [Route("notifications")]
 [Authorize]

@@ -27,14 +27,14 @@ public class NotificationTests
     public void Create_WithEmptyRecipient_Throws()
     {
         var act = () => Notification.Create(Guid.Empty, NotificationType.NewMessage, AnyPayload(), Guid.NewGuid());
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
     public void Create_WithEmptySourceEventId_Throws()
     {
         var act = () => Notification.Create(Guid.NewGuid(), NotificationType.NewMessage, AnyPayload(), Guid.Empty);
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<DomainException>();
     }
 
     [Fact]
@@ -105,6 +105,6 @@ public class NotificationTests
     public void Payload_ForNewMessage_RequiresNonEmptyMessageId()
     {
         var act = () => NotificationPayload.ForNewMessage(Guid.NewGuid(), Guid.Empty, Guid.NewGuid());
-        act.Should().Throw<ArgumentException>();
+        act.Should().Throw<DomainException>();
     }
 }

@@ -7,6 +7,8 @@ metadata:
   originSessionId: 3bae5ccb-f88d-4ed8-82a7-2ad0af4247d7
 ---
 
+> **Оновлення [TL-98] (2026-07-13):** Phase B доведена до кінця в решті сервісів — identity (value-object guard-и Username/Email/DisplayName/HashedPassword + `User.Register`), notifications (`Notification`/`NotificationPayload` + `MarkAll*/MarkChat*`-хендлери), presence (`UserPresence` + Heartbeat/GoOffline) тепер кидають `DomainException` → 400; presence-фільтр більше **не** no-op (`ForbiddenException`→403 / `DomainException`→400, ProblemDetails+traceId). Свідомо лишені сирими (data-integrity/config → 500 правильний): fanout enum-default guard у Notifications, `ContractMappers` unknown-type, config-guard-и у Program.cs/InfrastructureSetup, десеріалізаційні guard-и `ChatRepository`. Уточнення: з [TL-94] `DomainException`/`ForbiddenException` — **спільні** типи в `TelegramLike.Domain.ServiceDefaults` (per-service копії, описані нижче, видалені). Актуальні мапінги фільтрів — див. [[api_controllers]]. Додано `DomainExceptionFilterTests` + WebApplicationFactory-harness для identity/notifications/presence (за зразком chats/messaging).
+
 Крок (2026-07-08): двофазне покращення обробки помилок у 5 сервісах (за запитом «надто проста обробка»).
 
 **Phase A (безпечно, без зміни контракту):** у 4 `DomainExceptionFilter` (identity/notifications/chats/messaging) додано `ILogger` + `traceId` (`Activity.Current?.TraceId` → fallback `HttpContext.TraceIdentifier`). ProblemDetails-фільтри кладуть `traceId` в `Extensions`; Identity лишає `{error}`-тіло, лог тільки. Presence — no-op, не чіпали. Раніше змаповані 4xx ковталися тихо (невидимі в логах/трейсах).

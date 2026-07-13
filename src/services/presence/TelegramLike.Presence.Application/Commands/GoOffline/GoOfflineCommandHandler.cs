@@ -16,7 +16,7 @@ public sealed class GoOfflineCommandHandler(
     public async Task Handle(GoOfflineCommand request, CancellationToken cancellationToken)
     {
         if (request.UserId == Guid.Empty)
-            throw new ArgumentException("UserId cannot be empty.", nameof(request));
+            throw new DomainException("UserId cannot be empty.");
 
         await presenceCache.ClearAsync(request.UserId, cancellationToken);
 

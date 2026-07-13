@@ -77,3 +77,5 @@ app.MapPrometheusScrapingEndpoint();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program; // hook for WebApplicationFactory<Program> in Api tests

@@ -46,7 +46,7 @@ public sealed class User : ObjectWithEvents
     public static User Register(Guid id, string email, string username, string displayName, string passwordHash)
     {
         // Caller-supplied id doubles as the duplicate-protection key (see RegisterUserCommandHandler).
-        if (id == Guid.Empty) throw new ArgumentException("User id cannot be empty.", nameof(id));
+        if (id == Guid.Empty) throw new DomainException("User id cannot be empty.");
         var now = DateTime.UtcNow;
         var user = new User(
             id,

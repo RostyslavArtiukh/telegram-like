@@ -10,11 +10,11 @@ All 5 services (chats, identity, notifications, presence, messaging) expose thei
 Each `*.Api` project has:
 - `ApiControllerBase` — `[ApiController]` base; `TryGetUserId(out)` / `CurrentUserId` resolve the actor from JWT `sub` (fallback `ClaimTypes.NameIdentifier`); relies on `MapInboundClaims=false`. Was copied verbatim per service; **since [TL-92] it lives once in `src/shared/TelegramLike.Api.ServiceDefaults`** (together with `AddServiceJwtAuth`; skips `[AllowAnonymous]` endpoints so Identity's public auth endpoints keep working). `DomainExceptionFilter` stays per-service on purpose (next bullet).
 - `Controllers/*.cs` — **thin** controllers (logic stays in MediatR handlers), split by responsibility and grouped **by the resource being mutated**, not by whether an actor/permission check exists (e.g. chat `rename` is actor-authorized but lives with chat lifecycle in `ChatsController`, not membership). Split per service: chats → Chats/ChatMembers · identity → Auth(anon)/Users(authed) · notifications → Feed/Read · presence → Presence/Typing · messaging → Messages/Reactions/ReadReceipts.
-- `Filters/DomainExceptionFilter.cs` — global `IExceptionFilter`, registered via `AddControllers(o => o.Filters.Add<DomainExceptionFilter>())`. **Reproduces each service's pre-existing wire contract — never a blanket copy of the chats version:**
-  - chats / messaging: `InvalidOperationException`+`ArgumentException`→400, `UnauthorizedAccessException`→403, `ProblemDetails` body.
-  - identity: `ValidationException`+`InvalidOperationException`→400, body is `{ error }` (the Web BFF Identity client reads `error`), **not** `ProblemDetails`.
-  - notifications: only `InvalidOperationException`→400 `ProblemDetails`.
-  - presence: **no-op** — the old API caught nothing, so every handler exception was a 500.
+- `Filters/DomainExceptionFilter.cs` — global `IExceptionFilter`, registered via `AddControllers(o => o.Filters.Add<DomainExceptionFilter>())`. **Per-service wire contract — never a blanket copy of the chats version.** Current mappings (after [TL-93] semantic-exception refactor + [TL-98] identity/notifications/presence migration; raw BCL/framework exceptions → 500 everywhere):
+  - chats / messaging: `ForbiddenException`→403, `DomainException`→400, `ProblemDetails` body + `traceId`.
+  - identity: `ValidationException`+`DomainException`→400, body is `{ error }` (the Web BFF Identity client reads `error`), **not** `ProblemDetails`.
+  - notifications: `DomainException`→400 `ProblemDetails` + `traceId` (no 403 — never emitted one).
+  - presence: `ForbiddenException`→403 / `DomainException`→400 `ProblemDetails` + `traceId` ([TL-98]; до того — свідомий no-op, усе → 500).
 - `Contracts/` — request/response `public sealed record`s (where any exist; presence has none — only a bare `Guid[]` body).
 - `Program.cs` — `AddControllers(...)` + `MapControllers()`. `.AddJsonOptions(JsonStringEnumConverter)` **only** where the service already registered it (chats, messaging — load-bearing for `MemberRole` / `Emoji` / `AttachmentType`); identity/notifications/presence keep enums numeric. Health endpoints stay minimal (`MapHealthChecks` / `MapGet("/health")`). Auth/OTel/health/DI/MassTransit/outbox wiring is unchanged from the minimal-API era.
 

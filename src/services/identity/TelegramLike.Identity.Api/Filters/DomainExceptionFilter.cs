@@ -18,10 +18,10 @@ namespace TelegramLike.Identity.Api.Filters;
 ///   <item><see cref="ValidationException"/> (FluentValidation) → 400, joined error messages</item>
 ///   <item><see cref="DomainException"/> → 400, the exception message</item>
 /// </list>
-/// Anything else is left unhandled so it bubbles up as a 500 — including framework-thrown
-/// <see cref="InvalidOperationException"/> and the <see cref="ArgumentException"/> value-object
-/// guards, which Identity deliberately never mapped to a 4xx (so a raw framework exception is no
-/// longer mislabelled as a client 400).
+/// Anything else is left unhandled so it bubbles up as a 500. Since [TL-98] the value-object
+/// guards (Username/Email/DisplayName/HashedPassword) throw <see cref="DomainException"/> and
+/// therefore surface as a 400 with the guard message; framework-thrown exceptions (LINQ, the
+/// Mongo driver) keep bubbling up as a 500 and are never mislabelled as a client 400.
 /// <para>
 /// Unlike the Chats <c>DomainExceptionFilter</c>, this returns the legacy
 /// <c>{ "error": "..." }</c> body (not <see cref="ProblemDetails"/>) and also handles

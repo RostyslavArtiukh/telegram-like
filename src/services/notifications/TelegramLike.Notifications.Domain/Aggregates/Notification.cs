@@ -43,9 +43,9 @@ public sealed class Notification : ObjectWithEvents
         Guid sourceEventId)
     {
         if (recipientId == Guid.Empty)
-            throw new ArgumentException("RecipientId cannot be empty.", nameof(recipientId));
+            throw new DomainException("RecipientId cannot be empty.");
         if (sourceEventId == Guid.Empty)
-            throw new ArgumentException("SourceEventId cannot be empty.", nameof(sourceEventId));
+            throw new DomainException("SourceEventId cannot be empty.");
 
         var notification = new Notification(
             Guid.NewGuid(),

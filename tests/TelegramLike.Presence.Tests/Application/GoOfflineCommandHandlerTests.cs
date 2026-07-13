@@ -59,6 +59,6 @@ public class GoOfflineCommandHandlerTests
     public async Task GoOffline_EmptyUserId_Throws()
     {
         var act = () => Handler.Handle(new GoOfflineCommand(Guid.Empty), CancellationToken.None);
-        await act.Should().ThrowAsync<ArgumentException>();
+        await act.Should().ThrowAsync<DomainException>();
     }
 }

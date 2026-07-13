@@ -1,31 +1,67 @@
+using TelegramLike.Domain.ServiceDefaults;
+using System.Diagnostics;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Logging;
 
 namespace TelegramLike.Presence.Api.Filters;
 
 /// <summary>
-/// Global exception filter for the presence API. Registered (see <c>Program.cs</c>) to mirror
-/// the structure of the Chats/Identity/Notifications services, but kept deliberately empty.
+/// Translates domain/application exceptions thrown by command + query handlers into
+/// <see cref="ProblemDetails"/> responses. Registered globally (see <c>Program.cs</c>).
 /// <para>
-/// The former minimal API wrapped <b>no</b> endpoint in a try/catch and called no
-/// <c>Results.Problem(...)</c>: every handler exception bubbled up to ASP.NET's default
-/// handler and surfaced as a raw <c>500</c>. The only exception the command handlers can throw
-/// is <see cref="ArgumentException"/> (empty <c>UserId</c>), which is unreachable on the wire
-/// because the id always comes from the validated JWT <c>sub</c>. So Presence has never emitted
-/// a <c>400</c>/<c>403</c> <c>ProblemDetails</c> body from any endpoint.
+/// Mapping ([TL-98]):
+/// <list type="bullet">
+///   <item><see cref="ForbiddenException"/> → 403</item>
+///   <item><see cref="DomainException"/> → 400</item>
+/// </list>
+/// Until [TL-98] this filter was a deliberate no-op: the original minimal API had no error
+/// handling, so every handler exception surfaced as a raw 500 and the only throwable guards
+/// were unreachable from the wire (the user id always comes from the validated JWT <c>sub</c>).
+/// Those guards now throw <see cref="DomainException"/>, so mapping them costs nothing and
+/// makes presence consistent with the other services. Framework-thrown exceptions (LINQ, the
+/// Mongo/Redis drivers) stay unmapped and bubble up as a 500 — an internal failure is never
+/// mislabelled as a client error.
 /// </para>
-/// <para>
-/// Reproducing that contract means mapping nothing: we leave every exception unhandled so it
-/// still bubbles up as a <c>500</c>, exactly as before. Mapping <see cref="InvalidOperationException"/>
-/// (→400, like Chats) or <see cref="ArgumentException"/> would silently change the wire contract
-/// the Web BFF Presence client reads, so we intentionally do not — the same reasoning the
-/// Notifications filter documents for the codes it omits.
-/// </para>
+/// <remarks>
+/// Mapped exceptions are logged with the current trace id (also echoed in the <c>traceId</c>
+/// ProblemDetails extension) so a client-reported error correlates with its Jaeger trace —
+/// the same shape the Notifications filter emits.
+/// </remarks>
 /// </summary>
-public sealed class DomainExceptionFilter : IExceptionFilter
+public sealed class DomainExceptionFilter(ILogger<DomainExceptionFilter> logger) : IExceptionFilter
 {
     public void OnException(ExceptionContext context)
     {
-        // No-op: presence emits no domain-exception → ProblemDetails mapping. Unhandled
-        // exceptions bubble up as a 500, matching the previous minimal-API behaviour.
+        var statusCode = context.Exception switch
+        {
+            ForbiddenException => StatusCodes.Status403Forbidden,
+            DomainException => StatusCodes.Status400BadRequest,
+            _ => (int?)null
+        };
+
+        if (statusCode is null)
+            return;
+
+        var traceId = Activity.Current?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier;
+        logger.LogWarning(
+            "Domain exception {ExceptionType} mapped to {Status} for {Method} {Path} (traceId {TraceId}): {Message}",
+            context.Exception.GetType().Name,
+            statusCode,
+            context.HttpContext.Request.Method,
+            context.HttpContext.Request.Path,
+            traceId,
+            context.Exception.Message);
+
+        var problem = new ProblemDetails
+        {
+            Status = statusCode,
+            Detail = context.Exception.Message
+        };
+        problem.Extensions["traceId"] = traceId;
+
+        context.Result = new ObjectResult(problem) { StatusCode = statusCode };
+        context.ExceptionHandled = true;
     }
 }

@@ -22,7 +22,7 @@ public class HeartbeatCommandHandlerTests
     public async Task Heartbeat_EmptyUserId_Throws()
     {
         var act = () => Handler.Handle(new HeartbeatCommand(Guid.Empty), CancellationToken.None);
-        await act.Should().ThrowAsync<ArgumentException>();
+        await act.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]

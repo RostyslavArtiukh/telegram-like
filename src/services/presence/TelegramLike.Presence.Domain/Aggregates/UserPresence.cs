@@ -23,7 +23,7 @@ public sealed class UserPresence : ObjectWithEvents
     public static UserPresence CreateOffline(Guid userId, bool hideLastSeen = false)
     {
         if (userId == Guid.Empty)
-            throw new ArgumentException("UserId cannot be empty.", nameof(userId));
+            throw new DomainException("UserId cannot be empty.");
 
         return new UserPresence(userId, OnlineStatus.Offline, lastSeenAt: null, hideLastSeen);
     }

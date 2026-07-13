@@ -9,7 +9,7 @@ public sealed record HashedPassword
     public static HashedPassword FromHash(string hash)
     {
         if (string.IsNullOrWhiteSpace(hash))
-            throw new ArgumentException("Password hash cannot be empty.");
+            throw new DomainException("Password hash cannot be empty.");
         return new HashedPassword(hash);
     }
 

@@ -13,9 +13,9 @@ public sealed class MarkChatNotificationsAsReadCommandHandler(
     public async Task Handle(MarkChatNotificationsAsReadCommand request, CancellationToken cancellationToken)
     {
         if (request.RecipientId == Guid.Empty)
-            throw new ArgumentException("RecipientId cannot be empty.", nameof(request));
+            throw new DomainException("RecipientId cannot be empty.");
         if (request.ChatId == Guid.Empty)
-            throw new ArgumentException("ChatId cannot be empty.", nameof(request));
+            throw new DomainException("ChatId cannot be empty.");
 
         var changed = await repository.MarkAllForChatAsReadAsync(
             request.RecipientId, request.ChatId, DateTime.UtcNow, cancellationToken);
