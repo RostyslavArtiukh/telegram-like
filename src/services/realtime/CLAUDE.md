@@ -10,6 +10,6 @@ SignalR push channel for **external clients** (MAUI/desktop via the `TelegramLik
 - Push payload shapes + event names live in `Contracts/Realtime/RealtimeEvents.cs` — shared with the SDK's `TelegramLikeRealtimeClient`, so they can't drift. Changing them is a breaking change for deployed apps.
 
 ## Known trade-offs (deliberate)
-- `JoinChat` validates membership against an in-memory, event-sourced tracker (`Membership/ChatMembershipTracker`, fed by `MemberJoined/Left/Kicked`): fail-closed for a chat it has observed, fail-open for an unknown one (ephemeral, no DB — so it can't lock members out after a restart before events flow). [TL-76]
+- `JoinChat` validates membership against an in-memory, event-sourced tracker (`Membership/ChatMembershipTracker`, fed by `MemberJoined/Left/Kicked` + the `ChatMembershipsSnapshot` backfill): fail-closed for a chat it has observed, fail-open for an as-yet-unknown one (ephemeral, no DB). A restarted replica's temporary queue doesn't replay history, so re-running the admin backfill re-materializes every replica's tracker ([TL-103]); the residual unknown-chat window is metadata-only (id-only pushes — content is protected by Messaging's fail-closed reads). [TL-76]
 - Reconnect loses group membership; the SDK client re-joins its open chats on `Reconnected`.
 - Health: `/health/ready` = RabbitMQ bus only (MassTransit's auto check); no DB to probe.

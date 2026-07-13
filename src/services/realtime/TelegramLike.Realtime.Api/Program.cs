@@ -87,6 +87,8 @@ builder.Services.AddMassTransit(bus =>
     bus.AddConsumer<MemberJoinedMembershipConsumer>().Endpoint(PerInstanceQueue);
     bus.AddConsumer<MemberLeftMembershipConsumer>().Endpoint(PerInstanceQueue);
     bus.AddConsumer<MemberKickedMembershipConsumer>().Endpoint(PerInstanceQueue);
+    // Backfill snapshots make JoinChat fail-closed for pre-existing chats ([TL-103]).
+    bus.AddConsumer<ChatMembershipsSnapshotMembershipConsumer>().Endpoint(PerInstanceQueue);
 
     bus.UsingRabbitMq((ctx, cfg) =>
     {

@@ -6,9 +6,11 @@ namespace TelegramLike.Realtime.Api.Membership;
 /// In-memory, per-replica view of chat membership, materialized from the Chats
 /// integration events this instance already consumes. Realtime has no database
 /// (see the service CLAUDE.md), so this is deliberately ephemeral: a chat becomes
-/// "known" only once an event for it has been observed. JoinChat fails closed for
-/// known chats and fails open for unknown ones (e.g. right after a restart, before
-/// events flow) — matching the rest of the system rather than locking members out.
+/// "known" once an event for it has been observed, or once the admin backfill
+/// re-publishes its membership snapshot ([TL-103]) — which is how a restarted replica
+/// (whose temporary queue does not replay history) regains a full view. JoinChat fails
+/// closed for known chats; an as-yet-unknown chat fails open (metadata-only exposure —
+/// content is protected by Messaging's fail-closed reads) rather than locking members out.
 /// </summary>
 public sealed class ChatMembershipTracker
 {

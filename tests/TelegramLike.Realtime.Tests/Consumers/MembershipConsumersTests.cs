@@ -58,6 +58,30 @@ public class MembershipConsumersTests
     }
 
     [Fact]
+    public async Task ChatMembershipsSnapshotConsumer_MaterializesAllMembers_MakingChatKnownAndFailClosed()
+    {
+        var tracker = new ChatMembershipTracker();
+        var chatId = Guid.NewGuid();
+        var memberA = Guid.NewGuid();
+        var memberB = Guid.NewGuid();
+        var outsider = Guid.NewGuid();
+        var evt = new ChatMembershipsSnapshotIntegrationEvent(Guid.NewGuid(), DateTime.UtcNow, chatId,
+        [
+            new ChatMembershipSnapshotEntry(memberA, "Owner", DateTime.UtcNow),
+            new ChatMembershipSnapshotEntry(memberB, "Member", DateTime.UtcNow),
+        ]);
+
+        var consumer = new ChatMembershipsSnapshotMembershipConsumer(tracker);
+        await consumer.Consume(HubTestDoubles.ContextFor(evt));
+
+        // The chat is now "known", so JoinChat is fail-closed: members allowed, outsider rejected.
+        tracker.IsKnownChat(chatId).Should().BeTrue();
+        tracker.IsMember(chatId, memberA).Should().BeTrue();
+        tracker.IsMember(chatId, memberB).Should().BeTrue();
+        tracker.IsMember(chatId, outsider).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task MemberJoinedMembershipConsumer_DuplicateDelivery_IsIdempotent()
     {
         var tracker = new ChatMembershipTracker();

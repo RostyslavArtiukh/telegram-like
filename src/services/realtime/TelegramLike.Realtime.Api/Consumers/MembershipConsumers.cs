@@ -37,3 +37,18 @@ internal sealed class MemberKickedMembershipConsumer(ChatMembershipTracker track
         return Task.CompletedTask;
     }
 }
+
+// Backfill ([TL-103]): materializes a pre-existing chat's membership into this replica's
+// tracker so JoinChat becomes fail-closed for it. A restarted replica's temporary queue does
+// not replay history, so without this a chat only becomes "known" once a live membership event
+// fires — running the admin backfill (which publishes these snapshots) re-populates every replica.
+internal sealed class ChatMembershipsSnapshotMembershipConsumer(ChatMembershipTracker tracker)
+    : IConsumer<ChatMembershipsSnapshotIntegrationEvent>
+{
+    public Task Consume(ConsumeContext<ChatMembershipsSnapshotIntegrationEvent> context)
+    {
+        foreach (var member in context.Message.Members)
+            tracker.Join(context.Message.ChatId, member.UserId);
+        return Task.CompletedTask;
+    }
+}
