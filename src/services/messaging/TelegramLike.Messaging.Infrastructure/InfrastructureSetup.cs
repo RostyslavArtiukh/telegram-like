@@ -39,6 +39,8 @@ public static class InfrastructureSetup
             bus.AddConsumer<MemberKickedConsumer>();
             bus.AddConsumer<MemberLeftConsumer>();
             bus.AddConsumer<MemberRoleChangedConsumer>();
+            // One-time backfill of pre-existing chats' membership into the read-model.
+            bus.AddConsumer<ChatMembershipsSnapshotConsumer>();
         });
 
         return services;

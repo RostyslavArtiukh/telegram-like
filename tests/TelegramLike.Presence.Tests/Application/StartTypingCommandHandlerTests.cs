@@ -1,6 +1,5 @@
 using FluentAssertions;
 using MassTransit;
-using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TelegramLike.Contracts.Presence;
 using TelegramLike.Presence.Application.Storage;
@@ -14,7 +13,7 @@ public class StartTypingCommandHandlerTests
     private readonly IChatMembershipReadModel _membership = Substitute.For<IChatMembershipReadModel>();
     private readonly IPublishEndpoint _publish = Substitute.For<IPublishEndpoint>();
 
-    private StartTypingCommandHandler Handler => new(_typing, _membership, _publish, NullLogger<StartTypingCommandHandler>.Instance);
+    private StartTypingCommandHandler Handler => new(_typing, _membership, _publish);
 
     [Fact]
     public async Task StartTyping_ActiveMember_PublishesEvent()
@@ -32,22 +31,20 @@ public class StartTypingCommandHandlerTests
     }
 
     [Fact]
-    public async Task StartTyping_NonMember_IsAllowedThroughFailOpen()
+    public async Task StartTyping_NonMember_ThrowsForbidden()
     {
-        // Until the read model is fully populated for legacy chats we keep
-        // letting unknown pairs through (the handler logs a warning). Lock this
-        // in so a future "tighten to fail-closed" change has to consciously
-        // update the test, not slip past unnoticed.
+        // Fail-closed ([TL-101]): the read model is backfilled, so a non-member is refused —
+        // no typing indicator is set and no typing event is published.
         var chatId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         _membership.IsActiveMemberAsync(chatId, userId, Arg.Any<CancellationToken>()).Returns(false);
 
         var act = () => Handler.Handle(new StartTypingCommand(chatId, userId), CancellationToken.None);
 
-        await act.Should().NotThrowAsync();
-        await _typing.Received(1).StartTypingAsync(chatId, userId, Arg.Any<CancellationToken>());
-        await _publish.Received(1).Publish(
-            Arg.Any<UserTypingIntegrationEvent>(),
-            Arg.Any<CancellationToken>());
+        await act.Should().ThrowAsync<ForbiddenException>();
+        await _typing.DidNotReceive().StartTypingAsync(
+            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _publish.DidNotReceive().Publish(
+            Arg.Any<UserTypingIntegrationEvent>(), Arg.Any<CancellationToken>());
     }
 }

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TelegramLike.Application.ServiceDefaults;
+using TelegramLike.Chats.Application.Backfill;
 using TelegramLike.Chats.Application.Queries;
 using TelegramLike.Chats.Application.IntegrationEvents;
 using TelegramLike.Chats.Domain.Repositories;
@@ -19,6 +20,7 @@ public static class InfrastructureSetup
         services.AddMongoDb(configuration);
         services.AddScoped<IChatRepository, ChatRepository>();
         services.AddScoped<IChatQueryService, ChatQueryService>();
+        services.AddScoped<IChatMembershipBackfillReader, MongoChatMembershipBackfillReader>();
 
         services.AddOutgoingEvents(configuration);
         services.AddSingleton<IIntegrationEventMapper, MemberJoinedEventMapper>();

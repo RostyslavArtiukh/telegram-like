@@ -1,6 +1,5 @@
 using TelegramLike.Messaging.Domain;
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TelegramLike.Messaging.Application.Commands.MarkMessageAsRead;
 using TelegramLike.Messaging.Application.Storage;
@@ -17,7 +16,7 @@ public class MarkMessageAsReadCommandHandlerTests
     private readonly IChatMembershipReadModel _membership = Substitute.For<IChatMembershipReadModel>();
 
     private MarkMessageAsReadCommandHandler Handler =>
-        new(_messageRepository, _receiptRepository, _membership, NullLogger<MarkMessageAsReadCommandHandler>.Instance);
+        new(_messageRepository, _receiptRepository, _membership);
 
     private static Message NewMessage(Guid chatId, Guid authorId, bool isBroadcast = false)
         => Message.Send(Guid.NewGuid(), chatId, authorId, MessageContent.Create("hi"), [authorId], isBroadcast: isBroadcast);
@@ -100,10 +99,10 @@ public class MarkMessageAsReadCommandHandlerTests
     }
 
     [Fact]
-    public async Task MarkAsRead_NonMemberReader_StillGetsReceiptFailOpen()
+    public async Task MarkAsRead_NonMemberReader_ThrowsForbidden()
     {
-        // AddReaction/RemoveReaction/MarkMessageAsRead currently fail-open on membership
-        // (log-only) — documenting current behavior per the messaging CLAUDE.md.
+        // Fail-closed ([TL-101]): the read model is backfilled, so a non-member reader is
+        // refused with a 403 and no receipt is written.
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
         var readerId = Guid.NewGuid();
@@ -111,9 +110,11 @@ public class MarkMessageAsReadCommandHandlerTests
         _messageRepository.GetByIdAsync(message.Id, Arg.Any<CancellationToken>()).Returns(message);
         _membership.IsActiveMemberAsync(chatId, readerId, Arg.Any<CancellationToken>()).Returns(false);
 
-        await Handler.Handle(new MarkMessageAsReadCommand(message.Id, readerId, IsBroadcast: false), CancellationToken.None);
+        var act = () => Handler.Handle(
+            new MarkMessageAsReadCommand(message.Id, readerId, IsBroadcast: false), CancellationToken.None);
 
-        await _receiptRepository.Received(1).MarkAsReadAsync(
-            message.Id, readerId, Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+        await act.Should().ThrowAsync<ForbiddenException>();
+        await _receiptRepository.DidNotReceive().MarkAsReadAsync(
+            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
     }
 }

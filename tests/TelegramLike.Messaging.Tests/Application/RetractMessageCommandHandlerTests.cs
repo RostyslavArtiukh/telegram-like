@@ -1,6 +1,5 @@
 using TelegramLike.Messaging.Domain;
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TelegramLike.Messaging.Application.Commands.RetractMessage;
 using TelegramLike.Messaging.Application.Storage;
@@ -16,7 +15,7 @@ public class RetractMessageCommandHandlerTests
     private readonly IChatMembershipReadModel _membership = Substitute.For<IChatMembershipReadModel>();
 
     private RetractMessageCommandHandler Handler =>
-        new(_messageRepository, _membership, NullLogger<RetractMessageCommandHandler>.Instance);
+        new(_messageRepository, _membership);
 
     private static Message NewMessage(Guid chatId, Guid authorId)
         => Message.Send(Guid.NewGuid(), chatId, authorId, MessageContent.Create("hi"), [authorId]);
@@ -86,22 +85,22 @@ public class RetractMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Retract_NonMemberFailsOpen_StillNeedsAuthorOrModerator()
+    public async Task Retract_NonMember_ThrowsForbiddenBeforeAuthorOrModeratorCheck()
     {
-        // AddReaction/RemoveReaction fail-open on membership; retract also logs-only on
-        // membership but still gates on author-or-moderator, so a non-member stranger
-        // still can't retract someone else's message.
+        // Fail-closed ([TL-101]): a non-member is refused up front with a 403 — the read model
+        // is backfilled, so membership is authoritative. The message is never touched.
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
         var strangerId = Guid.NewGuid();
         var message = NewMessage(chatId, authorId);
         _messageRepository.GetByIdAsync(message.Id, Arg.Any<CancellationToken>()).Returns(message);
         _membership.IsActiveMemberAsync(chatId, strangerId, Arg.Any<CancellationToken>()).Returns(false);
-        _membership.IsModeratorAsync(chatId, strangerId, Arg.Any<CancellationToken>()).Returns(false);
 
         var act = () => Handler.Handle(
             new RetractMessageCommand(message.Id, strangerId, RetractedByModerator: false), CancellationToken.None);
 
-        await act.Should().ThrowAsync<DomainException>();
+        await act.Should().ThrowAsync<ForbiddenException>();
+        message.IsRetracted.Should().BeFalse();
+        await _messageRepository.DidNotReceive().UpdateAsync(Arg.Any<Message>(), Arg.Any<CancellationToken>());
     }
 }

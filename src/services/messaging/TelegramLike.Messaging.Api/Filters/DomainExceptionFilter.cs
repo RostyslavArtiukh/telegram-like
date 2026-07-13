@@ -23,8 +23,9 @@ namespace TelegramLike.Messaging.Api.Filters;
 /// <see cref="ArgumentException"/> (LINQ, the Mongo driver) — is left unhandled so it bubbles up
 /// as a <c>500</c>. This is the deliberate change from the previous filter, which caught those
 /// raw BCL base types and mislabelled such server bugs as a client <c>400</c> with an internal
-/// message in the body. The fail-open membership path is untouched: Messaging never threw on
-/// missing membership, so there is no mapping for it here either. Mapped exceptions are logged
+/// message in the body. Membership is now fail-closed ([TL-101]): the command handlers throw
+/// <see cref="ForbiddenException"/> for a non-member, which maps to 403 via the branch above.
+/// Mapped exceptions are logged
 /// and the response carries the current trace id (<c>traceId</c> extension) so a client-reported
 /// error correlates with its Jaeger trace.
 /// </summary>

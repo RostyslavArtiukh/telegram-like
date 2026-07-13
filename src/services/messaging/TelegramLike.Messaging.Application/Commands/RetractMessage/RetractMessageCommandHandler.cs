@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.Logging;
 using TelegramLike.Messaging.Application;
 using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Repositories;
@@ -8,8 +7,7 @@ namespace TelegramLike.Messaging.Application.Commands.RetractMessage;
 
 public sealed class RetractMessageCommandHandler(
     IMessageRepository messageRepository,
-    IChatMembershipReadModel membership,
-    ILogger<RetractMessageCommandHandler> logger)
+    IChatMembershipReadModel membership)
     : IRequestHandler<RetractMessageCommand>
 {
     public async Task Handle(RetractMessageCommand request, CancellationToken cancellationToken)
@@ -19,14 +17,9 @@ public sealed class RetractMessageCommandHandler(
             var message = await messageRepository.GetByIdAsync(request.MessageId, cancellationToken)
                           ?? throw new DomainException("Message not found.");
 
-            var isMember = await membership.IsActiveMemberAsync(message.ChatId, request.RetractedByUserId, cancellationToken);
-            if (!isMember)
-            {
-                logger.LogWarning(
-                    "RetractMessage: actor {RetractedByUserId} is not in the local membership read-model for chat {ChatId}; allowing through (fail-open).",
-                    request.RetractedByUserId,
-                    message.ChatId);
-            }
+            // Fail-closed ([TL-101]): backfilled read-model makes a non-member authoritative.
+            if (!await membership.IsActiveMemberAsync(message.ChatId, request.RetractedByUserId, cancellationToken))
+                throw new ForbiddenException("You are not a member of this chat.");
 
             var isAuthor = message.AuthorId == request.RetractedByUserId;
 

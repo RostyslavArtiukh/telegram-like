@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.Logging;
 using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Repositories;
 
@@ -8,8 +7,7 @@ namespace TelegramLike.Messaging.Application.Commands.MarkMessageAsRead;
 public sealed class MarkMessageAsReadCommandHandler(
     IMessageRepository messageRepository,
     IMessageReadReceiptRepository receiptRepository,
-    IChatMembershipReadModel membership,
-    ILogger<MarkMessageAsReadCommandHandler> logger)
+    IChatMembershipReadModel membership)
     : IRequestHandler<MarkMessageAsReadCommand>
 {
     public async Task Handle(MarkMessageAsReadCommand request, CancellationToken cancellationToken)
@@ -17,14 +15,9 @@ public sealed class MarkMessageAsReadCommandHandler(
         var message = await messageRepository.GetByIdAsync(request.MessageId, cancellationToken)
                       ?? throw new DomainException("Message not found.");
 
-        var isMember = await membership.IsActiveMemberAsync(message.ChatId, request.ReaderUserId, cancellationToken);
-        if (!isMember)
-        {
-            logger.LogWarning(
-                "MarkMessageAsRead: reader {ReaderUserId} is not in the local membership read-model for chat {ChatId}; allowing through (fail-open).",
-                request.ReaderUserId,
-                message.ChatId);
-        }
+        // Fail-closed ([TL-101]): backfilled read-model makes a non-member authoritative.
+        if (!await membership.IsActiveMemberAsync(message.ChatId, request.ReaderUserId, cancellationToken))
+            throw new ForbiddenException("You are not a member of this chat.");
 
         // Self-read skip stays here — it's purely about the message, not membership.
         if (message.AuthorId == request.ReaderUserId)

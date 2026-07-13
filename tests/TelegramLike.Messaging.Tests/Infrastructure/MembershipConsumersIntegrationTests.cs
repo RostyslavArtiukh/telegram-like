@@ -114,4 +114,51 @@ public class MembershipConsumersIntegrationTests(MongoFixture fx)
         (await readModel.IsModeratorAsync(chatId, userId)).Should().BeTrue(
             "a stale role event delivered after a newer one must not revert the role");
     }
+
+    // ── [TL-101] backfill snapshot consumer ──────────────────────────────────
+
+    [Fact]
+    public async Task ChatMembershipsSnapshotConsumer_MaterializesAllActiveMembers_Idempotently()
+    {
+        var readModel = NewReadModel();
+        var consumer = new ChatMembershipsSnapshotConsumer(readModel);
+        var chatId = Guid.NewGuid();
+        var owner = Guid.NewGuid();
+        var member = Guid.NewGuid();
+        var evt = new ChatMembershipsSnapshotIntegrationEvent(Guid.NewGuid(), T0.AddSeconds(60), chatId,
+        [
+            new ChatMembershipSnapshotEntry(owner, "Owner", T0),
+            new ChatMembershipSnapshotEntry(member, "Member", T0),
+        ]);
+
+        await consumer.Consume(ContextFor(evt));
+        await consumer.Consume(ContextFor(evt)); // redelivery must be a no-op
+
+        (await readModel.IsActiveMemberAsync(chatId, owner)).Should().BeTrue();
+        (await readModel.IsActiveMemberAsync(chatId, member)).Should().BeTrue();
+        (await readModel.IsModeratorAsync(chatId, owner)).Should().BeTrue("the snapshot carries the Owner role");
+        (await readModel.IsModeratorAsync(chatId, member)).Should().BeFalse();
+        (await readModel.GetActiveMemberIdsAsync(chatId)).Should().BeEquivalentTo(new[] { owner, member });
+    }
+
+    [Fact]
+    public async Task ChatMembershipsSnapshotConsumer_StaleSnapshot_DoesNotResurrectLeftMember()
+    {
+        // The snapshot carries each member's original JoinedAt. If a live MemberLeft has already
+        // been processed (newer timestamp), the backfill must NOT resurrect the departed member.
+        var readModel = NewReadModel();
+        var chatId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        await readModel.UpsertActiveAsync(chatId, userId, "Member", T0);
+        await readModel.DeactivateAsync(chatId, userId, T0.AddSeconds(10)); // they left after joining
+
+        var consumer = new ChatMembershipsSnapshotConsumer(readModel);
+        var evt = new ChatMembershipsSnapshotIntegrationEvent(Guid.NewGuid(), T0.AddSeconds(60), chatId,
+            [new ChatMembershipSnapshotEntry(userId, "Member", T0)]); // JoinedAt = T0, older than the leave
+
+        await consumer.Consume(ContextFor(evt));
+
+        (await readModel.IsActiveMemberAsync(chatId, userId)).Should().BeFalse(
+            "the snapshot's JoinedAt is older than the processed leave, so LWW must not resurrect the member");
+    }
 }
