@@ -11,7 +11,7 @@ metadata:
 
 **Routing:** `/<service>/{**catch-all}` → service cluster, `PathRemovePrefix` strips the prefix. Prefixes: identity/notifications/presence/chats/messaging + realtime (`/realtime/hub`, [TL-65] — WebSocket/SignalR YARP проксує з коробки). **Why prefix-routing (not natural paths):** chats and messaging both serve `/chats/*` (messaging owns `/chats/{chatId}/messages`) — ambiguous otherwise.
 
-**Code, config-overridable (з [TL-91]):** routes+clusters генеруються у `Program.cs` з одного списку `backends`; у config лишаються тільки destination-адреси (default `http://localhost:808x` для local dev; compose перекриває через `ReverseProxy__Clusters__<name>__Destinations__d1__Address`). До [TL-91] усе жило в `appsettings.json`. Emits OTel traces (`telegramlike.gateway`). `/health` + `/health/ready` (liveness only).
+**Code, config-overridable (з [TL-91]):** routes+clusters генеруються у `Program.cs` з одного списку `backends`; у config лишаються тільки destination-адреси (default `http://localhost:808x` для local dev; compose перекриває через `ReverseProxy__Clusters__<name>__Destinations__d1__Address`). До [TL-91] усе жило в `appsettings.json`. Emits OTel traces (`telegramlike.gateway`). `/health` + `/health/ready` — обидва статичні "ok" (немає бекенд-стору); у k8s: readiness `/health/ready` + liveness `/health` ([TL-99]).
 
 **Auth:** gateway forwards `Authorization` untouched; each service still validates the Identity JWT. Gateway is NOT a trust boundary.
 

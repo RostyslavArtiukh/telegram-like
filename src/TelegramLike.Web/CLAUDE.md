@@ -2,6 +2,8 @@
 
 Pure BFF: **no domain, no database, no MediatR handlers.** References `TelegramLike.Contracts` + the `TelegramLike.Client` SDK (`src/client/`), which owns all typed HTTP clients. Hosts a MassTransit bus solely so real-time pubsub consumers can push into the Blazor circuit.
 
+Health ([TL-99]): `/health/live` + `/health/ready` — readiness is the MassTransit bus check only; the gateway is deliberately **not** probed (downstream outage is absorbed by the SDK resilience pipeline + graceful degradation, and gating readiness on it would pull web out of the LB exactly when it can still serve).
+
 ## Calling services
 - Typed clients (`ChatsApiClient`, `MessagingApiClient`, `IIdentityAuthApi`+`IdentityUsersApiClient`, `NotificationsApiClient`, `PresenceApiClient` — конкретні класи; інтерфейс лишився тільки в auth-клієнта, бо його мокають тести) live in the **`TelegramLike.Client` SDK** (namespaces `TelegramLike.Client.<Context>`), registered via `AddTelegramLikeApiClients(gatewayUri)` in `Program.cs`.
 - **Auth:** the Web registers the scoped `ServiceTokenProvider` (`Services/ServiceAuth/`) as the SDK's `IAccessTokenProvider`; clients resolve it per request and attach `Bearer` themselves. **Never inject scoped auth-state into a `DelegatingHandler`** — handlers are pooled outside the circuit scope and would leak one user's token to another. That's why the provider lives in the clients, not a handler.

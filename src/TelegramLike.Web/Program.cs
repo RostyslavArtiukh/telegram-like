@@ -2,6 +2,7 @@ using MassTransit;
 using MudBlazor.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -158,6 +159,12 @@ var gatewayBaseUrl = builder.Configuration["Gateway:BaseUrl"]
                      ?? throw new InvalidOperationException("Gateway:BaseUrl is not configured.");
 builder.Services.AddTelegramLikeApiClients(new Uri(gatewayBaseUrl));
 
+// MassTransit auto-registers its "masstransit-bus" health check with the "ready" tag —
+// the BFF's only stateful dependency. The gateway is deliberately NOT probed: a downstream
+// outage is absorbed by the SDK resilience pipeline + graceful degradation, and gating
+// readiness on it would pull web out of the load balancer exactly when it can still serve.
+builder.Services.AddHealthChecks();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -168,6 +175,12 @@ if (!app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+
+// Liveness: the process is up. Readiness: the RabbitMQ bus is connected (tagged "ready"
+// by MassTransit). Same endpoint contract as the 5 services + realtime — used by the
+// compose healthcheck and the k8s probes.
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = c => c.Tags.Contains("ready") });
 
 // Auth callbacks (/auth/signin, /auth/signout) live in Controllers/AuthController.cs,
 // matching the 5 services' convention that HTTP endpoints don't sit inline in Program.cs.

@@ -73,12 +73,21 @@ spec:
             - name: dp-keys
               mountPath: /var/dp-keys
           readinessProbe:
-            # Web has no /health endpoint — a TCP check on the listen port is enough.
-            tcpSocket:
+            # Ready = the RabbitMQ bus is connected (MassTransit "ready"-tagged check).
+            # The gateway is deliberately not part of readiness — downstream outage is
+            # absorbed by the SDK resilience pipeline + graceful degradation.
+            httpGet:
+              path: /health/ready
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 15
       volumes:
         - name: dp-keys
           persistentVolumeClaim:

@@ -58,3 +58,11 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 6
+          livenessProbe:
+            # The gateway's /health is a static "ok" — process-up semantics, which is
+            # exactly what a liveness probe should test (restart only a wedged process).
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 15

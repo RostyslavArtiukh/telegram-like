@@ -344,6 +344,11 @@ services:
         condition: service_healthy
       gateway:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
+      interval: 10s
+      start_period: 20s
+      retries: 5
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       RabbitMQ__Host: rabbitmq
