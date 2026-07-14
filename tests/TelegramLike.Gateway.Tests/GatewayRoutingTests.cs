@@ -10,7 +10,7 @@ namespace TelegramLike.Gateway.Tests;
 /// Route + cluster generation contract for <see cref="GatewayRouting.AddGatewayReverseProxy"/>.
 /// Every backend must produce one route (match <c>/&lt;prefix&gt;/{**catch-all}</c>, strip the
 /// prefix, forward to a same-named cluster) and one cluster whose destination defaults to the
-/// service port but stays overridable via config — the exact keys compose/k8s set.
+/// service port but stays overridable via config — the exact keys compose sets.
 /// </summary>
 public sealed class GatewayRoutingTests
 {
@@ -107,7 +107,7 @@ public sealed class GatewayRoutingTests
     [Fact]
     public void ConfigOverrideWinsOverDefaultAddress()
     {
-        // The exact key shape compose/k8s use to point the gateway at the in-cluster service.
+        // The exact key shape compose uses to point the gateway at the service.
         var overrides = new Dictionary<string, string?>
         {
             ["ReverseProxy:Clusters:chats:Destinations:d1:Address"] = "http://chats:8080",

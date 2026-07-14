@@ -32,7 +32,7 @@ public static class InfrastructureSetup
         services.AddSingleton<IIntegrationEventMapper, ReactionAddedEventMapper>();
         services.AddSingleton<IIntegrationEventMapper, ReactionRemovedEventMapper>();
 
-        services.AddRabbitMqBus(configuration, bus =>
+        services.AddRabbitMqBus(configuration, "messaging", bus =>
         {
             // Membership events from Chats build the local read model so handlers
             // can run strict IsActiveMember checks without calling Chats back.

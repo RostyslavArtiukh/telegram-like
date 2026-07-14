@@ -1,13 +1,24 @@
 @inject TelegramLikeSession Session
 @inject TelegramLikeRealtimeClient Realtime
+@inject NotificationsApiClient NotificationsApi
 @inject PresenceHeartbeat Heartbeat
 @inject NavigationManager Navigation
+@implements IDisposable
 
 <MudNavMenu>
     @if (Session.UserId is not null)
     {
         <MudNavLink Href="chats" Icon="@Icons.Material.Filled.Chat">Chats</MudNavLink>
-        <MudNavLink Href="notifications" Icon="@Icons.Material.Filled.Notifications">Notifications</MudNavLink>
+
+        <MudNavLink Href="notifications" Icon="@Icons.Material.Filled.Notifications">
+            <div class="d-flex align-center justify-space-between" style="width:100%">
+                <span>Notifications</span>
+                @if (unreadNotificationCount > 0)
+                {
+                    <MudBadge Content="unreadNotificationCount" Color="Color.Error" Overlap="false" />
+                }
+            </div>
+        </MudNavLink>
 
         <MudDivider Class="my-2" />
 
@@ -27,11 +38,57 @@
 </MudNavMenu>
 
 @code {
+    private long unreadNotificationCount;
+
+    protected override void OnInitialized()
+    {
+        Realtime.UnreadCountChanged += OnUnreadCountChanged;
+        // NavMenu mounts before login (Session.UserId is null then), so the initial
+        // fetch is hooked to navigation: the post-login redirect to /chats triggers it.
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => _ = InvokeAsync(async () =>
+        {
+            await RefreshUnreadCountAsync();
+            // Unconditional: the menu itself is auth-gated (Session.UserId), and after a
+            // login/logout the location change is the only signal this component gets —
+            // without a re-render here the links would never appear/disappear.
+            StateHasChanged();
+        });
+
+    // Hub events arrive on background threads — hop onto the UI thread to touch state.
+    private void OnUnreadCountChanged() => _ = InvokeAsync(async () =>
+    {
+        await RefreshUnreadCountAsync();
+        StateHasChanged();
+    });
+
+    private async Task RefreshUnreadCountAsync()
+    {
+        if (Session.UserId is not { } userId)
+        {
+            unreadNotificationCount = 0;
+            return;
+        }
+
+        try { unreadNotificationCount = await NotificationsApi.GetUnreadCountAsync(userId); }
+        catch { /* best-effort: the badge just keeps its last known value */ }
+    }
+
     private async Task SignOutAsync()
     {
         Heartbeat.Stop();
         try { await Realtime.DisconnectAsync(); } catch { /* already down is fine */ }
         await Session.LogoutAsync();
+        unreadNotificationCount = 0;
         Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        Realtime.UnreadCountChanged -= OnUnreadCountChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }

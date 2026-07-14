@@ -1,0 +1,9 @@
+{
+  "name": "run-telegramlike-driver",
+  "private": true,
+  "type": "module",
+  "description": "Playwright driver for the running TelegramLike Web BFF.",
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}

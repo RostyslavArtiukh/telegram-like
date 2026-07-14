@@ -37,6 +37,9 @@ metadata:
 - `MemberJoined`: actor = joining user (він знає що приєднався, всі інші active members отримують нотифікацію).
 - `MemberKicked`: actor = `KickedBy` (admin), бо адмін не повинен спам отримувати про власну дію. Кікнутий вже не ActiveMember, тому фільтр відсіє його автоматично — він не отримає "you were kicked" (поки що, окремий flow для цього не реалізований).
 
+**⚠️ Queue naming — per-service префікс обов'язковий (2026-07-14):**
+`AddRabbitMqBus(configuration, serviceName, registerConsumers)` — другий параметр ставить `KebabCaseEndpointNameFormatter(prefix: serviceName)`. Без нього дефолтний formatter іменує чергу за класом консюмера (`MemberJoinedConsumer` → `MemberJoined`), а presence/notifications/messaging всі мають однойменні консюмери → ТРИ сервіси конкурували за ОДНУ чергу, RabbitMQ роздавав кожну подію лише одному з них (round-robin) — read-моделі мовчки голодували (симптом: 403 "not an active member" у чаті, який щойно працював). Тепер черги `messaging-member-joined`, `presence-member-joined`, `notifications-member-joined` — кожен сервіс отримує свою копію (справжній pub/sub fanout). Realtime hub і Web BFF це не зачіпає — вони і так на per-instance тимчасових чергах (`InstanceId` + `Temporary`). Новий сервіс із консюмерами → передавай унікальний `serviceName`. Після деплою старі спільні черги видалено вручну (вони лишались прив'язаними і копили повідомлення).
+
 **Гарантії та обмеження:**
 - Atomic save+outbox: так (Mongo транзакція).
 - At-least-once delivery: так — якщо publish впав, повідомлення лишається `SentAt == null` і буде повторно опубліковано.

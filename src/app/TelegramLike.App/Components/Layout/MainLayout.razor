@@ -1,4 +1,6 @@
 @inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <MudThemeProvider @bind-IsDarkMode="isDarkMode" Theme="applicationTheme" />
 <MudPopoverProvider />
@@ -11,9 +13,11 @@
                        OnClick="ToggleNavigationDrawer" aria-label="Toggle navigation menu" />
         <MudText Typo="Typo.h6">TelegramLike</MudText>
         <MudSpacer />
-        <MudIconButton Icon="@(isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
-                       Color="Color.Inherit" OnClick="ToggleDarkMode"
-                       aria-label="Toggle light and dark theme" />
+        <MudTooltip Text="@(isDarkMode ? "Switch to light theme" : "Switch to dark theme")">
+            <MudIconButton Icon="@(isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                           Color="Color.Inherit" OnClick="ToggleDarkMode"
+                           aria-label="Toggle light and dark theme" />
+        </MudTooltip>
     </MudAppBar>
 
     <MudDrawer @bind-Open="isNavigationDrawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always"
@@ -23,14 +27,19 @@
 
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
-            <ErrorBoundary>
+            @* Top-level safety net: a page-level lifecycle exception trips this
+               instead of leaving the WebView on a blank/broken page. *@
+            <ErrorBoundary @ref="pageErrorBoundary">
                 <ChildContent>
                     @Body
                 </ChildContent>
                 <ErrorContent Context="thrownException">
                     <MudAlert Severity="Severity.Error" Class="my-4">
-                        <MudText Typo="Typo.subtitle1">Something went wrong</MudText>
+                        <MudText Typo="Typo.subtitle1">Something went wrong loading this page.</MudText>
                         <MudText Typo="Typo.body2">@thrownException.Message</MudText>
+                        <MudButton Href="chats" Variant="Variant.Text" Color="Color.Error" Class="mt-2">
+                            Go to Chats
+                        </MudButton>
                     </MudAlert>
                 </ErrorContent>
             </ErrorBoundary>
@@ -41,7 +50,9 @@
 @code {
     private bool isNavigationDrawerOpen = true;
     private bool isDarkMode;
+    private ErrorBoundary? pageErrorBoundary;
 
+    // A calm blue-forward palette so the app reads as a messenger, not the default demo.
     private readonly MudTheme applicationTheme = new()
     {
         PaletteLight = new PaletteLight
@@ -55,7 +66,20 @@
         },
     };
 
+    protected override void OnInitialized()
+    {
+        // Without this, once the boundary trips it stays tripped for every
+        // subsequent in-app navigation (the layout instance is reused).
+        Navigation.LocationChanged += RecoverErrorBoundaryOnNavigation;
+    }
+
     private void ToggleNavigationDrawer() => isNavigationDrawerOpen = !isNavigationDrawerOpen;
 
     private void ToggleDarkMode() => isDarkMode = !isDarkMode;
+
+    private void RecoverErrorBoundaryOnNavigation(
+        object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => pageErrorBoundary?.Recover();
+
+    public void Dispose() => Navigation.LocationChanged -= RecoverErrorBoundaryOnNavigation;
 }

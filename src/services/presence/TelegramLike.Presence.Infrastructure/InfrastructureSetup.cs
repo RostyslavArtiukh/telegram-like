@@ -37,7 +37,7 @@ public static class InfrastructureSetup
         // Presence публікує UserTypingIntegrationEvent + споживає membership events
         // (MemberJoined/Kicked/Left) з Chats для побудови локальної read-моделі —
         // потрібно для StartTyping membership-check без cross-context call.
-        services.AddRabbitMqBus(configuration, bus =>
+        services.AddRabbitMqBus(configuration, "presence", bus =>
         {
             bus.AddConsumer<MemberJoinedConsumer>();
             bus.AddConsumer<MemberKickedConsumer>();

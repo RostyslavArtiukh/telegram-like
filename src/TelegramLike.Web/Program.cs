@@ -178,7 +178,7 @@ app.UseAntiforgery();
 
 // Liveness: the process is up. Readiness: the RabbitMQ bus is connected (tagged "ready"
 // by MassTransit). Same endpoint contract as the 5 services + realtime — used by the
-// compose healthcheck and the k8s probes.
+// compose healthcheck.
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = c => c.Tags.Contains("ready") });
 

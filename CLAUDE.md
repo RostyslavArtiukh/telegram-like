@@ -35,7 +35,7 @@ BFF clients keep their service-relative paths (e.g. `/messages/{id}`); a `Servic
 ## Auth — Identity is the IdP
 - Identity signs short-lived HMAC-SHA256 JWTs: `iss=telegramlike-identity`, `aud=telegramlike-services`, `sub`=userId. Every service validates with the same shared secret and `MapInboundClaims=false`.
 - Web holds a cookie session and exchanges the cookie's opaque session token for an access JWT at Identity (`ServiceTokenProvider`, scoped), forwarding `Bearer` on downstream calls. **Web signs nothing.**
-- ⚠️ **`ServiceAuth:JwtSecret` is a committed DEV DEFAULT** (same value in every `appsettings.json`, `docker-compose.yml`, and `k8s/01-secret.yaml`). Since the scheme is symmetric HMAC, that value **is** the validation key — anyone with the repo/images can forge a token for any `sub` and impersonate any user across every service. Fine for local dev; for any real deployment it must be replaced with a freshly generated secret injected only via env/secret store (never committed) and rotated. Tracked as a known accepted risk for this practice repo.
+- ⚠️ **`ServiceAuth:JwtSecret` is a committed DEV DEFAULT** (same value in every `appsettings.json` and `docker-compose.yml`). Since the scheme is symmetric HMAC, that value **is** the validation key — anyone with the repo/images can forge a token for any `sub` and impersonate any user across every service. Fine for local dev; for any real deployment it must be replaced with a freshly generated secret injected only via env/secret store (never committed) and rotated. Tracked as a known accepted risk for this practice repo.
 
 ## Cross-service rule
 Never read another service's database. Embed needed data in integration events, or build a local materialized read-model from those events (e.g. Presence's `chat_memberships`). The Web BFF enriches commands with cross-context data (recipients, isBroadcast, isModerator, isPremium).
@@ -54,7 +54,6 @@ Never read another service's database. Embed needed data in integration events, 
 - Build: `dotnet build TelegramLike.sln`
 - Test: `dotnet test` — Infrastructure tests use Testcontainers, so Docker must be running.
 - Run the whole stack: `docker compose up -d --build` → http://localhost:18080. **Docker host ports = local-dev ports + 10000** (services 18081–18086, gateway 18090) so the compose stack never clashes with `dotnet run` or other apps; inside containers everything stays on 8080.
-- **Kubernetes** (mirror of compose): `docker compose build` then `kubectl apply -k .` (kustomization at repo root, namespace `telegramlike`) → web at http://localhost:30080 (NodePort); everything else via `kubectl port-forward`. See `k8s/README.md`.
 - Traces: http://localhost:16686 · RabbitMQ UI: http://localhost:15672 · Grafana: http://localhost:3000 (anon view; admin/admin) · Prometheus: http://localhost:9090 · Alertmanager: http://localhost:9093
 - Alert rules live in `monitoring/rules.yml` (TargetDown / HighHttp5xxRate / HighRequestLatencyP95); Alertmanager has no external notifier wired locally.
 - Traffic simulation (N SDK bots chatting through the gateway, for watching Grafana/RabbitMQ/Jaeger live): `dotnet run --project tools/TelegramLike.Simulator` — intensity/duration configurable, see `tools/TelegramLike.Simulator/README.md`. Not in the .sln (local tool, like the MAUI app).

@@ -11,9 +11,17 @@ namespace TelegramLike.Infrastructure.ServiceDefaults;
 /// </summary>
 public static class RabbitMqSetup
 {
+    /// <param name="serviceName">
+    /// Unique per-service queue-name prefix (e.g. <c>"messaging"</c>). Without it, same-named
+    /// consumer classes in different services (each service has its own <c>MemberJoinedConsumer</c>)
+    /// map to ONE shared queue name, and RabbitMQ round-robins each event to a single service —
+    /// silently starving the others' read-models. The prefix gives every service its own queue,
+    /// so each gets its own copy of every event (proper pub/sub fan-out).
+    /// </param>
     public static IServiceCollection AddRabbitMqBus(
         this IServiceCollection services,
         IConfiguration configuration,
+        string serviceName,
         Action<IBusRegistrationConfigurator>? registerConsumers = null)
     {
         var host = configuration["RabbitMQ:Host"] ?? "localhost";
@@ -23,6 +31,9 @@ public static class RabbitMqSetup
 
         services.AddMassTransit(bus =>
         {
+            bus.SetEndpointNameFormatter(
+                new KebabCaseEndpointNameFormatter(prefix: serviceName, includeNamespace: false));
+
             registerConsumers?.Invoke(bus);
 
             bus.UsingRabbitMq((ctx, cfg) =>

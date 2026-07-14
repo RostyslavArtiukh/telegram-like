@@ -23,7 +23,7 @@ ServiceAuth__Issuer     = "telegramlike-identity"
 ServiceAuth__Audience   = "telegramlike-services"
 ```
 
-**Рецепт для нового сервісу:** ProjectReference на `TelegramLike.Api.ServiceDefaults` → `builder.Services.AddServiceJwtAuth(builder.Configuration)` → `app.UseAuthentication(); app.UseAuthorization();` → контролери успадковують `ApiControllerBase` (актор = `CurrentUserId`) → та сама `ServiceAuth__*` секція в appsettings + compose/k8s env. Публічні endpoint-и — `[AllowAnonymous]`.
+**Рецепт для нового сервісу:** ProjectReference на `TelegramLike.Api.ServiceDefaults` → `builder.Services.AddServiceJwtAuth(builder.Configuration)` → `app.UseAuthentication(); app.UseAuthorization();` → контролери успадковують `ApiControllerBase` (актор = `CurrentUserId`) → та сама `ServiceAuth__*` секція в appsettings + compose env. Публічні endpoint-и — `[AllowAnonymous]`.
 
 **Threat model (що дизайн НЕ покриває):**
 - Секрет симетричний (HMAC) — витік = можна підробити токен будь-якого `sub` для всіх сервісів. Для прода: secret store + rotation.

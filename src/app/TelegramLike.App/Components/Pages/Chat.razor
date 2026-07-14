@@ -614,7 +614,7 @@ else
     }
 
     private Task SendOnEnterAsync(KeyboardEventArgs args)
-        => args.Key is "Enter" or "NumpadEnter" ? SendMessageAsync() : Task.CompletedTask;
+        => args.Key is "Enter" or "NumpadEnter" && !args.ShiftKey ? SendMessageAsync() : Task.CompletedTask;
 
     private async Task SendMessageAsync()
     {

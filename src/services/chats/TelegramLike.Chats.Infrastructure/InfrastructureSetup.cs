@@ -29,7 +29,7 @@ public static class InfrastructureSetup
         services.AddSingleton<IIntegrationEventMapper, MemberLeftEventMapper>();
         services.AddSingleton<IIntegrationEventMapper, MemberRoleChangedEventMapper>();
 
-        services.AddRabbitMqBus(configuration);
+        services.AddRabbitMqBus(configuration, "chats");
         return services;
     }
 }

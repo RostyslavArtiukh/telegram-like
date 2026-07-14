@@ -38,8 +38,8 @@ internal static class GatewayRouting
         }).ToArray();
 
         // Only the destination address is environment-specific, so it stays overridable via
-        // ReverseProxy:Clusters:<prefix>:Destinations:d1:Address — the exact keys compose and
-        // k8s already set (http://<service>:8080). Absent an override we fall back to the port.
+        // ReverseProxy:Clusters:<prefix>:Destinations:d1:Address — the exact key compose
+        // already sets (http://<service>:8080). Absent an override we fall back to the port.
         var clusters = Backends.Select(b => new ClusterConfig
         {
             ClusterId = b.Prefix,

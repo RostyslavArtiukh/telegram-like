@@ -5,8 +5,7 @@
 
 A Telegram-like messenger built as a learning project to practise **microservices**,
 **Domain-Driven Design**, **CQRS**, and **event-driven** architecture end to end — from
-the domain model all the way to a real-time Blazor UI, a desktop app, and a Kubernetes
-deployment.
+the domain model all the way to a real-time Blazor UI and a desktop app.
 
 It started as a modular monolith and was **incrementally migrated to microservices** behind a
 Blazor Server BFF. The whole stack runs with a single `docker compose up`.
@@ -95,7 +94,7 @@ flowchart TB
 - **JWT** (HMAC-SHA256) service-to-service auth
 - **OpenTelemetry → Jaeger** (tracing), **Prometheus + Grafana** (metrics), **Alertmanager**
 - **xUnit + FluentAssertions + NSubstitute + Testcontainers** (tests)
-- **Docker Compose** and **Kubernetes** (kustomize) deployments; **GitHub Actions** CI
+- **Docker Compose** deployment; **GitHub Actions** CI
 
 ## Repository layout
 
@@ -109,7 +108,6 @@ src/
   app/                     MAUI Blazor Hybrid desktop app
   shared/                  Api.ServiceDefaults (shared JWT auth + controller base)
 tests/                     unit + application + infrastructure (Testcontainers) tests
-k8s/                       Kubernetes manifests (kustomize)
 monitoring/                Prometheus rules, Grafana dashboards
 ```
 
@@ -136,16 +134,6 @@ watch messages/typing/presence update in real time.
 | Prometheus | http://localhost:9090 |
 | Alertmanager | http://localhost:9093 |
 
-### Kubernetes
-
-A kustomize deployment mirrors the compose stack:
-
-```bash
-docker compose build          # build the images
-kubectl apply -k .            # namespace: telegramlike
-# web available at http://localhost:30080 (NodePort)
-```
-
 ## Building & testing
 
 ```bash
@@ -167,7 +155,7 @@ The MAUI app is **not** part of `TelegramLike.sln` (CI runs on Linux); build it 
 ## Security
 
 The `ServiceAuth:JwtSecret` is a **committed dev default**, identical across every
-`appsettings.json`, `docker-compose.yml`, and the k8s secret. Because the scheme is symmetric
+`appsettings.json` and `docker-compose.yml`. Because the scheme is symmetric
 HMAC, that value *is* the validation key — anyone with the repo could forge a token for any
 user. This is fine for local development and is a **known, accepted risk for this practice
 repo**; a real deployment must inject a freshly generated secret via env/secret store (never

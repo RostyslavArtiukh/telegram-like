@@ -19,7 +19,7 @@ public static class InfrastructureSetup
         services.AddScoped<INotificationQueryService, NotificationQueryService>();
         services.AddHostedService<NotificationIndexInitializer>();
 
-        services.AddRabbitMqBus(configuration, bus =>
+        services.AddRabbitMqBus(configuration, "notifications", bus =>
         {
             bus.AddConsumer<MessageSentConsumer>();
             bus.AddConsumer<MemberJoinedConsumer>();
