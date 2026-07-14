@@ -24,5 +24,6 @@
 - [nomenclature_step_not_day.md](nomenclature_step_not_day.md) — Нумерація ітерацій: Day → Step → нині єдиний лічильник [TL-N] у коміт-префіксах; housekeeping — plain docs:
 - [memory_dual_write.md](memory_dual_write.md) — Дзеркалити memory у `.claude/memory/` репо для синхронізації між машинами
 - [readable_naming_and_mudblazor.md](readable_naming_and_mudblazor.md) — Стиль: людські імена (без техно-жаргону) + UI на MudBlazor всюди по максимуму
+- [traffic_simulator.md](traffic_simulator.md) — tools/TelegramLike.Simulator: N ботів на Client SDK симулюють живий трафік для спостереження у Grafana/RabbitMQ/Jaeger; поза .sln; граблі (NU1605, 5с на read-models, ліміт реакцій)
 - [project_telegramlike.md](project_telegramlike.md) — Що це і навіщо: Telegram-clone як deliberate practice DDD/NoSQL/clean code після співбесіди; стек зафіксований користувачем
 - [user_profile.md](user_profile.md) — Профіль користувача та стиль роботи
