@@ -8,6 +8,7 @@
 @inject UsernameCache Usernames
 @inject TelegramLikeRealtimeClient Realtime
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 @if (chatLoadError is not null)
 {
@@ -20,6 +21,7 @@ else if (openedChat is null)
 }
 else
 {
+    <div class="chat-shell">
     <div class="d-flex justify-space-between align-start mb-2">
         <div>
             <MudText Typo="Typo.h5">@GetChatTitle()</MudText>
@@ -62,7 +64,7 @@ else
 
     @if (showManagePanel)
     {
-        <MudCard Elevation="2" Class="mb-3">
+        <MudCard Elevation="2" Class="mb-3 chat-manage-panel">
             <MudCardContent>
                 <MudText Typo="Typo.h6" GutterBottom="true">Manage chat</MudText>
                 @if (!string.IsNullOrEmpty(manageActionError))
@@ -146,8 +148,9 @@ else
         </MudCard>
     }
 
-    <MudPaper Elevation="0" Outlined="true" Class="pa-3 mb-3" Style="height:50vh;overflow-y:auto"
-              aria-live="polite" aria-relevant="additions" aria-label="Messages">
+    <div class="chat-messages pa-3 mb-3" @ref="messagesContainer"
+         style="border:1px solid var(--mud-palette-lines-default);border-radius:var(--mud-default-borderradius)"
+         aria-live="polite" aria-relevant="additions" aria-label="Messages">
         @if (olderMessagesCursor is not null)
         {
             <div class="d-flex justify-center mb-2">
@@ -260,7 +263,7 @@ else
                 </MudPaper>
             </div>
         }
-    </MudPaper>
+    </div>
 
     @if (messageBeingRepliedTo is not null)
     {
@@ -332,6 +335,7 @@ else
     {
         <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@actionError</MudAlert>
     }
+    </div>
 }
 
 <MudDialog Visible="messageBeingForwarded is not null" VisibleChanged="OnForwardDialogVisibleChanged"
@@ -378,6 +382,8 @@ else
     private Guid currentUserId;
     private ChatDetails? openedChat;
     private readonly List<ChatMessage> messages = [];
+    private ElementReference messagesContainer;
+    private bool shouldScrollToBottom;
     private DateTime? olderMessagesCursor;
     private string messageDraft = "";
     private string? actionError;
@@ -452,6 +458,7 @@ else
             var page = await MessagingApi.GetChatMessagesAsync(currentUserId, ChatId, pageSize: 50);
             messages.AddRange(page.Items.Reverse());
             olderMessagesCursor = page.NextCursor;
+            shouldScrollToBottom = true;
         }
         catch (Exception ex)
         {
@@ -499,6 +506,18 @@ else
             foreach (var userId2 in expiredUserIds) typingExpiryByUser.Remove(userId2);
             StateHasChanged();
         }), null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Keep the newest message in view after the initial load and whenever one
+        // arrives or is sent (but not when paging in older history above).
+        if (shouldScrollToBottom)
+        {
+            shouldScrollToBottom = false;
+            try { await JS.InvokeVoidAsync("telegramLike.scrollToBottom", messagesContainer); }
+            catch { /* WebView JS not ready yet or page tearing down */ }
+        }
     }
 
     private ChatMember? GetOtherDirectMember() =>
@@ -551,6 +570,7 @@ else
             if (newMessage is null || messages.Any(m => m.MessageId == newMessage.MessageId)) return;
             await Usernames.EnsureAsync([newMessage.AuthorId]);
             messages.Add(newMessage);
+            shouldScrollToBottom = true;
             typingExpiryByUser.Remove(newMessage.AuthorId);
             try { await NotificationsApi.MarkChatAsReadAsync(currentUserId, ChatId); } catch { /* best-effort */ }
             StateHasChanged();
@@ -642,7 +662,10 @@ else
 
             var sentMessage = await MessagingApi.GetMessageByIdAsync(currentUserId, sentMessageId);
             if (sentMessage is not null && !messages.Any(m => m.MessageId == sentMessage.MessageId))
+            {
                 messages.Add(sentMessage);
+                shouldScrollToBottom = true;
+            }
         }
         catch (Exception ex)
         {
