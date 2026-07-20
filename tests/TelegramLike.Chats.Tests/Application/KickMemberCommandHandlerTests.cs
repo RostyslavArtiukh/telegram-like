@@ -2,6 +2,7 @@ using TelegramLike.Chats.Domain;
 using FluentAssertions;
 using NSubstitute;
 using TelegramLike.Chats.Application.Commands.KickMember;
+using TelegramLike.Chats.Application.Observability;
 using TelegramLike.Chats.Domain.Aggregates;
 using TelegramLike.Chats.Domain.Repositories;
 using TelegramLike.Chats.Domain.ValueObjects;
@@ -11,7 +12,8 @@ namespace TelegramLike.Chats.Tests.Application;
 public class KickMemberCommandHandlerTests
 {
     private readonly IChatRepository _repo = Substitute.For<IChatRepository>();
-    private KickMemberCommandHandler Handler => new(_repo);
+    private readonly ChatsMetrics _metrics = new();
+    private KickMemberCommandHandler Handler => new(_repo, _metrics);
 
     [Fact]
     public async Task KickMember_ByOwner_RemovesMemberAndPersists()

@@ -98,6 +98,38 @@ public sealed class OutgoingEventsStore(IMongoDatabase database)
         }
     }
 
+    /// <summary>
+    /// Samples queue depth and head-of-queue age for the outbox gauges. Unlike
+    /// <see cref="GetPendingAsync"/> this ignores the claim lease: a row a sender is
+    /// mid-publish on is still backlog until it is actually marked sent.
+    /// </summary>
+    public async Task<OutboxBacklog> GetBacklogAsync(CancellationToken cancellationToken = default)
+    {
+        var pendingFilter = Builders<OutgoingEventDocument>.Filter.And(
+            Builders<OutgoingEventDocument>.Filter.Eq(d => d.SentAt, null),
+            Builders<OutgoingEventDocument>.Filter.Eq(d => d.DeadLetteredAt, null));
+
+        var pendingCount = await _collection.CountDocumentsAsync(pendingFilter, cancellationToken: cancellationToken);
+
+        var deadLetteredCount = await _collection.CountDocumentsAsync(
+            Builders<OutgoingEventDocument>.Filter.Ne(d => d.DeadLetteredAt, null),
+            cancellationToken: cancellationToken);
+
+        var oldestPending = await _collection
+            .Find(pendingFilter)
+            .SortBy(d => d.OccurredAt)
+            .Limit(1)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        // An empty queue reports 0 age rather than "no sample", so the gauge stays a
+        // continuous line in Grafana instead of going stale between bursts.
+        var oldestAgeSeconds = oldestPending is null
+            ? 0
+            : Math.Max(0, (DateTime.UtcNow - oldestPending.OccurredAt).TotalSeconds);
+
+        return new OutboxBacklog(pendingCount, deadLetteredCount, oldestAgeSeconds);
+    }
+
     public async Task<IReadOnlyList<OutgoingEvent>> GetDeadLetteredAsync(
         int batchSize,
         CancellationToken cancellationToken = default)

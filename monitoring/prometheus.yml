@@ -33,3 +33,19 @@ scrape_configs:
     static_configs: [{ targets: ['web:8080'] }]
   - job_name: prometheus
     static_configs: [{ targets: ['localhost:9090'] }]
+
+  # RabbitMQ ships the rabbitmq_prometheus plugin on :15692, enabled by default in the
+  # official image. Two jobs because the broker exposes two shapes of the same data:
+  #   /metrics          — cluster-wide aggregates, cheap, no per-queue labels
+  #   /metrics/detailed — per-object series, which is what makes "which queue is backing
+  #                       up" answerable. Restricted to the queue family on purpose;
+  #                       asking for everything multiplies series by every connection
+  #                       and channel.
+  - job_name: rabbitmq
+    static_configs: [{ targets: ['rabbitmq:15692'] }]
+
+  - job_name: rabbitmq-queues
+    metrics_path: /metrics/detailed
+    params:
+      family: [queue_coarse_metrics]
+    static_configs: [{ targets: ['rabbitmq:15692'] }]

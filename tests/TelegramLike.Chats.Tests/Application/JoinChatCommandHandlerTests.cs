@@ -2,6 +2,7 @@ using TelegramLike.Chats.Domain;
 using FluentAssertions;
 using NSubstitute;
 using TelegramLike.Chats.Application.Commands.JoinChat;
+using TelegramLike.Chats.Application.Observability;
 using TelegramLike.Chats.Domain.Aggregates;
 using TelegramLike.Chats.Domain.Repositories;
 using TelegramLike.Chats.Domain.ValueObjects;
@@ -11,7 +12,8 @@ namespace TelegramLike.Chats.Tests.Application;
 public class JoinChatCommandHandlerTests
 {
     private readonly IChatRepository _repo = Substitute.For<IChatRepository>();
-    private JoinChatCommandHandler Handler => new(_repo);
+    private readonly ChatsMetrics _metrics = new();
+    private JoinChatCommandHandler Handler => new(_repo, _metrics);
 
     [Fact]
     public async Task JoinChat_WhenChatNotFound_Throws()

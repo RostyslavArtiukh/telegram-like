@@ -14,7 +14,7 @@
 - [api_controllers.md](api_controllers.md) — Класичні [ApiController]-контролери в усіх 5 сервісах (не minimal API): thin controllers → MediatR, ApiControllerBase у shared ([TL-92]), per-service DomainExceptionFilter wire contract; Web /auth — теж контролер ([TL-90])
 - [realtime_blazor_pubsub.md](realtime_blazor_pubsub.md) — Real-time UI Web BFF через RabbitMQ → in-memory pubsub → Blazor circuit (Web НЕ юзає окремий hub; realtime-сервіс існує окремо для SDK/MAUI)
 - [observability_tracing.md](observability_tracing.md) — OpenTelemetry → Jaeger на всіх 8 застосунках; як додавати spans і пропагація через HTTP+RabbitMQ
-- [observability_metrics.md](observability_metrics.md) — Prometheus /metrics на всіх 8 застосунках + Grafana dashboard; Docker publish-layer cache gotcha
+- [observability_metrics.md](observability_metrics.md) — Prometheus /metrics на всіх 8 застосунках + 2 Grafana-дашборди (RED + Product/Outbox); кастомні метрики outbox/бізнес [TL-110], RabbitMQ per-queue; граблі: AddMeter, ms-бакети, counter без інкременту, MassTransit не кидає при падінні брокера
 - [testing_setup.md](testing_setup.md) — xUnit + FluentAssertions + NSubstitute + Testcontainers; directConnection fix для Mongo
 - [ci_pipeline.md](ci_pipeline.md) — GitHub Actions CI: build+test solution (ubuntu, Docker для Testcontainers) + MAUI compile-check (windows, [TL-77])
 - [bff_resilience.md](bff_resilience.md) — BFF HTTP resilience: timeout/retry/circuit-breaker на всіх 5 downstream клієнтах + graceful read-path degradation

@@ -15,6 +15,7 @@ namespace TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
 public sealed class OutgoingEventsSender(
     IServiceScopeFactory scopeFactory,
     IOptions<OutgoingEventsSenderOptions> options,
+    OutboxMetrics metrics,
     ILogger<OutgoingEventsSender> logger) : BackgroundService
 {
     private readonly OutgoingEventsSenderOptions _options = options.Value;
@@ -77,12 +78,16 @@ public sealed class OutgoingEventsSender(
 
                 await publishEndpoint.Publish(payload, type, cancellationToken);
                 await store.MarkSentAsync(outgoingEvent.Id, cancellationToken);
+                metrics.RecordPublished(outgoingEvent.EventType, outgoingEvent.OccurredAt);
             }
             catch (Exception ex)
             {
+                metrics.RecordPublishFailure(outgoingEvent.EventType);
+
                 var nextAttempt = outgoingEvent.Retries + 1;
                 if (nextAttempt >= _options.MaxRetries)
                 {
+                    metrics.RecordDeadLettered(outgoingEvent.EventType);
                     logger.LogError(
                         ex,
                         "Outgoing event {EventId} (type {EventType}) dead-lettered after {Attempts} attempts",

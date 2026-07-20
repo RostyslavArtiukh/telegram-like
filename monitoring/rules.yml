@@ -40,3 +40,27 @@ groups:
         annotations:
           summary: "High p95 latency on {{ $labels.job }}"
           description: "p95 request latency on {{ $labels.job }} is {{ $value | humanizeDuration }} (>1.5s)."
+
+  - name: telegramlike-outbox
+    rules:
+      # Age of the head of the queue, not its depth: a deep queue that drains is fine,
+      # a shallow one whose oldest row keeps aging is stuck. The sender polls every
+      # OutgoingEvents:PollIntervalSeconds, so a healthy head is a few seconds old.
+      - alert: OutboxStalled
+        expr: telegramlike_outbox_oldest_pending_age_seconds > 60
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox is not draining on {{ $labels.job }}"
+          description: "The oldest unpublished event on {{ $labels.job }} is {{ $value | humanizeDuration }} old — integration events are not reaching the broker."
+
+      # Dead-lettered events are silent data loss: consumers never see them and nothing
+      # retries. Any sustained increase deserves a look.
+      - alert: OutboxDeadLettering
+        expr: increase(telegramlike_outbox_dead_lettered_total[10m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "Outbox dead-lettered events on {{ $labels.job }}"
+          description: "{{ $labels.job }} gave up publishing {{ $value }} {{ $labels.event_type }} event(s) in the last 10m."

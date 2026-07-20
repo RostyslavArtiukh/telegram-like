@@ -1,11 +1,12 @@
 using MediatR;
+using TelegramLike.Chats.Application.Observability;
 using TelegramLike.Chats.Domain.Aggregates;
 using TelegramLike.Chats.Domain.Repositories;
 using TelegramLike.Chats.Domain.ValueObjects;
 
 namespace TelegramLike.Chats.Application.Commands.CreateBroadcastChannel;
 
-public sealed class CreateBroadcastChannelCommandHandler(IChatRepository chatRepository)
+public sealed class CreateBroadcastChannelCommandHandler(IChatRepository chatRepository, ChatsMetrics metrics)
     : IRequestHandler<CreateBroadcastChannelCommand, Guid>
 {
     public async Task<Guid> Handle(CreateBroadcastChannelCommand request, CancellationToken cancellationToken)
@@ -15,6 +16,7 @@ public sealed class CreateBroadcastChannelCommandHandler(IChatRepository chatRep
         var chatId = request.ChatId == Guid.Empty ? Guid.NewGuid() : request.ChatId;
         var chat = BroadcastChannel.Create(chatId, ChatName.Create(request.Name), request.OwnerUserId);
         await chatRepository.AddAsync(chat, cancellationToken);
+        metrics.RecordChatCreated("broadcast");
         return chat.Id;
     }
 }

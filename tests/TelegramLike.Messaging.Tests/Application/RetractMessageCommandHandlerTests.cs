@@ -2,6 +2,7 @@ using TelegramLike.Messaging.Domain;
 using FluentAssertions;
 using NSubstitute;
 using TelegramLike.Messaging.Application.Commands.RetractMessage;
+using TelegramLike.Messaging.Application.Observability;
 using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Aggregates;
 using TelegramLike.Messaging.Domain.Repositories;
@@ -13,9 +14,10 @@ public class RetractMessageCommandHandlerTests
 {
     private readonly IMessageRepository _messageRepository = Substitute.For<IMessageRepository>();
     private readonly IChatMembershipReadModel _membership = Substitute.For<IChatMembershipReadModel>();
+    private readonly MessagingMetrics _metrics = new();
 
     private RetractMessageCommandHandler Handler =>
-        new(_messageRepository, _membership);
+        new(_messageRepository, _membership, _metrics);
 
     private static Message NewMessage(Guid chatId, Guid authorId)
         => Message.Send(Guid.NewGuid(), chatId, authorId, MessageContent.Create("hi"), [authorId]);

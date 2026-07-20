@@ -1,10 +1,11 @@
 using MediatR;
+using TelegramLike.Chats.Application.Observability;
 using TelegramLike.Chats.Domain.Aggregates;
 using TelegramLike.Chats.Domain.Repositories;
 
 namespace TelegramLike.Chats.Application.Commands.JoinChat;
 
-public sealed class JoinChatCommandHandler(IChatRepository chatRepository)
+public sealed class JoinChatCommandHandler(IChatRepository chatRepository, ChatsMetrics metrics)
     : IRequestHandler<JoinChatCommand>
 {
     public async Task Handle(JoinChatCommand request, CancellationToken cancellationToken)
@@ -25,5 +26,6 @@ public sealed class JoinChatCommandHandler(IChatRepository chatRepository)
         }
 
         await chatRepository.UpdateAsync(chat, cancellationToken);
+        metrics.RecordMembershipChange("joined");
     }
 }

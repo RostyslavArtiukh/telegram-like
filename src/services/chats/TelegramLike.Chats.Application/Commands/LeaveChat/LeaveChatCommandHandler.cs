@@ -1,9 +1,10 @@
 using MediatR;
+using TelegramLike.Chats.Application.Observability;
 using TelegramLike.Chats.Domain.Repositories;
 
 namespace TelegramLike.Chats.Application.Commands.LeaveChat;
 
-public sealed class LeaveChatCommandHandler(IChatRepository chatRepository)
+public sealed class LeaveChatCommandHandler(IChatRepository chatRepository, ChatsMetrics metrics)
     : IRequestHandler<LeaveChatCommand>
 {
     public async Task Handle(LeaveChatCommand request, CancellationToken cancellationToken)
@@ -13,5 +14,6 @@ public sealed class LeaveChatCommandHandler(IChatRepository chatRepository)
 
         chat.Leave(request.UserId);
         await chatRepository.UpdateAsync(chat, cancellationToken);
+        metrics.RecordMembershipChange("left");
     }
 }

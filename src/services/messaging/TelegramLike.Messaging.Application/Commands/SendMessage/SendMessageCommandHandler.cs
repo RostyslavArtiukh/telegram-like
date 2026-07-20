@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
+using TelegramLike.Messaging.Application.Observability;
 using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Aggregates;
 using TelegramLike.Messaging.Domain.Repositories;
@@ -11,6 +12,7 @@ public sealed class SendMessageCommandHandler(
     IMessageRepository messageRepository,
     IChatMembershipReadModel membership,
     IChatTypeReadModel chatType,
+    MessagingMetrics metrics,
     ILogger<SendMessageCommandHandler> logger)
     : IRequestHandler<SendMessageCommand, Guid>
 {
@@ -95,6 +97,9 @@ public sealed class SendMessageCommandHandler(
             isBroadcast: isBroadcast);
 
         await messageRepository.AddAsync(message, cancellationToken);
+
+        var kind = forwardRef is not null ? "forward" : replyRef is not null ? "reply" : "new";
+        metrics.RecordMessageSent(isBroadcast, kind);
 
         return message.Id;
     }

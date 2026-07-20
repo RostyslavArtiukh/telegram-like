@@ -1,5 +1,6 @@
 using MediatR;
 using TelegramLike.Messaging.Application;
+using TelegramLike.Messaging.Application.Observability;
 using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Repositories;
 
@@ -7,11 +8,14 @@ namespace TelegramLike.Messaging.Application.Commands.RetractMessage;
 
 public sealed class RetractMessageCommandHandler(
     IMessageRepository messageRepository,
-    IChatMembershipReadModel membership)
+    IChatMembershipReadModel membership,
+    MessagingMetrics metrics)
     : IRequestHandler<RetractMessageCommand>
 {
     public async Task Handle(RetractMessageCommand request, CancellationToken cancellationToken)
     {
+        var retractedByModerator = false;
+
         await ConcurrencyRetry.ExecuteAsync(async () =>
         {
             var message = await messageRepository.GetByIdAsync(request.MessageId, cancellationToken)
@@ -32,6 +36,12 @@ public sealed class RetractMessageCommandHandler(
 
             message.Retract(request.RetractedByUserId, isAuthor || isModerator);
             await messageRepository.UpdateAsync(message, cancellationToken);
+
+            retractedByModerator = isModerator && !isAuthor;
         });
+
+        // Counted outside the retry: the lambda re-runs on a version conflict, and
+        // counting in there would report retries as extra retractions.
+        metrics.RecordMessageRetracted(retractedByModerator);
     }
 }

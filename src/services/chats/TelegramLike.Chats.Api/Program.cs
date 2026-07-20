@@ -6,8 +6,10 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using TelegramLike.Chats.Api.Filters;
+using TelegramLike.Chats.Application.Observability;
 using TelegramLike.Chats.Application.Queries.GetMyChats;
 using TelegramLike.Chats.Infrastructure;
+using TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +17,10 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(GetMyChatsQuery).Assembly));
 
 builder.Services.AddChatsInfrastructure(builder.Configuration);
+
+// Product counters the handlers write to. Singleton because a Meter is meant to be
+// created once per process, not per request.
+builder.Services.AddSingleton<ChatsMetrics>();
 
 builder.Services
     .AddControllers(options => options.Filters.Add<DomainExceptionFilter>())
@@ -44,6 +50,12 @@ builder.Services.AddOpenTelemetry()
         m.AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddRuntimeInstrumentation()
+            // Custom meters must be named explicitly — anything not listed is dropped.
+            .AddMeter(ChatsMetrics.MeterName)
+            .AddMeter(OutboxMetrics.MeterName)
+            .AddView(
+                "telegramlike.outbox.publish_delay",
+                new ExplicitBucketHistogramConfiguration { Boundaries = OutboxMetrics.PublishDelayBucketsSeconds })
             .AddPrometheusExporter();
     });
 

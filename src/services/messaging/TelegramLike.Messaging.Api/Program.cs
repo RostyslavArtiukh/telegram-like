@@ -8,7 +8,9 @@ using OpenTelemetry.Trace;
 using FluentValidation;
 using TelegramLike.Messaging.Api.Filters;
 using TelegramLike.Messaging.Application.Commands.SendMessage;
+using TelegramLike.Messaging.Application.Observability;
 using TelegramLike.Application.ServiceDefaults;
+using TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
 using TelegramLike.Messaging.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +23,10 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddValidatorsFromAssembly(typeof(SendMessageCommand).Assembly);
 
 builder.Services.AddMessagingInfrastructure(builder.Configuration);
+
+// Product counters the handlers write to. Singleton because a Meter is meant to be
+// created once per process, not per request.
+builder.Services.AddSingleton<MessagingMetrics>();
 
 builder.Services
     .AddControllers(options => options.Filters.Add<DomainExceptionFilter>())
@@ -50,6 +56,12 @@ builder.Services.AddOpenTelemetry()
         m.AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddRuntimeInstrumentation()
+            // Custom meters must be named explicitly — anything not listed is dropped.
+            .AddMeter(MessagingMetrics.MeterName)
+            .AddMeter(OutboxMetrics.MeterName)
+            .AddView(
+                "telegramlike.outbox.publish_delay",
+                new ExplicitBucketHistogramConfiguration { Boundaries = OutboxMetrics.PublishDelayBucketsSeconds })
             .AddPrometheusExporter();
     });
 

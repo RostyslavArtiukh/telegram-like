@@ -90,6 +90,9 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+      # rabbitmq_prometheus, enabled by default in this image. Prometheus scrapes it over
+      # the compose network; published so you can curl the raw exposition yourself.
+      - "15692:15692"
     environment:
       # Namespace TelegramLike traffic in its own vhost so the broker stays
       # tidy if another app shares it. True per-service vhosts would need

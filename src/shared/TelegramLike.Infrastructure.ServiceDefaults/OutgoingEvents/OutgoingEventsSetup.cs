@@ -27,6 +27,13 @@ public static class OutgoingEventsSetup
         services.AddScoped<IOutgoingEventsWriter, OutgoingEventsWriter>();
         services.AddHostedService<OutgoingEventsSender>();
 
+        // Metrics are part of the queue, not an opt-in: a silently stalled outbox is the
+        // failure mode this pattern trades away for atomicity, so every service that
+        // takes the queue also takes its instrumentation.
+        services.AddSingleton<OutboxMetrics>();
+        services.AddHostedService<OutboxBacklogPoller>();
+        services.AddHostedService<OutgoingEventsIndexInitializer>();
+
         return services;
     }
 }

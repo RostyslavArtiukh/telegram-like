@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TelegramLike.Messaging.Application.Commands.SendMessage;
+using TelegramLike.Messaging.Application.Observability;
 using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Aggregates;
 using TelegramLike.Messaging.Domain.Repositories;
@@ -14,9 +15,10 @@ public class SendMessageCommandHandlerTests
     private readonly IMessageRepository _messageRepository = Substitute.For<IMessageRepository>();
     private readonly IChatMembershipReadModel _membership = Substitute.For<IChatMembershipReadModel>();
     private readonly IChatTypeReadModel _chatType = Substitute.For<IChatTypeReadModel>();
+    private readonly MessagingMetrics _metrics = new();
 
     private SendMessageCommandHandler Handler =>
-        new(_messageRepository, _membership, _chatType, NullLogger<SendMessageCommandHandler>.Instance);
+        new(_messageRepository, _membership, _chatType, _metrics, NullLogger<SendMessageCommandHandler>.Instance);
 
     private static SendMessageCommand Command(
         Guid chatId, Guid authorId, IReadOnlyList<Guid>? recipients = null, bool isBroadcast = false)

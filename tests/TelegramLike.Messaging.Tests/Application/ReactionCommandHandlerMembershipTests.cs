@@ -2,6 +2,7 @@ using FluentAssertions;
 using NSubstitute;
 using TelegramLike.Messaging.Application.Commands.AddReaction;
 using TelegramLike.Messaging.Application.Commands.RemoveReaction;
+using TelegramLike.Messaging.Application.Observability;
 using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Aggregates;
 using TelegramLike.Messaging.Domain.Repositories;
@@ -18,7 +19,9 @@ public class ReactionCommandHandlerMembershipTests
     private readonly IMessageRepository _messageRepository = Substitute.For<IMessageRepository>();
     private readonly IChatMembershipReadModel _membership = Substitute.For<IChatMembershipReadModel>();
 
-    private AddReactionCommandHandler AddHandler => new(_messageRepository, _membership);
+    private readonly MessagingMetrics _metrics = new();
+
+    private AddReactionCommandHandler AddHandler => new(_messageRepository, _membership, _metrics);
     private RemoveReactionCommandHandler RemoveHandler => new(_messageRepository, _membership);
 
     private static Message NewMessage(Guid chatId, Guid authorId)

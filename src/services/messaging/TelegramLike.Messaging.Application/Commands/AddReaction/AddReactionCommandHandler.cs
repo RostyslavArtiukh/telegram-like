@@ -1,5 +1,6 @@
 using MediatR;
 using TelegramLike.Messaging.Application;
+using TelegramLike.Messaging.Application.Observability;
 using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Domain.Repositories;
 
@@ -7,7 +8,8 @@ namespace TelegramLike.Messaging.Application.Commands.AddReaction;
 
 public sealed class AddReactionCommandHandler(
     IMessageRepository messageRepository,
-    IChatMembershipReadModel membership)
+    IChatMembershipReadModel membership,
+    MessagingMetrics metrics)
     : IRequestHandler<AddReactionCommand>
 {
     public async Task Handle(AddReactionCommand request, CancellationToken cancellationToken)
@@ -27,5 +29,9 @@ public sealed class AddReactionCommandHandler(
             message.AddReaction(request.UserId, request.Emoji, request.UserIsPremium);
             await messageRepository.UpdateAsync(message, cancellationToken);
         });
+
+        // Counted outside the retry: the lambda re-runs on a version conflict, and
+        // counting in there would report retries as extra reactions.
+        metrics.RecordReactionAdded();
     }
 }
