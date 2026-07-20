@@ -45,11 +45,15 @@ public static class MauiProgram
 public static class AppConfig
 {
 #if ANDROID
-	// The phone reaches the compose stack over Wi-Fi via the PC's LAN address
-	// (both must be on the same network; Windows Firewall must allow 18090 in).
-	// Plain HTTP → android:usesCleartextTraffic in the manifest. Update the IP
-	// if the PC's DHCP lease changes.
-	public const string GatewayBaseUrl = "http://192.168.0.101:18090";
+	// Android emulator (default target): 10.0.2.2 is the emulator's magic alias
+	// for the host machine's loopback, so it reaches the compose stack on the PC
+	// with no firewall rule and no LAN address. Plain HTTP → android:usesCleartextTraffic
+	// in the manifest.
+	//
+	// For a *physical* device instead, swap this for the PC's LAN address
+	// (e.g. "http://192.168.0.101:18090") — both must share a Wi-Fi network and
+	// Windows Firewall must allow 18090 inbound.
+	public const string GatewayBaseUrl = "http://10.0.2.2:18090";
 #else
 	// Windows desktop talks to the compose stack on the same machine.
 	public const string GatewayBaseUrl = "http://localhost:18090";

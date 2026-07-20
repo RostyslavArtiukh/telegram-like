@@ -7,7 +7,7 @@
 - [notifications_fanout.md](notifications_fanout.md) — Fanout нотифікацій: асинхронно через RabbitMQ; recipients вбудовані в подію, ідемпотентно по SourceEventId; UnreadCountChanged публікується без outbox (сигнальна)
 - [integration_events_rabbitmq.md](integration_events_rabbitmq.md) — RabbitMQ + MassTransit + Transactional Outbox (chats/messaging; presence/notifications публікують напряму — свідомий виняток); як додавати нові integration events
 - [microservices_migration.md](microservices_migration.md) — Інкрементальна міграція з monolith у мікросервіси; прогрес і архітектурні рішення
-- [client_sdk_plan.md](client_sdk_plan.md) — SDK [TL-64] + hub [TL-65] + MAUI desktop [TL-66..68] + Android-prep [TL-67] ЗРОБЛЕНО й запушено; лишились фізичні кроки Android (SDK/adb/firewall 18090/телефон)
+- [client_sdk_plan.md](client_sdk_plan.md) — SDK [TL-64] + hub [TL-65] + MAUI desktop [TL-66..68] + Android ЕМУЛЯТОР [TL-106] ЗРОБЛЕНО й live-verified у емуляторі (register→login→chat→send через 10.0.2.2:18090); JAVA_HOME-фікс (jdk-17) + curl-обхід флейкового sdkmanager; iOS неможливий на Windows (треба macOS/Xcode)
 - [quality_audit_plan.md](quality_audit_plan.md) — ВИКОНАНО → див. quality_audit_done (це був pre-execution план)
 - [service_auth_jwt.md](service_auth_jwt.md) — JWT auth: Identity — IdP (iss=telegramlike-identity), Web нічого не підписує; спільний TelegramLike.Api.ServiceDefaults (AddServiceJwtAuth + ApiControllerBase, [TL-92]); рецепт для нового сервісу
 - [error_handling_domain_exceptions.md](error_handling_domain_exceptions.md) — Кидати DomainException/ForbiddenException (не сирі BCL) у сервісах; DomainExceptionFilter мапить семантичні типи, framework-винятки → 500; +traceId/логування
