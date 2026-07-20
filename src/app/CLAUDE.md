@@ -22,6 +22,7 @@ The default mobile target is the local **Android emulator** — no physical phon
 - Enrichment (recipients/isBroadcast) happens app-side via `ChatsApiClient` helpers before `SendMessageAsync` — mirrors the Web BFF until enrichment moves server-side.
 - `PresenceHeartbeat` singleton: 20s heartbeat while signed in (Redis TTL 30s); `UsernameCache` batches id→username lookups.
 - Session store: in-memory on Windows (login is per-launch); on Android `SecureSessionStore` (SecureStorage-backed `ISessionStore`) is registered `#if ANDROID` **before** `AddTelegramLikeClient` in `MauiProgram` ([TL-67]).
+- **Android 15 edge-to-edge:** API 35+ forces edge-to-edge, so the WebView draws behind the transparent status/nav bars and the header slid under the clock/wifi icons. `MainActivity.OnCreate` fixes it with a `ViewCompat.SetOnApplyWindowInsetsListener` that pads the content view by the system-bar + cutout insets (and sets dark status-bar icons for the light background) ([TL-107]).
 
 ## E2E driving (for verification)
 WebView2 honors `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333` — set it, start the exe, then Playwright `connectOverCDP('http://localhost:9333')` drives the app's Blazor UI like a page. See the root verify skill.
