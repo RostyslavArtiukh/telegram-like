@@ -7,3 +7,5 @@ public sealed record RegisterRequest(string Email, string Username, string Displ
 public sealed record LoginRequest(string Email, string Password);
 
 public sealed record TokenRequest(string SessionToken);
+
+public sealed record LogoutRequest(string SessionToken);

@@ -53,6 +53,13 @@ public sealed class TelegramLikeSession(IIdentityAuthApi identityAuth, ISessionS
 
     public async Task LogoutAsync(CancellationToken cancellationToken = default)
     {
+        // Revoke the session server-side (best-effort) before dropping it locally, so the
+        // opaque token stops minting access JWTs — not just a local clear. The client
+        // swallows downstream failures, so the local sign-out below always proceeds.
+        var sessionToken = await store.GetSessionTokenAsync(cancellationToken);
+        if (sessionToken is not null)
+            await identityAuth.LogoutAsync(sessionToken, cancellationToken);
+
         await store.SetSessionTokenAsync(null, cancellationToken);
         InvalidateAccessToken();
         _identity = null;

@@ -42,6 +42,22 @@ internal sealed class IdentityAuthApiClient(HttpClient http) : IIdentityAuthApi
         return await resp.Content.ReadFromJsonAsync<SessionExchangeResult>(cancellationToken);
     }
 
+    public async Task LogoutAsync(string sessionToken, CancellationToken cancellationToken = default)
+    {
+        // Best-effort revocation: clearing the server session stops it minting new JWTs, but
+        // a downstream outage (timeout, open circuit) must never block the caller's local
+        // sign-out. The endpoint is idempotent, so swallowing a failure just leaves the
+        // session to lapse on its own TTL — the same outcome as before this call existed.
+        try
+        {
+            using var resp = await http.PostAsJsonAsync("/auth/logout", new { sessionToken }, cancellationToken);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Intentionally ignored — see above.
+        }
+    }
+
     // Identity returns { "error": "..." } with 400 for validation/business failures;
     // surface that message so UI layers can show it.
     private static async Task EnsureOkAsync(HttpResponseMessage resp, CancellationToken cancellationToken)

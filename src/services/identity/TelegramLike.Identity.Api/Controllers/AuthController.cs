@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TelegramLike.Identity.Api.Contracts;
 using TelegramLike.Identity.Application.Auth.ExchangeSession;
+using TelegramLike.Identity.Application.Commands.EndSession;
 using TelegramLike.Identity.Application.Commands.LoginUser;
 using TelegramLike.Identity.Application.Commands.RegisterUser;
 
@@ -41,5 +42,15 @@ public sealed class AuthController(IMediator mediator) : ApiControllerBase
     {
         var dto = await mediator.Send(new ExchangeSessionQuery(body.SessionToken), cancellationToken);
         return dto is null ? Unauthorized() : Ok(dto);
+    }
+
+    // Logout: revoke the session token so it stops minting access JWTs. Possession of the
+    // token is the credential (same as /token), so this stays public. Idempotent — an
+    // unknown/expired token is a no-op → always 204, so a client can call it best-effort.
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] LogoutRequest body, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new EndSessionCommand(body.SessionToken), cancellationToken);
+        return NoContent();
     }
 }

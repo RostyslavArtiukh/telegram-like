@@ -10,6 +10,12 @@ public interface IIdentityAuthApi
     Task<Guid> RegisterAsync(string email, string username, string displayName, string password, CancellationToken cancellationToken = default);
     Task<string> LoginAsync(string email, string password, CancellationToken cancellationToken = default);
     Task<SessionExchangeResult?> ExchangeAsync(string sessionToken, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Revokes a session token server-side (logout). Best-effort by contract: it never
+    /// throws on a downstream failure, so a failed revoke can't block the local sign-out.
+    /// </summary>
+    Task LogoutAsync(string sessionToken, CancellationToken cancellationToken = default);
 }
 
 public sealed record IdentityUser(

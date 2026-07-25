@@ -84,6 +84,13 @@ public sealed class AuthController(IIdentityAuthApi identity, IAntiforgery antif
             return BadRequest("Invalid request.");
         }
 
+        // Revoke the session server-side (delete it from Redis at the IdP) so the opaque
+        // token can't mint further access JWTs after logout — not just drop the cookie.
+        // Best-effort by the client's contract: a downstream failure won't block sign-out.
+        var sessionToken = HttpContext.User.FindFirst("session_token")?.Value;
+        if (!string.IsNullOrEmpty(sessionToken))
+            await identity.LogoutAsync(sessionToken);
+
         await HttpContext.SignOutAsync("Cookies");
         return Redirect("/login");
     }

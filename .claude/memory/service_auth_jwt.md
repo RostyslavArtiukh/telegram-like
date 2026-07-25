@@ -5,6 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: c86df29a-c998-45fb-8ef5-72540737621d
+  modified: 2026-07-25T14:39:15.886Z
 ---
 
 **Актуальна схема (2026-07, після [TL-43..45] і [TL-92]):**
@@ -27,7 +28,7 @@ ServiceAuth__Audience   = "telegramlike-services"
 
 **Threat model (що дизайн НЕ покриває):**
 - Секрет симетричний (HMAC) — витік = можна підробити токен будь-якого `sub` для всіх сервісів. Для прода: secret store + rotation.
-- Немає revocation — токен живе до `exp` навіть після logout; mitigation — короткий TTL (5 хв).
+- Двошарова модель. **Сесію** відкликати можна: `POST /auth/logout` (`EndSessionCommand`) видаляє `session:{token}` з Redis → нею більше не взяти новий JWT. Це роблять і Web `AuthController.LogOut` (перед `SignOutAsync`, best-effort), і SDK `TelegramLikeSession.LogoutAsync`. Але **access JWT не відкликається** — сервіси валідують stateless (не ходять у Redis), тож уже виданий токен живе до `exp` (~5 хв) навіть після logout. Гарантоване миттєве відкликання = denylist `jti` (свідомо не робимо в навчальному проєкті). `/auth/logout` ідемпотентний (unknown token → 204).
 
 **Історія:** День 14 (2026-05-30) — перша версія: **Web був issuer-ом** (`iss=telegramlike-web`; `ServiceAuthOptions`/`ServiceTokenIssuer`/`ServiceAuthHandler` жили у Web) — закривала довіру до `X-User-Id` header між Web і Notifications. [TL-43..45] — Identity став IdP, issuer-файли з Web видалені. [TL-92] — валідаційний плюмбінг зведено у shared проєкт (правило «не шарити» стосується БД/домену, не інфраструктурного плюмбінгу).
 

@@ -127,6 +127,19 @@ public class TelegramLikeSessionTests
         token.Should().BeNull();
         // Still only the one exchange from login — logout must not trigger another.
         await identityAuth.Received(1).ExchangeAsync("session-token-3", Arg.Any<CancellationToken>());
+        // Logout must revoke the session server-side, not just clear it locally.
+        await identityAuth.Received(1).LogoutAsync("session-token-3", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task LogoutAsync_WhenNoSessionStored_DoesNotCallRevoke()
+    {
+        var identityAuth = Substitute.For<IIdentityAuthApi>();
+        var session = new TelegramLikeSession(identityAuth, new InMemorySessionStore());
+
+        await session.LogoutAsync();
+
+        await identityAuth.DidNotReceive().LogoutAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
