@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 
-namespace TelegramLike.Infrastructure.ServiceDefaults;
+namespace TelegramLike.Shared.Infrastructure;
 
 /// <summary>
 /// Registers the shared Redis connection from the standard

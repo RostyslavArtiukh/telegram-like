@@ -1,6 +1,6 @@
 # Memory Index — TelegramLike
 
-- [shared_projects_naming.md](shared_projects_naming.md) — Shared-проєкти по шарах + людський неймінг (мапа старе→нове: ObjectWithEvents/IChangeEvent/FromStorage/Storage/OutgoingEvents) + правило видалення одноразових інтерфейсів
+- [shared_projects_naming.md](shared_projects_naming.md) — Shared-проєкти по шарах `TelegramLike.Shared.{Domain,Application,Infrastructure,Api}` (перейм. з *.ServiceDefaults 2026-07-25) + людський неймінг (мапа старе→нове: ObjectWithEvents/IChangeEvent/FromStorage/Storage/OutgoingEvents) + правило видалення одноразових інтерфейсів
 - [project_status.md](project_status.md) — ЗАСТАРІЛО (стан ~День 18); архітектура — у CLAUDE.md, прогрес — microservices_migration + quality_audit_done
 - [quality_audit_done.md](quality_audit_done.md) — Наскрізний аудит якості 9 агентами + фікси [TL-71..82] ЗРОБЛЕНО; що виправлено/відкладено; тести 156→343 (нині ~361 у 8 проєктах після [TL-95..97])
 - [chats_persistence.md](chats_persistence.md) — Дві колекції + MongoDB транзакція для агрегату Chat
@@ -9,7 +9,7 @@
 - [microservices_migration.md](microservices_migration.md) — Інкрементальна міграція з monolith у мікросервіси; прогрес і архітектурні рішення
 - [client_sdk_plan.md](client_sdk_plan.md) — SDK [TL-64] + hub [TL-65] + MAUI desktop [TL-66..68] + Android ЕМУЛЯТОР [TL-106] ЗРОБЛЕНО й live-verified у емуляторі (register→login→chat→send через 10.0.2.2:18090); JAVA_HOME-фікс (jdk-17) + curl-обхід флейкового sdkmanager; iOS неможливий на Windows (треба macOS/Xcode)
 - [quality_audit_plan.md](quality_audit_plan.md) — ВИКОНАНО → див. quality_audit_done (це був pre-execution план)
-- [service_auth_jwt.md](service_auth_jwt.md) — JWT auth: Identity — IdP (iss=telegramlike-identity), Web нічого не підписує; спільний TelegramLike.Api.ServiceDefaults (AddServiceJwtAuth + ApiControllerBase, [TL-92]); рецепт для нового сервісу
+- [service_auth_jwt.md](service_auth_jwt.md) — JWT auth: Identity — IdP (iss=telegramlike-identity), Web нічого не підписує; спільний TelegramLike.Shared.Api (AddServiceJwtAuth + ApiControllerBase, [TL-92]); рецепт для нового сервісу
 - [error_handling_domain_exceptions.md](error_handling_domain_exceptions.md) — Кидати DomainException/ForbiddenException (не сирі BCL) у сервісах; DomainExceptionFilter мапить семантичні типи, framework-винятки → 500; +traceId/логування
 - [api_controllers.md](api_controllers.md) — Класичні [ApiController]-контролери в усіх 5 сервісах (не minimal API): thin controllers → MediatR, ApiControllerBase у shared ([TL-92]), per-service DomainExceptionFilter wire contract; Web /auth — теж контролер ([TL-90])
 - [realtime_blazor_pubsub.md](realtime_blazor_pubsub.md) — Real-time UI Web BFF через RabbitMQ → in-memory pubsub → Blazor circuit (Web НЕ юзає окремий hub; realtime-сервіс існує окремо для SDK/MAUI)

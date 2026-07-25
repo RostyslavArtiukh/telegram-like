@@ -1,9 +1,9 @@
 using System.Text.Json;
 using MongoDB.Driver;
-using TelegramLike.Application.ServiceDefaults;
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Application;
+using TelegramLike.Shared.Domain;
 
-namespace TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 public sealed class OutgoingEventsWriter : IOutgoingEventsWriter
 {

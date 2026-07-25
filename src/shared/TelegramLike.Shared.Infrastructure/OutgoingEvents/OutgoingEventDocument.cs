@@ -1,7 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 [BsonIgnoreExtraElements]
 public sealed class OutgoingEventDocument

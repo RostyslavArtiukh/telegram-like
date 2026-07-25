@@ -1,13 +1,13 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using TelegramLike.Application.ServiceDefaults;
+using TelegramLike.Shared.Application;
 using TelegramLike.Messaging.Application.Storage;
 using TelegramLike.Messaging.Application.IntegrationEvents;
 using TelegramLike.Messaging.Domain.Repositories;
 using TelegramLike.Messaging.Infrastructure.Messaging.Consumers;
 using TelegramLike.Messaging.Infrastructure.Storage;
-using TelegramLike.Infrastructure.ServiceDefaults;
-using TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+using TelegramLike.Shared.Infrastructure;
+using TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 namespace TelegramLike.Messaging.Infrastructure;
 

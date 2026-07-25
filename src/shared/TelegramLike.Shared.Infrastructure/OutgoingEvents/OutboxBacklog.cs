@@ -1,4 +1,4 @@
-namespace TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 /// <summary>
 /// A point-in-time snapshot of how far behind the outgoing-events queue is.

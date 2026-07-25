@@ -1,4 +1,4 @@
-namespace TelegramLike.Domain.ServiceDefaults;
+namespace TelegramLike.Shared.Domain;
 
 /// <summary>
 /// Base type for deliberate business-rule violations raised by the domain / application layer

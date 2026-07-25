@@ -1,4 +1,4 @@
-namespace TelegramLike.Domain.ServiceDefaults;
+namespace TelegramLike.Shared.Domain;
 
 /// <summary>
 /// "Something happened inside this service" — recorded by an <see cref="ObjectWithEvents"/>

@@ -1,6 +1,6 @@
 using MongoDB.Driver;
 
-namespace TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 /// <summary>
 /// The Mongo-backed queue of integration events waiting to be sent. Rows are inserted

@@ -9,7 +9,7 @@ using TelegramLike.Chats.Api.Filters;
 using TelegramLike.Chats.Application.Observability;
 using TelegramLike.Chats.Application.Queries.GetMyChats;
 using TelegramLike.Chats.Infrastructure;
-using TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+using TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 var builder = WebApplication.CreateBuilder(args);
 

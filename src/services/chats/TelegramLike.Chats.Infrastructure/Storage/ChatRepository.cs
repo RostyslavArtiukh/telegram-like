@@ -2,7 +2,7 @@ using MongoDB.Driver;
 using TelegramLike.Chats.Domain.Aggregates;
 using TelegramLike.Chats.Domain.Repositories;
 using TelegramLike.Chats.Domain.ValueObjects;
-using TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+using TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 namespace TelegramLike.Chats.Infrastructure.Storage;
 

@@ -1,4 +1,4 @@
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Domain;
 using TelegramLike.Messaging.Domain.ValueObjects;
 
 namespace TelegramLike.Messaging.Domain.Entities;

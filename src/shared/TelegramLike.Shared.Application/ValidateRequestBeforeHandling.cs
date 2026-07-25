@@ -1,7 +1,7 @@
 using FluentValidation;
 using MediatR;
 
-namespace TelegramLike.Application.ServiceDefaults;
+namespace TelegramLike.Shared.Application;
 
 /// <summary>
 /// Runs all registered FluentValidation validators for a request before the

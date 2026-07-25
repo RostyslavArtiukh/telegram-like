@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 /// <summary>
 /// Background loop that drains the outgoing-events queue: claims a batch of unsent

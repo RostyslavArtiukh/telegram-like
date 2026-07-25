@@ -4,7 +4,7 @@ Messages, reactions, read receipts. 4 projects, namespace `TelegramLike.Messagin
 
 ## Domain
 - `Message` aggregate = one document; `Reaction` embedded. Reaction/retract writes go through the aggregate and use **optimistic concurrency** ([TL-74b]): a `Version` field guards the `ReplaceOne` and callers retry via `ConcurrencyRetry` — so concurrent reactions don't lost-update. `HideMessage` → `hidden_messages` read-model. Read receipts: unique `(MessageId, MemberId)` index makes them idempotent; Broadcast additionally does an atomic `$inc broadcastReadCount` on the message, once per new receipt.
-- Publishes through the shared outgoing-events queue (`TelegramLike.Infrastructure.ServiceDefaults`, collection `outgoing_events`). Publishes `MessageSent` (carries **embedded recipients**), `MessageRetracted`, `ReactionAdded/Removed`. Query `GetChatMessages` = keyset paging by `SentAt` DESC.
+- Publishes through the shared outgoing-events queue (`TelegramLike.Shared.Infrastructure`, collection `outgoing_events`). Publishes `MessageSent` (carries **embedded recipients**), `MessageRetracted`, `ReactionAdded/Removed`. Query `GetChatMessages` = keyset paging by `SentAt` DESC.
 
 ## Server-side enrichment (was BFF-supplied)
 Cross-context values are derived server-side from local read-models / the signed JWT, not trusted from the client:

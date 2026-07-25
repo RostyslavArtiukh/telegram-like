@@ -81,13 +81,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Gateway.Tests"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shared", "shared", "{BF38785C-2CCF-1B42-A168-BB141CE662EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Api.ServiceDefaults", "src\shared\TelegramLike.Api.ServiceDefaults\TelegramLike.Api.ServiceDefaults.csproj", "{727F2015-95D0-438D-A4D4-1DD727FE1F7B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Shared.Api", "src\shared\TelegramLike.Shared.Api\TelegramLike.Shared.Api.csproj", "{727F2015-95D0-438D-A4D4-1DD727FE1F7B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Domain.ServiceDefaults", "src\shared\TelegramLike.Domain.ServiceDefaults\TelegramLike.Domain.ServiceDefaults.csproj", "{D62F0DB9-8FBC-420B-847F-0717391BEC76}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Shared.Domain", "src\shared\TelegramLike.Shared.Domain\TelegramLike.Shared.Domain.csproj", "{D62F0DB9-8FBC-420B-847F-0717391BEC76}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Application.ServiceDefaults", "src\shared\TelegramLike.Application.ServiceDefaults\TelegramLike.Application.ServiceDefaults.csproj", "{E86ED94D-FAC3-436C-9F88-F8BCE4943792}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Shared.Application", "src\shared\TelegramLike.Shared.Application\TelegramLike.Shared.Application.csproj", "{E86ED94D-FAC3-436C-9F88-F8BCE4943792}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Infrastructure.ServiceDefaults", "src\shared\TelegramLike.Infrastructure.ServiceDefaults\TelegramLike.Infrastructure.ServiceDefaults.csproj", "{E40B498C-5B6E-4825-97B2-7E776E321291}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Shared.Infrastructure", "src\shared\TelegramLike.Shared.Infrastructure\TelegramLike.Shared.Infrastructure.csproj", "{E40B498C-5B6E-4825-97B2-7E776E321291}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Chats.Tests", "tests\TelegramLike.Chats.Tests\TelegramLike.Chats.Tests.csproj", "{0527DFB7-5BA9-4234-AC37-E05B6FB8A2D6}"
 EndProject

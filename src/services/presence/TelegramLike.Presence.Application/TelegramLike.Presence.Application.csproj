@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Using Include="TelegramLike.Domain.ServiceDefaults" />
+    <Using Include="TelegramLike.Shared.Domain" />
   </ItemGroup>
 
 </Project>

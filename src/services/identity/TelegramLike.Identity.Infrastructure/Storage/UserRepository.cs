@@ -1,4 +1,4 @@
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Domain;
 using MongoDB.Driver;
 using TelegramLike.Identity.Domain;
 using TelegramLike.Identity.Domain.Aggregates;

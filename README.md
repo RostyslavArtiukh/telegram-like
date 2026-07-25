@@ -106,7 +106,7 @@ src/
   services/                identity · chats · messaging · presence · notifications · realtime
   client/                  NuGet-packable typed client SDK (+ SignalR realtime client)
   app/                     MAUI Blazor Hybrid desktop app
-  shared/                  Api.ServiceDefaults (shared JWT auth + controller base)
+  shared/                  Shared.{Domain,Application,Infrastructure,Api} (per-layer building blocks)
 tests/                     unit + application + infrastructure (Testcontainers) tests
 monitoring/                Prometheus rules, Grafana dashboards
 ```

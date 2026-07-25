@@ -1,6 +1,6 @@
 using System.Diagnostics.Metrics;
 
-namespace TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 /// <summary>
 /// Metrics for the transactional outbox, shared by every service that uses it.

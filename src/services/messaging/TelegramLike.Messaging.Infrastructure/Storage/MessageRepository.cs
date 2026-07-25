@@ -1,9 +1,9 @@
 using TelegramLike.Messaging.Domain;
 using MongoDB.Driver;
 using TelegramLike.Messaging.Domain.Aggregates;
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Domain;
 using TelegramLike.Messaging.Domain.Repositories;
-using TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+using TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 namespace TelegramLike.Messaging.Infrastructure.Storage;
 

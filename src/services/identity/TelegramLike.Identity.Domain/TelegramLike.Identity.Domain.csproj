@@ -7,11 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../shared/TelegramLike.Domain.ServiceDefaults/TelegramLike.Domain.ServiceDefaults.csproj" />
+    <ProjectReference Include="../../../shared/TelegramLike.Shared.Domain/TelegramLike.Shared.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="TelegramLike.Domain.ServiceDefaults" />
+    <Using Include="TelegramLike.Shared.Domain" />
   </ItemGroup>
 
 </Project>

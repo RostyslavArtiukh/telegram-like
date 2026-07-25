@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
-namespace TelegramLike.Api.ServiceDefaults;
+namespace TelegramLike.Shared.Api;
 
 /// <summary>
 /// Shared base for authenticated API controllers across every service. Resolves the acting user

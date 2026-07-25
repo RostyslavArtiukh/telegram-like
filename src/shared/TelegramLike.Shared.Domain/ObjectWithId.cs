@@ -1,4 +1,4 @@
-namespace TelegramLike.Domain.ServiceDefaults;
+namespace TelegramLike.Shared.Domain;
 
 /// <summary>
 /// Base class for domain objects that are identified by an <see cref="Id"/>:

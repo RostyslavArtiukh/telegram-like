@@ -20,11 +20,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Using Include="TelegramLike.Domain.ServiceDefaults" />
+    <Using Include="TelegramLike.Shared.Domain" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../shared/TelegramLike.Application.ServiceDefaults/TelegramLike.Application.ServiceDefaults.csproj" />
+    <ProjectReference Include="../../../shared/TelegramLike.Shared.Application/TelegramLike.Shared.Application.csproj" />
   </ItemGroup>
 
 </Project>

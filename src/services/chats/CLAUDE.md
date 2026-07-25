@@ -8,7 +8,7 @@ Chats, members, roles. 4 projects, namespace `TelegramLike.Chats.*`.
 - Broadcast: join → Viewer; roles via Promote/Demote (not arbitrary ChangeRole). Direct chats reject rename/kick/leave.
 
 ## Events / outgoing-events queue
-Publishes through the **shared outgoing-events queue** (transactional outbox in `TelegramLike.Infrastructure.ServiceDefaults`: `OutgoingEventsStore`/`Writer`/`Sender`, Mongo collection `outgoing_events`) + its own `IIntegrationEventMapper`s. Publishes `MemberJoined/Kicked/Left` + chat-lifecycle events. Actor comes from the JWT `sub`; there is no `IUserRepository` here (Identity is separate) — callers are trusted via JWT.
+Publishes through the **shared outgoing-events queue** (transactional outbox in `TelegramLike.Shared.Infrastructure`: `OutgoingEventsStore`/`Writer`/`Sender`, Mongo collection `outgoing_events`) + its own `IIntegrationEventMapper`s. Publishes `MemberJoined/Kicked/Left` + chat-lifecycle events. Actor comes from the JWT `sub`; there is no `IUserRepository` here (Identity is separate) — callers are trusted via JWT.
 
 ## Endpoints (`/chats`, authed)
 `my`, `{id}`, `{id}/members`, create `direct|group|broadcast`, `{id}/join`, `{id}/leave`, members `{u}/kick` · `{u}/role`, `transfer-ownership`, `PATCH {id}` (rename).

@@ -1,4 +1,4 @@
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Domain;
 
 namespace TelegramLike.Messaging.Application;
 

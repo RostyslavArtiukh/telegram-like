@@ -1,5 +1,5 @@
 using MongoDB.Driver;
-using TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+using TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 namespace TelegramLike.Chats.Tests.Infrastructure.Fixtures;
 

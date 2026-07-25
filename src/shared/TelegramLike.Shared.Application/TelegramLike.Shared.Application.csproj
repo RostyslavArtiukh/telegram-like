@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\TelegramLike.Domain.ServiceDefaults\TelegramLike.Domain.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\TelegramLike.Shared.Domain\TelegramLike.Shared.Domain.csproj" />
     <ProjectReference Include="..\..\TelegramLike.Contracts\TelegramLike.Contracts.csproj" />
   </ItemGroup>
 

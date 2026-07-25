@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using TelegramLike.Infrastructure.ServiceDefaults;
+using TelegramLike.Shared.Infrastructure;
 using TelegramLike.Notifications.Application.Queries;
 using TelegramLike.Notifications.Domain.Repositories;
 using TelegramLike.Notifications.Infrastructure.Messaging.Consumers;

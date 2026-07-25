@@ -1,7 +1,7 @@
 using TelegramLike.Messaging.Domain;
 using FluentAssertions;
 using TelegramLike.Messaging.Domain.Aggregates;
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Domain;
 using TelegramLike.Messaging.Domain.ValueObjects;
 using TelegramLike.Messaging.Infrastructure.Storage;
 using TelegramLike.Messaging.Tests.Infrastructure.Fixtures;

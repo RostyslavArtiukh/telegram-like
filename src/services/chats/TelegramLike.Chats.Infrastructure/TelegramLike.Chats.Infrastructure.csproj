@@ -23,7 +23,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../shared/TelegramLike.Infrastructure.ServiceDefaults/TelegramLike.Infrastructure.ServiceDefaults.csproj" />
+    <ProjectReference Include="../../../shared/TelegramLike.Shared.Infrastructure/TelegramLike.Shared.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

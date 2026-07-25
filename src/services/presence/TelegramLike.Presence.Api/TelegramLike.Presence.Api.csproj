@@ -2,11 +2,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TelegramLike.Presence.Infrastructure\TelegramLike.Presence.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\..\shared\TelegramLike.Api.ServiceDefaults\TelegramLike.Api.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\..\shared\TelegramLike.Shared.Api\TelegramLike.Shared.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="TelegramLike.Api.ServiceDefaults" />
+    <Using Include="TelegramLike.Shared.Api" />
   </ItemGroup>
 
   <ItemGroup>

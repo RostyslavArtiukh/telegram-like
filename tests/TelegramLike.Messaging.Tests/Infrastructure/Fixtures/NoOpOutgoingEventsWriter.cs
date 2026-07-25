@@ -1,6 +1,6 @@
 using MongoDB.Driver;
-using TelegramLike.Domain.ServiceDefaults;
-using TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+using TelegramLike.Shared.Domain;
+using TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 namespace TelegramLike.Messaging.Tests.Infrastructure.Fixtures;
 

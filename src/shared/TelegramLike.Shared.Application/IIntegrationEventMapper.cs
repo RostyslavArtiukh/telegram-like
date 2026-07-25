@@ -1,7 +1,7 @@
 using TelegramLike.Contracts.Common;
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Domain;
 
-namespace TelegramLike.Application.ServiceDefaults;
+namespace TelegramLike.Shared.Application;
 
 /// <summary>
 /// Turns one service-internal <see cref="IChangeEvent"/> into the integration event

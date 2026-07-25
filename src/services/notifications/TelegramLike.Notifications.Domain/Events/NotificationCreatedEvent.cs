@@ -1,4 +1,4 @@
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Domain;
 using TelegramLike.Notifications.Domain.ValueObjects;
 
 namespace TelegramLike.Notifications.Domain.Events;

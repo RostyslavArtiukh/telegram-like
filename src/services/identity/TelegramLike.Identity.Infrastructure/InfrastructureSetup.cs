@@ -6,7 +6,7 @@ using TelegramLike.Identity.Domain.Repositories;
 using TelegramLike.Identity.Infrastructure.Auth;
 using TelegramLike.Identity.Infrastructure.Caching;
 using TelegramLike.Identity.Infrastructure.Storage;
-using TelegramLike.Infrastructure.ServiceDefaults;
+using TelegramLike.Shared.Infrastructure;
 
 namespace TelegramLike.Identity.Infrastructure;
 

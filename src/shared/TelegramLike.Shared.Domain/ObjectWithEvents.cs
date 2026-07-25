@@ -1,4 +1,4 @@
-namespace TelegramLike.Domain.ServiceDefaults;
+namespace TelegramLike.Shared.Domain;
 
 /// <summary>
 /// A domain object that, on top of an id, keeps a list of "what just happened to me"

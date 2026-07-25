@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
-using TelegramLike.Infrastructure.ServiceDefaults;
+using TelegramLike.Shared.Infrastructure;
 using TelegramLike.Presence.Application.Storage;
 using TelegramLike.Presence.Application.Queries;
 using TelegramLike.Presence.Domain.Repositories;

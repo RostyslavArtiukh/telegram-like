@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 
-namespace TelegramLike.Infrastructure.ServiceDefaults;
+namespace TelegramLike.Shared.Infrastructure;
 
 /// <summary>
 /// Registers the service's MongoDB client and database from the standard

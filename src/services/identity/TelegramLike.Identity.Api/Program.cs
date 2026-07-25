@@ -7,7 +7,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using TelegramLike.Identity.Api.Filters;
 using TelegramLike.Identity.Application.Commands.RegisterUser;
-using TelegramLike.Application.ServiceDefaults;
+using TelegramLike.Shared.Application;
 using TelegramLike.Identity.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);

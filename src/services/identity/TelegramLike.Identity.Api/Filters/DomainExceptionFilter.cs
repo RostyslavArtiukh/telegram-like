@@ -1,4 +1,4 @@
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Domain;
 using System.Diagnostics;
 using FluentValidation;
 using Microsoft.AspNetCore.Http;

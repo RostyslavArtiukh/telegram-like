@@ -1,4 +1,4 @@
-namespace TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 public sealed class OutgoingEventsSenderOptions
 {

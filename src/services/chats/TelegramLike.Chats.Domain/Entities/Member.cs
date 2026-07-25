@@ -1,5 +1,5 @@
 using TelegramLike.Chats.Domain.ValueObjects;
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Domain;
 
 namespace TelegramLike.Chats.Domain.Entities;
 

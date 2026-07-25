@@ -22,7 +22,7 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
-    <Using Include="TelegramLike.Domain.ServiceDefaults" />
+    <Using Include="TelegramLike.Shared.Domain" />
   </ItemGroup>
 
   <ItemGroup>

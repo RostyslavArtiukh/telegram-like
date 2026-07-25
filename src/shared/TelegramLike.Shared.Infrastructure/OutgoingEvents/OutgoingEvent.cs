@@ -1,4 +1,4 @@
-namespace TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 /// <summary>
 /// One integration event waiting in the outgoing queue: saved to the database in the

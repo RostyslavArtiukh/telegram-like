@@ -1,6 +1,6 @@
 ---
 name: service-auth-jwt
-description: JWT auth між клієнтами і сервісами — Identity є IdP; спільний AddServiceJwtAuth + ApiControllerBase у TelegramLike.Api.ServiceDefaults
+description: JWT auth між клієнтами і сервісами — Identity є IdP; спільний AddServiceJwtAuth + ApiControllerBase у TelegramLike.Shared.Api
 metadata: 
   node_type: memory
   type: project
@@ -10,10 +10,10 @@ metadata:
 **Актуальна схема (2026-07, після [TL-43..45] і [TL-92]):**
 
 - **Identity — IdP.** Підписує короткоживучі HMAC-SHA256 JWT: `iss=telegramlike-identity`, `aud=telegramlike-services`, `sub`=userId (Guid string), lifetime ~5 хв. **Web (BFF) нічого не підписує** — тримає cookie-сесію і міняє opaque session token на access JWT в Identity (`ServiceTokenProvider`, scoped, імплементує SDK-шний `IAccessTokenProvider`), далі `Bearer` на всіх downstream викликах. Standalone-клієнти (SDK/MAUI) роблять те саме через `TelegramLikeSession` (login → session token → exchange → кешований JWT з refresh-before-expiry).
-- **Валідація — спільна ([TL-92]).** `src/shared/TelegramLike.Api.ServiceDefaults`:
+- **Валідація — спільна ([TL-92]).** `src/shared/TelegramLike.Shared.Api`:
   - `ServiceAuthExtensions.AddServiceJwtAuth(IConfiguration)` — єдине джерело `AddAuthentication().AddJwtBearer(...)` + `AddAuthorization`. Читає `ServiceAuth:JwtSecret/Issuer/Audience`; `MapInboundClaims=false` (**критично** — інакше .NET переіменовує `sub` → `ClaimTypes.NameIdentifier`); `ClockSkew = 30s` (розбіжності часу між контейнерами). Раніше цей блок був дослівно скопійований у 5 `Program.cs`.
   - `ApiControllerBase` — резолвить `CurrentUserId` через `IActionFilter` раз на запит, віддає 401 до тіла екшену; **пропускає `[AllowAnonymous]`** (`EndpointMetadata.OfType<IAllowAnonymous>()`) — без цього Identity register/login/exchange ламались 401.
-  - Підключення в сервісі: `<ProjectReference>` на shared + `<Using Include="TelegramLike.Api.ServiceDefaults" />`; JwtBearer-пакет приходить транзитивно.
+  - Підключення в сервісі: `<ProjectReference>` на shared + `<Using Include="TelegramLike.Shared.Api" />`; JwtBearer-пакет приходить транзитивно.
 - **Realtime hub** — той самий JWT: `[Authorize]` на хабі, для WebSocket токен через `?access_token=` (`JwtBearerEvents.OnMessageReceived`, тільки на hub-шляху). **Gateway auth не робить** — форвардить `Authorization` як є; кожен сервіс валідує сам (gateway ≠ trust boundary).
 
 **Config (appsettings + env):**
@@ -23,7 +23,7 @@ ServiceAuth__Issuer     = "telegramlike-identity"
 ServiceAuth__Audience   = "telegramlike-services"
 ```
 
-**Рецепт для нового сервісу:** ProjectReference на `TelegramLike.Api.ServiceDefaults` → `builder.Services.AddServiceJwtAuth(builder.Configuration)` → `app.UseAuthentication(); app.UseAuthorization();` → контролери успадковують `ApiControllerBase` (актор = `CurrentUserId`) → та сама `ServiceAuth__*` секція в appsettings + compose env. Публічні endpoint-и — `[AllowAnonymous]`.
+**Рецепт для нового сервісу:** ProjectReference на `TelegramLike.Shared.Api` → `builder.Services.AddServiceJwtAuth(builder.Configuration)` → `app.UseAuthentication(); app.UseAuthorization();` → контролери успадковують `ApiControllerBase` (актор = `CurrentUserId`) → та сама `ServiceAuth__*` секція в appsettings + compose env. Публічні endpoint-и — `[AllowAnonymous]`.
 
 **Threat model (що дизайн НЕ покриває):**
 - Секрет симетричний (HMAC) — витік = можна підробити токен будь-якого `sub` для всіх сервісів. Для прода: secret store + rotation.

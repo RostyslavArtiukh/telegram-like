@@ -9,8 +9,8 @@ using FluentValidation;
 using TelegramLike.Messaging.Api.Filters;
 using TelegramLike.Messaging.Application.Commands.SendMessage;
 using TelegramLike.Messaging.Application.Observability;
-using TelegramLike.Application.ServiceDefaults;
-using TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+using TelegramLike.Shared.Application;
+using TelegramLike.Shared.Infrastructure.OutgoingEvents;
 using TelegramLike.Messaging.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);

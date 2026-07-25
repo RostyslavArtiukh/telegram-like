@@ -2,7 +2,7 @@ using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace TelegramLike.Infrastructure.ServiceDefaults;
+namespace TelegramLike.Shared.Infrastructure;
 
 /// <summary>
 /// Registers the MassTransit bus on RabbitMQ from the standard <c>RabbitMQ:*</c>

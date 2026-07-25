@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
-namespace TelegramLike.Api.ServiceDefaults;
+namespace TelegramLike.Shared.Api;
 
 /// <summary>
 /// The one JWT-bearer setup every service shares. Each service validates tokens with the same

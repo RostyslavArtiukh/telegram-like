@@ -3,7 +3,7 @@ using TelegramLike.Chats.Domain.Aggregates;
 using TelegramLike.Chats.Domain.ValueObjects;
 using TelegramLike.Chats.Infrastructure.Storage;
 using TelegramLike.Chats.Tests.Infrastructure.Fixtures;
-using TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+using TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 namespace TelegramLike.Chats.Tests.Infrastructure;
 

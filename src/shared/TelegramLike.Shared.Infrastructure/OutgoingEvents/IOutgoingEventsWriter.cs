@@ -1,7 +1,7 @@
 using MongoDB.Driver;
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Domain;
 
-namespace TelegramLike.Infrastructure.ServiceDefaults.OutgoingEvents;
+namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 /// <summary>
 /// Called by repositories while saving an aggregate: takes the aggregate's pending

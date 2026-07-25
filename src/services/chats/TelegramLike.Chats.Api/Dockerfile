@@ -14,10 +14,10 @@ COPY ["src/services/chats/TelegramLike.Chats.Api/TelegramLike.Chats.Api.csproj",
 COPY ["src/services/chats/TelegramLike.Chats.Infrastructure/TelegramLike.Chats.Infrastructure.csproj", "src/services/chats/TelegramLike.Chats.Infrastructure/"]
 COPY ["src/services/chats/TelegramLike.Chats.Application/TelegramLike.Chats.Application.csproj", "src/services/chats/TelegramLike.Chats.Application/"]
 COPY ["src/services/chats/TelegramLike.Chats.Domain/TelegramLike.Chats.Domain.csproj", "src/services/chats/TelegramLike.Chats.Domain/"]
-COPY ["src/shared/TelegramLike.Api.ServiceDefaults/TelegramLike.Api.ServiceDefaults.csproj", "src/shared/TelegramLike.Api.ServiceDefaults/"]
-COPY ["src/shared/TelegramLike.Infrastructure.ServiceDefaults/TelegramLike.Infrastructure.ServiceDefaults.csproj", "src/shared/TelegramLike.Infrastructure.ServiceDefaults/"]
-COPY ["src/shared/TelegramLike.Application.ServiceDefaults/TelegramLike.Application.ServiceDefaults.csproj", "src/shared/TelegramLike.Application.ServiceDefaults/"]
-COPY ["src/shared/TelegramLike.Domain.ServiceDefaults/TelegramLike.Domain.ServiceDefaults.csproj", "src/shared/TelegramLike.Domain.ServiceDefaults/"]
+COPY ["src/shared/TelegramLike.Shared.Api/TelegramLike.Shared.Api.csproj", "src/shared/TelegramLike.Shared.Api/"]
+COPY ["src/shared/TelegramLike.Shared.Infrastructure/TelegramLike.Shared.Infrastructure.csproj", "src/shared/TelegramLike.Shared.Infrastructure/"]
+COPY ["src/shared/TelegramLike.Shared.Application/TelegramLike.Shared.Application.csproj", "src/shared/TelegramLike.Shared.Application/"]
+COPY ["src/shared/TelegramLike.Shared.Domain/TelegramLike.Shared.Domain.csproj", "src/shared/TelegramLike.Shared.Domain/"]
 COPY ["src/TelegramLike.Contracts/TelegramLike.Contracts.csproj", "src/TelegramLike.Contracts/"]
 RUN dotnet restore "src/services/chats/TelegramLike.Chats.Api/TelegramLike.Chats.Api.csproj"
 

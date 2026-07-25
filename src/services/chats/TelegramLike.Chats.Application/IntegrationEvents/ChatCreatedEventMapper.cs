@@ -1,8 +1,8 @@
-using TelegramLike.Application.ServiceDefaults;
+using TelegramLike.Shared.Application;
 using TelegramLike.Contracts.Chats;
 using TelegramLike.Contracts.Common;
 using TelegramLike.Chats.Domain.Events;
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Domain;
 
 namespace TelegramLike.Chats.Application.IntegrationEvents;
 

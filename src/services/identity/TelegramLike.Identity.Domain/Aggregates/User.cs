@@ -1,4 +1,4 @@
-using TelegramLike.Domain.ServiceDefaults;
+using TelegramLike.Shared.Domain;
 using TelegramLike.Identity.Domain.Events;
 using TelegramLike.Identity.Domain.ValueObjects;
 
