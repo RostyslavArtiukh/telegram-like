@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using NSubstitute;
 
@@ -43,6 +44,13 @@ public sealed class ChatsApiFactory : WebApplicationFactory<Program>
             // Replace the real IMediator with our mock — no handlers execute.
             services.RemoveAll<IMediator>();
             services.AddSingleton(Mediator);
+
+            // Strip hosted services (outbox poller, index initializer) — these touch
+            // Mongo, which isn't running for these routing/auth tests. The index
+            // initializer awaits its Mongo connection in StartAsync, so leaving it in
+            // would crash the whole test host — and when a dev Mongo *is* listening on
+            // 27017 it silently created a leftover "test_chats" database instead.
+            services.RemoveAll<IHostedService>();
         });
     }
 
