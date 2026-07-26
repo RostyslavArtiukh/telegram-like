@@ -44,11 +44,12 @@ metadata:
 - Atomic save+outbox: так (Mongo транзакція).
 - At-least-once delivery: так — якщо publish впав, повідомлення лишається `SentAt == null` і буде повторно опубліковано.
 - Order: best-effort (sort by OccurredAt) — не строгий FIFO в межах consumer'а.
+- **Retention — mark-sent + TTL (2026-07-26, рішення юзера):** `MarkSentAsync` НЕ видаляє рядок, а ставить `SentAt`, тобто `outgoing_events` — це історія вже опублікованого, а не лише черга (юзер очікував видалення після відправки — це свідомий вибір, історія дає forensics типу «що і з яким лагом ми публікували»). Щоб не росла нескінченно, `OutgoingEventsIndexInitializer` створює TTL-індекс `sent_ttl` на `SentAt` з `OutgoingEvents:SentRetentionDays` (default 7). Pending і dead-lettered рядки TTL не чіпає НІКОЛИ — у них `SentAt: null`, а Mongo експайрить лише документи, де індексоване поле — BSON Date. Зміну retention на вже існуючому індексі робить `collMod`-фолбек: `CreateOneAsync` з іншим `expireAfterSeconds` кидає IndexOptionsConflict (code 85), і без фолбеку правка конфіга мовчки не діяла б.
 - Outbox-level DLQ (Step 23): poison message після `OutgoingEvents:MaxRetries` (default 5) переходить у `DeadLetteredAt != null` стан і виключається з `GetPendingAsync`. Replay поки ручний (clear `DeadLetteredAt` + reset `Retries` через Mongo shell). RabbitMQ-side DLQ/retry policies (MassTransit `UseDelayedRedelivery`) — НЕ налаштовано.
 
 **Конфіги:**
 - `RabbitMQ:Host/Username/Password/VirtualHost` у appsettings.json (у docker-compose — env vars `RabbitMQ__Host=rabbitmq`, `RabbitMQ__VirtualHost=telegramlike`). `VirtualHost` default — `/` для local dev; у docker — `telegramlike` (Step 26).
-- `OutgoingEvents:PollIntervalSeconds` (default 2), `OutgoingEvents:BatchSize` (default 50), `OutgoingEvents:MaxRetries` (default 5, після нього → DLQ).
+- `OutgoingEvents:PollIntervalSeconds` (default 2), `OutgoingEvents:BatchSize` (default 50), `OutgoingEvents:MaxRetries` (default 5, після нього → DLQ), `OutgoingEvents:SentRetentionDays` (default 7 — TTL на опубліковані рядки). У appsettings жодного з них не задано — усі працюють на дефолтах.
 
 **Тести:**
 - `MessageSentEventMapperTests` (Application.Tests) — unit на маппінг.

@@ -16,6 +16,12 @@
     <PackageReference Include="MongoDB.Driver" Version="3.8.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The shared outbox is integration-tested from the Chats test project, which already
+         owns the replica-set Mongo fixture the queue needs. -->
+    <InternalsVisibleTo Include="TelegramLike.Chats.Tests" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

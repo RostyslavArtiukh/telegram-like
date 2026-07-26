@@ -34,7 +34,6 @@
 | `message_read_receipts` | Messaging | read model |
 | `user_presence` | Presence | `UserPresence` |
 | `notifications` | Notifications | `Notification` |
-| `outbox` | Infrastructure (Messaging) | Transactional outbox для integration events |
 
 ---
 
@@ -319,29 +318,6 @@ users ────────────────────────�
             │                                                    │
        payload.actorId ────────────────────────────────────────-┘
 ```
-
----
-
-### `outbox` (День 9)
-
-Transactional outbox для integration events — гарантує що подія потрапить у RabbitMQ навіть якщо брокер тимчасово недоступний.
-
-```js
-{
-  _id: UUID,              // EventId
-  EventType: String,      // assembly-qualified type name
-  Payload: String,        // JSON-серіалізований integration event
-  OccurredAt: Date,
-  SentAt: Date | null,    // null = pending; не-null = опубліковано
-  Retries: Int            // лічильник невдалих спроб
-}
-```
-
-Індекси: за замовчуванням `_id`. Для `OutboxPublisher` запит `SentAt == null` сортується за `OccurredAt`. При зростанні розмірів додати:
-- `{ SentAt: 1, OccurredAt: 1 }` — для polling-запиту publisher'а
-- TTL index на `SentAt` (наприклад 7 днів) для прибирання опублікованих
-
-Записується **у тій же Mongo-транзакції**, що й агрегат (через `IClientSessionHandle`), щоб гарантувати атомарність. Окремий `OutboxPublisherHostedService` дренує `SentAt == null` і публікує через MassTransit `IPublishEndpoint`.
 
 ---
 

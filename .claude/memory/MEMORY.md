@@ -5,7 +5,7 @@
 - [quality_audit_done.md](quality_audit_done.md) — Наскрізний аудит якості 9 агентами + фікси [TL-71..82] ЗРОБЛЕНО; що виправлено/відкладено; тести 156→343 (нині ~361 у 8 проєктах після [TL-95..97])
 - [chats_persistence.md](chats_persistence.md) — Дві колекції + MongoDB транзакція для агрегату Chat
 - [notifications_fanout.md](notifications_fanout.md) — Fanout нотифікацій: асинхронно через RabbitMQ; recipients вбудовані в подію, ідемпотентно по SourceEventId; UnreadCountChanged публікується без outbox (сигнальна)
-- [integration_events_rabbitmq.md](integration_events_rabbitmq.md) — RabbitMQ + MassTransit + Transactional Outbox (chats/messaging; presence/notifications публікують напряму — свідомий виняток); як додавати нові integration events
+- [integration_events_rabbitmq.md](integration_events_rabbitmq.md) — RabbitMQ + MassTransit + Transactional Outbox (chats/messaging; presence/notifications публікують напряму — свідомий виняток); як додавати нові integration events; retention опублікованих рядків — mark-sent + TTL 7 днів
 - [microservices_migration.md](microservices_migration.md) — Інкрементальна міграція з monolith у мікросервіси; прогрес і архітектурні рішення
 - [client_sdk_plan.md](client_sdk_plan.md) — SDK [TL-64] + hub [TL-65] + MAUI desktop [TL-66..68] + Android ЕМУЛЯТОР [TL-106] ЗРОБЛЕНО й live-verified у емуляторі (register→login→chat→send через 10.0.2.2:18090); JAVA_HOME-фікс (jdk-17) + curl-обхід флейкового sdkmanager; iOS неможливий на Windows (треба macOS/Xcode)
 - [quality_audit_plan.md](quality_audit_plan.md) — ВИКОНАНО → див. quality_audit_done (це був pre-execution план)
