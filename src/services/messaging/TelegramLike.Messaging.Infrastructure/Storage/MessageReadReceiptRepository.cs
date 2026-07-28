@@ -30,7 +30,4 @@ internal sealed class MessageReadReceiptRepository(IMongoDatabase database) : IM
             return false;
         }
     }
-
-    public Task<bool> HasReceiptAsync(Guid messageId, Guid memberId, CancellationToken cancellationToken = default)
-        => _readReceiptsCollection.Find(r => r.MessageId == messageId && r.MemberId == memberId).AnyAsync(cancellationToken);
 }

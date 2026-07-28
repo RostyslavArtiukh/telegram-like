@@ -23,9 +23,6 @@ public sealed record NotificationPayload
         return new NotificationPayload(chatId, messageId, triggeredByUserId);
     }
 
-    public static NotificationPayload ForMention(Guid chatId, Guid messageId, Guid triggeredByUserId)
-        => ForNewMessage(chatId, messageId, triggeredByUserId);
-
     public static NotificationPayload ForMemberJoined(Guid chatId, Guid triggeredByUserId)
     {
         if (triggeredByUserId == Guid.Empty) throw new DomainException("TriggeredByUserId required.");

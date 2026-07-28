@@ -10,7 +10,7 @@ public class MessageReadReceiptRepositoryIntegrationTests(MongoFixture fx)
     private MessageReadReceiptRepository NewRepository() => new(fx.Database);
 
     [Fact]
-    public async Task MarkAsRead_FirstForReader_ReturnsTrueAndIsRecorded()
+    public async Task MarkAsRead_FirstForReader_ReturnsTrue()
     {
         var repo = NewRepository();
         var messageId = Guid.NewGuid();
@@ -19,7 +19,6 @@ public class MessageReadReceiptRepositoryIntegrationTests(MongoFixture fx)
         var created = await repo.MarkAsReadAsync(messageId, memberId, DateTime.UtcNow);
 
         created.Should().BeTrue();
-        (await repo.HasReceiptAsync(messageId, memberId)).Should().BeTrue();
     }
 
     [Fact]
@@ -60,13 +59,5 @@ public class MessageReadReceiptRepositoryIntegrationTests(MongoFixture fx)
 
         a.Should().BeTrue();
         b.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task HasReceipt_UnknownPair_ReturnsFalse()
-    {
-        var repo = NewRepository();
-
-        (await repo.HasReceiptAsync(Guid.NewGuid(), Guid.NewGuid())).Should().BeFalse();
     }
 }

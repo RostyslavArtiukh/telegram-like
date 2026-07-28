@@ -8,8 +8,6 @@ public interface INotificationRepository
 
     Task AddAsync(Notification notification, CancellationToken cancellationToken = default);
 
-    Task AddManyAsync(IReadOnlyCollection<Notification> notifications, CancellationToken cancellationToken = default);
-
     Task<int> AddManyIgnoringDuplicatesAsync(IReadOnlyCollection<Notification> notifications, CancellationToken cancellationToken = default);
 
     Task UpdateAsync(Notification notification, CancellationToken cancellationToken = default);

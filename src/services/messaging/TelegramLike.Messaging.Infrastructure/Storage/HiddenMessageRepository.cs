@@ -21,7 +21,4 @@ internal sealed class HiddenMessageRepository(IMongoDatabase database) : IHidden
 
         await _hiddenMessagesCollection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, cancellationToken);
     }
-
-    public Task<bool> IsHiddenAsync(Guid messageId, Guid userId, CancellationToken cancellationToken = default)
-        => _hiddenMessagesCollection.Find(h => h.MessageId == messageId && h.UserId == userId).AnyAsync(cancellationToken);
 }

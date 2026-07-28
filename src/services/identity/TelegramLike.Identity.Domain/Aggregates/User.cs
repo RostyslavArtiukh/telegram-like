@@ -81,18 +81,6 @@ public sealed class User : ObjectWithEvents
             blockedUserIds, createdAt, updatedAt);
     }
 
-    public void UpdateDisplayName(DisplayName newName)
-    {
-        DisplayName = newName;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void SetAvatar(string? avatarUrl)
-    {
-        AvatarUrl = avatarUrl;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
     public void Block(Guid otherUserId)
     {
         if (otherUserId == Id)

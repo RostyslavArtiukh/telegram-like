@@ -26,7 +26,7 @@ public class NotificationRepositoryIntegrationTests(MongoFixture fx)
         var recipient = Guid.NewGuid();
         var batch = new[] { New(recipient), New(recipient), New(recipient) };
 
-        await repo.AddManyAsync(batch);
+        await repo.AddManyIgnoringDuplicatesAsync(batch);
         var count = await query.GetUnreadCountAsync(recipient);
 
         count.Should().Be(3);
@@ -38,7 +38,7 @@ public class NotificationRepositoryIntegrationTests(MongoFixture fx)
         var repo = NewRepo();
         var query = NewQuery();
         var recipient = Guid.NewGuid();
-        await repo.AddManyAsync(new[] { New(recipient), New(recipient) });
+        await repo.AddManyIgnoringDuplicatesAsync(new[] { New(recipient), New(recipient) });
 
         await repo.MarkAllAsReadAsync(recipient, DateTime.UtcNow);
         var count = await query.GetUnreadCountAsync(recipient);

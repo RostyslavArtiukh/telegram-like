@@ -129,17 +129,4 @@ public sealed class OutgoingEventsStore(IMongoDatabase database)
 
         return new OutboxBacklog(pendingCount, deadLetteredCount, oldestAgeSeconds);
     }
-
-    public async Task<IReadOnlyList<OutgoingEvent>> GetDeadLetteredAsync(
-        int batchSize,
-        CancellationToken cancellationToken = default)
-    {
-        var docs = await _collection
-            .Find(d => d.DeadLetteredAt != null)
-            .SortBy(d => d.DeadLetteredAt)
-            .Limit(batchSize)
-            .ToListAsync(cancellationToken);
-
-        return docs.Select(d => d.ToEvent()).ToList();
-    }
 }

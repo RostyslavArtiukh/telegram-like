@@ -19,14 +19,6 @@ internal sealed class NotificationRepository(IMongoDatabase database) : INotific
     public Task AddAsync(Notification notification, CancellationToken cancellationToken = default)
         => _notificationsCollection.InsertOneAsync(NotificationDocument.FromDomain(notification), cancellationToken: cancellationToken);
 
-    public Task AddManyAsync(IReadOnlyCollection<Notification> notifications, CancellationToken cancellationToken = default)
-    {
-        if (notifications.Count == 0) return Task.CompletedTask;
-
-        var docs = notifications.Select(NotificationDocument.FromDomain).ToList();
-        return _notificationsCollection.InsertManyAsync(docs, cancellationToken: cancellationToken);
-    }
-
     public async Task<int> AddManyIgnoringDuplicatesAsync(
         IReadOnlyCollection<Notification> notifications,
         CancellationToken cancellationToken = default)
