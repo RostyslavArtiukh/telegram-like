@@ -14,4 +14,8 @@ public interface IChatMembershipReadModel
     Task UpsertActiveAsync(Guid chatId, Guid userId, DateTime occurredAt, CancellationToken cancellationToken = default);
 
     Task DeactivateAsync(Guid chatId, Guid userId, DateTime occurredAt, CancellationToken cancellationToken = default);
+
+    // Deactivates the chat's whole membership in one write, for ChatDeleted. Terminal:
+    // a deleted chat can never be rejoined, so nothing may reactivate these rows.
+    Task DeactivateChatAsync(Guid chatId, DateTime occurredAt, CancellationToken cancellationToken = default);
 }

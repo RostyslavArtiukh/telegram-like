@@ -25,6 +25,31 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
     public Task DeactivateAsync(Guid chatId, Guid userId, DateTime occurredAt, CancellationToken cancellationToken = default)
         => ApplyAsync(chatId, userId, isActive: false, occurredAt, cancellationToken);
 
+    // Chat-wide deactivation for ChatDeleted. Same last-writer-wins guard as ApplyAsync, but
+    // UpdateMany over every row of the chat and never an upsert: a chat nobody materialized
+    // here has no membership to revoke, and inventing rows for it would be meaningless.
+    public Task DeactivateChatAsync(Guid chatId, DateTime occurredAt, CancellationToken cancellationToken = default)
+    {
+        var occurred = new BsonDateTime(occurredAt);
+        var isNewer = IsNewerThanStored(occurred);
+
+        var set = new BsonDocument("$set", new BsonDocument
+        {
+            { "IsActive", new BsonDocument("$cond", new BsonArray
+                { isNewer, false, new BsonDocument("$ifNull", new BsonArray { "$IsActive", true }) }) },
+            { "LastEventAt", new BsonDocument("$cond", new BsonArray
+                { isNewer, occurred, new BsonDocument("$ifNull", new BsonArray { "$LastEventAt", occurred }) }) },
+        });
+
+        var pipeline = Builders<ChatMembershipDocument>.Update.Pipeline(
+            PipelineDefinition<ChatMembershipDocument, ChatMembershipDocument>.Create(set));
+
+        return _chatMembershipsCollection.UpdateManyAsync(
+            Builders<ChatMembershipDocument>.Filter.Eq(d => d.ChatId, chatId),
+            pipeline,
+            cancellationToken: cancellationToken);
+    }
+
     // Last-writer-wins by occurredAt via a conditional pipeline update: the new state
     // is applied only when occurredAt is newer than the stored LastEventAt (missing =>
     // epoch). A stale event is a no-op, never a resurrect/delete. One atomic upsert,
@@ -33,11 +58,7 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
     {
         var id = ChatMembershipDocument.MakeId(chatId, userId);
         var occurred = new BsonDateTime(occurredAt);
-        var isNewer = new BsonDocument("$gte", new BsonArray
-        {
-            occurred,
-            new BsonDocument("$ifNull", new BsonArray { "$LastEventAt", BsonDateTime.Create(DateTime.UnixEpoch) })
-        });
+        var isNewer = IsNewerThanStored(occurred);
 
         var set = new BsonDocument("$set", new BsonDocument
         {
@@ -58,4 +79,11 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
             new UpdateOptions { IsUpsert = true },
             cancellationToken);
     }
+
+    private static BsonDocument IsNewerThanStored(BsonDateTime occurred)
+        => new("$gte", new BsonArray
+        {
+            occurred,
+            new BsonDocument("$ifNull", new BsonArray { "$LastEventAt", BsonDateTime.Create(DateTime.UnixEpoch) })
+        });
 }

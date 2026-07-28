@@ -26,11 +26,7 @@ public static class InfrastructureSetup
         services.AddScoped<IChatTypeReadModel, MongoChatTypeReadModel>();
         services.AddHostedService<MessageIndexInitializer>();
 
-        services.AddOutgoingEvents(configuration);
-        services.AddSingleton<IIntegrationEventMapper, MessageSentEventMapper>();
-        services.AddSingleton<IIntegrationEventMapper, MessageRetractedEventMapper>();
-        services.AddSingleton<IIntegrationEventMapper, ReactionAddedEventMapper>();
-        services.AddSingleton<IIntegrationEventMapper, ReactionRemovedEventMapper>();
+        services.AddOutgoingEvents(configuration, MessagingIntegrationEvents.Map);
 
         services.AddRabbitMqBus(configuration, "messaging", bus =>
         {
@@ -39,7 +35,9 @@ public static class InfrastructureSetup
             bus.AddConsumer<MemberJoinedConsumer>();
             bus.AddConsumer<MemberKickedConsumer>();
             bus.AddConsumer<MemberLeftConsumer>();
+            bus.AddConsumer<MemberBannedConsumer>();
             bus.AddConsumer<MemberRoleChangedConsumer>();
+            bus.AddConsumer<ChatDeletedConsumer>();
             // Chat type → SendMessage derives isBroadcast server-side ([TL-102]).
             bus.AddConsumer<ChatCreatedConsumer>();
             // One-time backfill of pre-existing chats' membership into the read-model.

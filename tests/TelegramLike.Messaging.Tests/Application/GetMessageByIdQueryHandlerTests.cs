@@ -75,4 +75,23 @@ public class GetMessageByIdQueryHandlerTests
 
         result.Should().BeSameAs(dto);
     }
+
+    [Fact]
+    public async Task GetMessageById_DeletedChat_HidesTheMessageDespiteNoActiveMembers()
+    {
+        // Known chat with everyone deactivated must not read as "unknown" — that is the
+        // fail-open branch, and it would expose a deleted chat's history to anyone.
+        var chatId = Guid.NewGuid();
+        var messageId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+        _queryService.GetMessageByIdAsync(messageId, requesterId, Arg.Any<CancellationToken>())
+            .Returns(MakeDto(messageId, chatId));
+        _membership.GetActiveMemberIdsAsync(chatId, Arg.Any<CancellationToken>())
+            .Returns(new List<Guid>());
+        _membership.IsChatKnownAsync(chatId, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await Handler.Handle(new GetMessageByIdQuery(messageId, requesterId), CancellationToken.None);
+
+        result.Should().BeNull();
+    }
 }

@@ -13,10 +13,16 @@ public interface IChatMembershipReadModel
     // derive moderator authority server-side instead of trusting a client flag.
     Task<bool> IsModeratorAsync(Guid chatId, Guid userId, CancellationToken cancellationToken = default);
 
-    // Every active member of the chat. An empty result means the chat isn't
-    // materialized yet (legacy chat, or a MemberJoined still in flight) — callers
-    // treat that as "unknown" and fall back rather than fail closed.
+    // Every active member of the chat. An empty result is ambiguous on its own — it means
+    // either "not materialized yet" or "materialized, but nobody is active any more"
+    // (every member banned/kicked, or the chat deleted). Pair it with IsChatKnownAsync.
     Task<IReadOnlyList<Guid>> GetActiveMemberIdsAsync(Guid chatId, CancellationToken cancellationToken = default);
+
+    // True once ANY membership row exists for the chat, active or not. This is what
+    // separates "we have never heard of this chat" (the deliberate fail-open window for a
+    // just-created chat) from "we know it and nobody may post" — without it, deleting a
+    // chat empties its active members and silently flips access back to fail-open.
+    Task<bool> IsChatKnownAsync(Guid chatId, CancellationToken cancellationToken = default);
 
     // occurredAt is the membership event's timestamp. RabbitMQ is at-least-once with no
     // cross-message ordering, so writes are last-writer-wins by occurredAt: a stale
@@ -24,6 +30,10 @@ public interface IChatMembershipReadModel
     Task UpsertActiveAsync(Guid chatId, Guid userId, string? role, DateTime occurredAt, CancellationToken cancellationToken = default);
 
     Task DeactivateAsync(Guid chatId, Guid userId, DateTime occurredAt, CancellationToken cancellationToken = default);
+
+    // Deactivates the chat's whole membership in one write, for ChatDeleted. Terminal:
+    // a deleted chat can never be rejoined, so nothing may reactivate these rows.
+    Task DeactivateChatAsync(Guid chatId, DateTime occurredAt, CancellationToken cancellationToken = default);
 
     Task SetRoleAsync(Guid chatId, Guid userId, string role, DateTime occurredAt, CancellationToken cancellationToken = default);
 }

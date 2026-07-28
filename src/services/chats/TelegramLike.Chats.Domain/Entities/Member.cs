@@ -55,6 +55,28 @@ public sealed class Member : ObjectWithId
 
     public bool IsActive => Status == MemberStatus.Active;
 
+    /// <summary>
+    /// Revives this row for a member who had left or been kicked, as a fresh join.
+    /// </summary>
+    /// <remarks>
+    /// A rejoin must reuse the existing row rather than mint a second one. The row's
+    /// <see cref="ObjectWithId.Id"/> is what <c>chat_members</c> is upserted by, so a
+    /// replacement row leaves the old Left/Kicked one orphaned in the collection forever —
+    /// and every lookup that resolves a user through <c>FindAnyMember</c> (notably
+    /// <c>Ban</c>) then picks whichever row Mongo happens to return first, which could be
+    /// the ghost while the live row stayed active.
+    /// </remarks>
+    internal void Rejoin(MemberRole role)
+    {
+        Role = role;
+        Status = MemberStatus.Active;
+        JoinedAt = DateTime.UtcNow;
+        LeftAt = null;
+        KickedBy = null;
+        BannedBy = null;
+        BanReason = null;
+    }
+
     internal void ChangeRole(MemberRole newRole)
     {
         Role = newRole;

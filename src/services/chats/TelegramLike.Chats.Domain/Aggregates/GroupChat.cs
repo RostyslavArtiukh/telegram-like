@@ -42,11 +42,12 @@ public sealed class GroupChat : Chat
         if (existing is { Status: MemberStatus.Active })
             return;
 
+        // Revive the existing row instead of replacing it — see Member.Rejoin.
         if (existing is not null)
-            _members.Remove(existing);
+            existing.Rejoin(MemberRole.Member);
+        else
+            _members.Add(Member.Join(userId, MemberRole.Member));
 
-        var member = Member.Join(userId, MemberRole.Member);
-        _members.Add(member);
         RecordEvent(new MemberJoinedEvent(Id, userId, MemberRole.Member, RecipientsExcept(userId)));
     }
 

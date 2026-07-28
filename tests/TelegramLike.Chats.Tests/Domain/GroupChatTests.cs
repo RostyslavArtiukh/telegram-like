@@ -329,4 +329,77 @@ public class GroupChatTests
 
         act.Should().Throw<DomainException>().WithMessage("*deleted*");
     }
+
+    // ── Rejoin reuses the member's row ────────────────────────────────────
+
+    [Fact]
+    public void Join_AfterLeaving_RevivesTheSameMemberRow()
+    {
+        // The row id is what chat_members is upserted by, so a replacement row would
+        // strand the old one in the collection forever.
+        var chat = GroupChat.Create(Guid.NewGuid(), Name(), Guid.NewGuid());
+        var userId = Guid.NewGuid();
+        chat.Join(userId);
+        var originalRowId = chat.FindActiveMember(userId)!.Id;
+        chat.Leave(userId);
+
+        chat.Join(userId);
+
+        chat.Members.Where(m => m.UserId == userId).Should().ContainSingle()
+            .Which.Id.Should().Be(originalRowId);
+        chat.FindActiveMember(userId)!.Role.Should().Be(MemberRole.Member);
+    }
+
+    [Fact]
+    public void Join_AfterLeaving_ClearsTheDepartureTrail()
+    {
+        var ownerId = Guid.NewGuid();
+        var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
+        var userId = Guid.NewGuid();
+        chat.Join(userId);
+        chat.Kick(userId, ownerId);
+
+        chat.Join(userId);
+
+        var member = chat.FindActiveMember(userId)!;
+        member.LeftAt.Should().BeNull();
+        member.KickedBy.Should().BeNull();
+    }
+
+    [Fact]
+    public void Join_RepeatedLeaveRejoinCycles_KeepOneRowPerUser()
+    {
+        var chat = GroupChat.Create(Guid.NewGuid(), Name(), Guid.NewGuid());
+        var userId = Guid.NewGuid();
+
+        for (var i = 0; i < 3; i++)
+        {
+            chat.Join(userId);
+            chat.Leave(userId);
+        }
+        chat.Join(userId);
+
+        chat.Members.Where(m => m.UserId == userId).Should().ContainSingle();
+        chat.ActiveMembers.Should().HaveCount(2, "the owner plus the one rejoined member");
+    }
+
+    [Fact]
+    public void Ban_AfterLeaveRejoinHistory_ActuallyDeactivatesTheMember()
+    {
+        // Ban resolves its target through FindAnyMember. With a duplicate row it could
+        // land on the stale Left one and leave the member's live row Active.
+        var ownerId = Guid.NewGuid();
+        var chat = GroupChat.Create(Guid.NewGuid(), Name(), ownerId);
+        var userId = Guid.NewGuid();
+        chat.Join(userId);
+        chat.Leave(userId);
+        chat.Join(userId);
+
+        chat.Ban(userId, ownerId, "spam");
+
+        chat.FindActiveMember(userId).Should().BeNull();
+        chat.FindAnyMember(userId)!.Status.Should().Be(MemberStatus.Banned);
+        var reJoin = () => chat.Join(userId);
+        reJoin.Should().Throw<DomainException>().WithMessage("*banned*");
+    }
 }

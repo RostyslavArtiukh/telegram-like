@@ -72,6 +72,11 @@ public sealed class ChatsApiClient(HttpClient http, IAccessTokenProvider tokenPr
     public Task KickMemberAsync(Guid kickedByUserId, Guid chatId, Guid memberToKickUserId, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{memberToKickUserId}/kick", content: null, cancellationToken);
 
+    /// <summary>Permanently bans a member from a group chat — unlike a kick, they cannot rejoin.</summary>
+    public Task BanMemberAsync(Guid bannedByUserId, Guid chatId, Guid memberToBanUserId, string? reason = null, CancellationToken cancellationToken = default)
+        => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{memberToBanUserId}/ban",
+            JsonContent.Create(new { reason }), cancellationToken);
+
     public Task ChangeMemberRoleAsync(Guid changedByUserId, Guid chatId, Guid memberToChangeUserId, MemberRole newRole, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Post, $"/chats/{chatId}/members/{memberToChangeUserId}/role",
             JsonContent.Create(new { newRole = newRole.ToString() }), cancellationToken);
@@ -83,6 +88,10 @@ public sealed class ChatsApiClient(HttpClient http, IAccessTokenProvider tokenPr
     public Task RenameChatAsync(Guid renamedByUserId, Guid chatId, string newName, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Patch, $"/chats/{chatId}",
             JsonContent.Create(new { newName }), cancellationToken);
+
+    /// <summary>Soft-deletes a group chat or broadcast channel. Owner only; direct chats cannot be deleted.</summary>
+    public Task DeleteChatAsync(Guid deletedByUserId, Guid chatId, CancellationToken cancellationToken = default)
+        => SendVoid(HttpMethod.Delete, $"/chats/{chatId}", content: null, cancellationToken);
 
     public async Task<IReadOnlyList<Guid>> GetActiveRecipientsAsync(
         Guid actingUserId, Guid chatId, Guid excludeUserId, CancellationToken cancellationToken = default)

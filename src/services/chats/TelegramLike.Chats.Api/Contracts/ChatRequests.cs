@@ -12,6 +12,9 @@ public sealed record CreateBroadcastChannelRequest(string Name, Guid ChatId = de
 
 public sealed record ChangeMemberRoleRequest(MemberRole NewRole);
 
+// Optional moderation note; the whole body may be omitted.
+public sealed record BanMemberRequest(string? Reason);
+
 public sealed record TransferOwnershipRequest(Guid NewOwnerUserId);
 
 public sealed record RenameChatRequest(string NewName);

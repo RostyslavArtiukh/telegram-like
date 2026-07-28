@@ -58,6 +58,44 @@ public class MembershipConsumersTests
     }
 
     [Fact]
+    public async Task MemberBannedMembershipConsumer_RemovesUserFromTracker()
+    {
+        // Stops a banned member re-subscribing to the chat's live push group.
+        var tracker = new ChatMembershipTracker();
+        var chatId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        tracker.Join(chatId, userId);
+        var evt = new MemberBannedIntegrationEvent(
+            Guid.NewGuid(), DateTime.UtcNow, chatId, userId, Guid.NewGuid(), "spam");
+
+        var consumer = new MemberBannedMembershipConsumer(tracker);
+        await consumer.Consume(HubTestDoubles.ContextFor(evt));
+
+        tracker.IsMember(chatId, userId).Should().BeFalse();
+        tracker.IsKnownChat(chatId).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ChatDeletedMembershipConsumer_ClosesTheChatWithoutMakingItUnknown()
+    {
+        var tracker = new ChatMembershipTracker();
+        var chatId = Guid.NewGuid();
+        var memberA = Guid.NewGuid();
+        var memberB = Guid.NewGuid();
+        tracker.Join(chatId, memberA);
+        tracker.Join(chatId, memberB);
+        var evt = new ChatDeletedIntegrationEvent(Guid.NewGuid(), DateTime.UtcNow, chatId, memberA);
+
+        var consumer = new ChatDeletedMembershipConsumer(tracker);
+        await consumer.Consume(HubTestDoubles.ContextFor(evt));
+
+        tracker.IsMember(chatId, memberA).Should().BeFalse();
+        tracker.IsMember(chatId, memberB).Should().BeFalse();
+        tracker.IsKnownChat(chatId).Should().BeTrue(
+            "forgetting the chat would flip JoinChat to its fail-open branch");
+    }
+
+    [Fact]
     public async Task ChatMembershipsSnapshotConsumer_MaterializesAllMembers_MakingChatKnownAndFailClosed()
     {
         var tracker = new ChatMembershipTracker();

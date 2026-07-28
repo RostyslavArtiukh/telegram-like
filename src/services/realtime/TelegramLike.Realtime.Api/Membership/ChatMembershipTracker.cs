@@ -29,4 +29,15 @@ public sealed class ChatMembershipTracker
         if (_membersByChat.TryGetValue(chatId, out var members))
             members.TryRemove(userId, out _);
     }
+
+    /// <summary>
+    /// The chat is gone: keep it known but empty, so <c>JoinChat</c> rejects everyone.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately NOT a dictionary removal. Dropping the key would make the chat
+    /// "unknown" again, and unknown is the fail-OPEN branch — anyone could then subscribe
+    /// to the deleted chat's group. An empty member set is the fail-closed way to say
+    /// "known, and nobody belongs to it".
+    /// </remarks>
+    public void Close(Guid chatId) => _membersByChat[chatId] = new ConcurrentDictionary<Guid, byte>();
 }

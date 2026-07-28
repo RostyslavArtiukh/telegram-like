@@ -23,7 +23,14 @@ public sealed class SendMessageCommandHandler(
         // the chat is materialized at all. The read-model is event-sourced from Chats
         // (MemberJoined/Kicked/Left).
         var activeMembers = await membership.GetActiveMemberIdsAsync(request.ChatId, cancellationToken);
-        var chatKnown = activeMembers.Count > 0;
+
+        // "No active members" alone does NOT mean the chat is unknown — a deleted chat (or one
+        // whose members were all banned) is materialized here with every row deactivated.
+        // Treating that as unknown would drop straight into the fail-open branch below and let
+        // anyone post into a chat that no longer accepts anything. The extra lookup only runs in
+        // that ambiguous case, since a non-empty active set already proves the chat is known.
+        var chatKnown = activeMembers.Count > 0
+                        || await membership.IsChatKnownAsync(request.ChatId, cancellationToken);
         var isMember = activeMembers.Contains(request.AuthorId);
 
         if (chatKnown && !isMember)

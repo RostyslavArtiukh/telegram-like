@@ -141,6 +141,149 @@ public class MembershipConsumersIntegrationTests(MongoFixture fx)
         (await readModel.GetActiveMemberIdsAsync(chatId)).Should().BeEquivalentTo(new[] { owner, member });
     }
 
+    // ── Ban and chat deletion must actually revoke access here ────────────
+
+    [Fact]
+    public async Task MemberBannedConsumer_DeactivatesTheMember()
+    {
+        // The whole point of publishing MemberBanned: Messaging decides membership from this
+        // read-model, so without it a banned user would keep sending messages and reacting.
+        var readModel = NewReadModel();
+        var chatId = Guid.NewGuid();
+        var bannedUser = Guid.NewGuid();
+        var owner = Guid.NewGuid();
+        await readModel.UpsertActiveAsync(chatId, owner, "Owner", T0);
+        await readModel.UpsertActiveAsync(chatId, bannedUser, "Member", T0);
+
+        var consumer = new MemberBannedConsumer(readModel);
+        var evt = new MemberBannedIntegrationEvent(
+            Guid.NewGuid(), T0.AddSeconds(10), chatId, bannedUser, owner, "spam");
+
+        await consumer.Consume(ContextFor(evt));
+        await consumer.Consume(ContextFor(evt)); // redelivery must be a no-op
+
+        (await readModel.IsActiveMemberAsync(chatId, bannedUser)).Should().BeFalse();
+        (await readModel.GetActiveMemberIdsAsync(chatId)).Should().ContainSingle().Which.Should().Be(owner);
+    }
+
+    [Fact]
+    public async Task MemberBannedConsumer_StaleRedelivery_DoesNotUndoALaterRejoinOfSomeoneElse()
+    {
+        // LWW guard: an old ban redelivered after newer membership traffic must not win.
+        var readModel = NewReadModel();
+        var chatId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        await readModel.UpsertActiveAsync(chatId, userId, "Member", T0.AddSeconds(60));
+
+        var consumer = new MemberBannedConsumer(readModel);
+        await consumer.Consume(ContextFor(
+            new MemberBannedIntegrationEvent(Guid.NewGuid(), T0, chatId, userId, Guid.NewGuid(), null)));
+
+        (await readModel.IsActiveMemberAsync(chatId, userId)).Should().BeTrue(
+            "the ban is older than the membership state on record");
+    }
+
+    [Fact]
+    public async Task ChatDeletedConsumer_DeactivatesEveryMemberOfTheChat()
+    {
+        var readModel = NewReadModel();
+        var chatId = Guid.NewGuid();
+        var owner = Guid.NewGuid();
+        var memberA = Guid.NewGuid();
+        var memberB = Guid.NewGuid();
+        await readModel.UpsertActiveAsync(chatId, owner, "Owner", T0);
+        await readModel.UpsertActiveAsync(chatId, memberA, "Member", T0);
+        await readModel.UpsertActiveAsync(chatId, memberB, "Member", T0);
+
+        var consumer = new ChatDeletedConsumer(readModel);
+        var evt = new ChatDeletedIntegrationEvent(Guid.NewGuid(), T0.AddSeconds(10), chatId, owner);
+
+        await consumer.Consume(ContextFor(evt));
+        await consumer.Consume(ContextFor(evt)); // redelivery must be a no-op
+
+        (await readModel.GetActiveMemberIdsAsync(chatId)).Should().BeEmpty();
+        (await readModel.IsActiveMemberAsync(chatId, owner)).Should().BeFalse();
+        (await readModel.IsModeratorAsync(chatId, owner)).Should().BeFalse(
+            "an inactive row must not keep moderator authority in a deleted chat");
+    }
+
+    [Fact]
+    public async Task ChatDeletedConsumer_LeavesOtherChatsUntouched()
+    {
+        var readModel = NewReadModel();
+        var deletedChat = Guid.NewGuid();
+        var survivingChat = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        await readModel.UpsertActiveAsync(deletedChat, userId, "Member", T0);
+        await readModel.UpsertActiveAsync(survivingChat, userId, "Member", T0);
+
+        await new ChatDeletedConsumer(readModel).Consume(ContextFor(
+            new ChatDeletedIntegrationEvent(Guid.NewGuid(), T0.AddSeconds(10), deletedChat, Guid.NewGuid())));
+
+        (await readModel.IsActiveMemberAsync(deletedChat, userId)).Should().BeFalse();
+        (await readModel.IsActiveMemberAsync(survivingChat, userId)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ChatDeletedConsumer_LeavesTheChatKnown_SoAccessChecksStayFailClosed()
+    {
+        // The trap this closes: handlers used to read "no active members" as "chat unknown",
+        // which is the fail-OPEN branch. Deleting a chat empties its active members, so without
+        // IsChatKnown a deleted chat would start accepting messages from anyone again.
+        var readModel = NewReadModel();
+        var chatId = Guid.NewGuid();
+        var owner = Guid.NewGuid();
+        await readModel.UpsertActiveAsync(chatId, owner, "Owner", T0);
+
+        await new ChatDeletedConsumer(readModel).Consume(ContextFor(
+            new ChatDeletedIntegrationEvent(Guid.NewGuid(), T0.AddSeconds(10), chatId, owner)));
+
+        (await readModel.GetActiveMemberIdsAsync(chatId)).Should().BeEmpty();
+        (await readModel.IsChatKnownAsync(chatId)).Should().BeTrue(
+            "the chat must stay known so access checks fail closed rather than open");
+    }
+
+    [Fact]
+    public async Task MemberBannedConsumer_OfTheLastMember_LeavesTheChatKnown()
+    {
+        var readModel = NewReadModel();
+        var chatId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        await readModel.UpsertActiveAsync(chatId, userId, "Member", T0);
+
+        await new MemberBannedConsumer(readModel).Consume(ContextFor(
+            new MemberBannedIntegrationEvent(Guid.NewGuid(), T0.AddSeconds(10), chatId, userId, Guid.NewGuid(), null)));
+
+        (await readModel.GetActiveMemberIdsAsync(chatId)).Should().BeEmpty();
+        (await readModel.IsChatKnownAsync(chatId)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task IsChatKnown_ForAChatNeverSeen_IsFalse()
+    {
+        // Preserves the deliberate fail-open window for a chat whose MemberJoined is still
+        // in flight — that is the one case the handlers may fall through.
+        var readModel = NewReadModel();
+
+        (await readModel.IsChatKnownAsync(Guid.NewGuid())).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ChatDeletedConsumer_ForAChatItNeverMaterialized_CreatesNothing()
+    {
+        // UpdateMany without upsert: an unknown chat has no membership to revoke, and
+        // inventing rows for it would be meaningless.
+        var readModel = NewReadModel();
+        var unknownChat = Guid.NewGuid();
+
+        await new ChatDeletedConsumer(readModel).Consume(ContextFor(
+            new ChatDeletedIntegrationEvent(Guid.NewGuid(), T0, unknownChat, Guid.NewGuid())));
+
+        (await readModel.GetActiveMemberIdsAsync(unknownChat)).Should().BeEmpty();
+        (await readModel.IsChatKnownAsync(unknownChat)).Should().BeFalse(
+            "an UpdateMany without upsert must not conjure rows for a chat we never knew");
+    }
+
     [Fact]
     public async Task ChatMembershipsSnapshotConsumer_StaleSnapshot_DoesNotResurrectLeftMember()
     {

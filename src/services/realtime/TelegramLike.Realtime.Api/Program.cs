@@ -87,6 +87,8 @@ builder.Services.AddMassTransit(bus =>
     bus.AddConsumer<MemberJoinedMembershipConsumer>().Endpoint(PerInstanceQueue);
     bus.AddConsumer<MemberLeftMembershipConsumer>().Endpoint(PerInstanceQueue);
     bus.AddConsumer<MemberKickedMembershipConsumer>().Endpoint(PerInstanceQueue);
+    bus.AddConsumer<MemberBannedMembershipConsumer>().Endpoint(PerInstanceQueue);
+    bus.AddConsumer<ChatDeletedMembershipConsumer>().Endpoint(PerInstanceQueue);
     // Backfill snapshots make JoinChat fail-closed for pre-existing chats ([TL-103]).
     bus.AddConsumer<ChatMembershipsSnapshotMembershipConsumer>().Endpoint(PerInstanceQueue);
 

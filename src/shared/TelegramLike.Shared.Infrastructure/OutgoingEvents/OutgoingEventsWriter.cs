@@ -5,19 +5,10 @@ using TelegramLike.Shared.Domain;
 
 namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
-public sealed class OutgoingEventsWriter : IOutgoingEventsWriter
+public sealed class OutgoingEventsWriter(
+    IntegrationEventMap map,
+    OutgoingEventsStore store) : IOutgoingEventsWriter
 {
-    private readonly Dictionary<Type, IIntegrationEventMapper> _mappersByEventType;
-    private readonly OutgoingEventsStore _store;
-
-    public OutgoingEventsWriter(
-        IEnumerable<IIntegrationEventMapper> mappers,
-        OutgoingEventsStore store)
-    {
-        _mappersByEventType = mappers.ToDictionary(m => m.ChangeEventType);
-        _store = store;
-    }
-
     public async Task WriteAsync(
         IEnumerable<IChangeEvent> events,
         IClientSessionHandle session,
@@ -27,10 +18,12 @@ public sealed class OutgoingEventsWriter : IOutgoingEventsWriter
 
         foreach (var changeEvent in events)
         {
-            if (!_mappersByEventType.TryGetValue(changeEvent.GetType(), out var mapper))
-                continue;
+            // A null result means the service deliberately keeps this event internal —
+            // the service's map is the single place that decides, and its default arm is
+            // reviewed there rather than depending on a DI registration being present.
+            var integrationEvent = map(changeEvent);
+            if (integrationEvent is null) continue;
 
-            var integrationEvent = mapper.Map(changeEvent);
             var payload = JsonSerializer.Serialize(integrationEvent, integrationEvent.GetType());
 
             outgoing.Add(new OutgoingEvent(
@@ -41,7 +34,7 @@ public sealed class OutgoingEventsWriter : IOutgoingEventsWriter
         }
 
         if (outgoing.Count > 0)
-            await _store.AddAsync(outgoing, session, cancellationToken);
+            await store.AddAsync(outgoing, session, cancellationToken);
     }
 
     // Store a version-agnostic "Namespace.Type, Assembly" name instead of the fully

@@ -42,11 +42,12 @@ public sealed class BroadcastChannel : Chat
         if (existing is { Status: MemberStatus.Active })
             return;
 
+        // Revive the existing row instead of replacing it — see Member.Rejoin.
         if (existing is not null)
-            _members.Remove(existing);
+            existing.Rejoin(MemberRole.Viewer);
+        else
+            _members.Add(Member.Join(userId, MemberRole.Viewer));
 
-        var member = Member.Join(userId, MemberRole.Viewer);
-        _members.Add(member);
         RecordEvent(new MemberJoinedEvent(Id, userId, MemberRole.Viewer, RecipientsExcept(userId)));
     }
 

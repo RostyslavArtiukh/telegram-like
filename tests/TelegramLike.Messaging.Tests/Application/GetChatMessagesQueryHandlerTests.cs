@@ -61,6 +61,22 @@ public class GetChatMessagesQueryHandlerTests
         result.Should().BeSameAs(EmptyPage);
     }
 
+    [Fact]
+    public async Task GetChatMessages_DeletedChat_FailsClosedDespiteNoActiveMembers()
+    {
+        // Known chat with everyone deactivated must not read as "unknown" — that is the
+        // fail-open branch, and it would expose a deleted chat's history to anyone.
+        var chatId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+        _membership.GetActiveMemberIdsAsync(chatId, Arg.Any<CancellationToken>())
+            .Returns(new List<Guid>());
+        _membership.IsChatKnownAsync(chatId, Arg.Any<CancellationToken>()).Returns(true);
+
+        var act = () => Handler.Handle(new GetChatMessagesQuery(chatId, requesterId), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
     [Theory]
     [InlineData(0, 50)]
     [InlineData(201, 50)]

@@ -18,7 +18,10 @@ public sealed class GetMessageByIdQueryHandler(
         // 403 so a non-member can't probe which message ids exist. Unknown chat falls
         // through (fail-open window, mirrors SendMessage / GetChatMessages).
         var activeMembers = await membership.GetActiveMemberIdsAsync(dto.ChatId, cancellationToken);
-        if (activeMembers.Count > 0 && !activeMembers.Contains(request.RequesterId))
+        var chatKnown = activeMembers.Count > 0
+                        || await membership.IsChatKnownAsync(dto.ChatId, cancellationToken);
+
+        if (chatKnown && !activeMembers.Contains(request.RequesterId))
             return null;
 
         return dto;

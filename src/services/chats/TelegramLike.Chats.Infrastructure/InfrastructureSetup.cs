@@ -21,13 +21,9 @@ public static class InfrastructureSetup
         services.AddScoped<IChatRepository, ChatRepository>();
         services.AddScoped<IChatQueryService, ChatQueryService>();
         services.AddScoped<IChatMembershipBackfillReader, MongoChatMembershipBackfillReader>();
+        services.AddHostedService<ChatIndexInitializer>();
 
-        services.AddOutgoingEvents(configuration);
-        services.AddSingleton<IIntegrationEventMapper, ChatCreatedEventMapper>();
-        services.AddSingleton<IIntegrationEventMapper, MemberJoinedEventMapper>();
-        services.AddSingleton<IIntegrationEventMapper, MemberKickedEventMapper>();
-        services.AddSingleton<IIntegrationEventMapper, MemberLeftEventMapper>();
-        services.AddSingleton<IIntegrationEventMapper, MemberRoleChangedEventMapper>();
+        services.AddOutgoingEvents(configuration, ChatsIntegrationEvents.Map);
 
         services.AddRabbitMqBus(configuration, "chats");
         return services;

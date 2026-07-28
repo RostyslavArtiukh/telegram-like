@@ -5,6 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: c86df29a-c998-45fb-8ef5-72540737621d
+  modified: 2026-07-28T18:19:11.949Z
 ---
 
 День 9 (2026-05-24): додано event-driven cross-context зв'язок через RabbitMQ.
@@ -19,17 +20,20 @@ metadata:
 **Архітектура:**
 - **Domain Events** (як було) — `MessageSentEvent`, `MemberJoinedEvent` тощо. Лежать у `aggregate.PendingEvents` після операції.
 - **Integration Events** — POCO records у `src/TelegramLike.Contracts/` (на День 11 винесено з Application, бо їх будуть шарити між сервісами після міграції на microservices, [[microservices-migration]]). Повний набір (2026-07): Messaging — `MessageSent`, `MessageRetracted`, `ReactionAdded/Removed`; Chats — `MemberJoined/Left/Kicked`, `MemberRoleChanged`; Presence — `UserCameOnline/WentOffline`, `UserTyping`; Notifications — `UnreadCountChanged`. Стейтові події несуть `Recipients: IReadOnlyList<Guid>` — обчислюється у публікуючому контексті, embed у event, щоб consumers не робили cross-context queries.
-- **IIntegrationEventMapper** — інтерфейс в `Application/Common/IntegrationEvents/`. Один мапер на тип domain event. Реєструється як Singleton, dispatcher отримує `IEnumerable<IIntegrationEventMapper>` і будує `Dictionary<Type, IIntegrationEventMapper>`.
+- **IntegrationEventMap** (делегат у `TelegramLike.Shared.Application`, з 2026-07-28) — `IChangeEvent → IIntegrationEvent?`, ОДИН на сервіс, передається у `AddOutgoingEvents(configuration, XIntegrationEvents.Map)`. `null` = подія свідомо лишається всередині. Було: інтерфейс `IIntegrationEventMapper` + клас на кожен тип події + рядок DI на кожен (7 у chats, 4 у messaging) — 11 файлів заради 4 рядків реальної логіки; забутий рядок DI = тиха втрата події. Тепер увесь опублікований контракт сервісу видно з одного switch.
+- **Навіщо взагалі трансляція** (не викидати!): `TelegramLike.Contracts` НЕ має жодної project reference, бо їде всередині NuGet-пакета `TelegramLike.Client` у MAUI. Тому доменні типи (`MemberRole`, `ChatType`, `Emoji`) фізично не можуть бути на дроті — звідси `.ToString()`. Плюс звуження: `MemberRoleChangedEvent` всередині несе `OldRole`+`ChangedBy`, назовні йде лише нова роль. Плюс outbox відтворює payload ПІЗНІШЕ — перейменування доменного поля мусить зупинитись на цьому шві, інакше ламає і консюмерів, і рядки в польоті.
 - **IOutgoingEventsWriter** (internal у Infrastructure/Outbox) — приймає `IEnumerable<IChangeEvent>` + `IClientSessionHandle`, мапить, серіалізує (`System.Text.Json`), пише в outbox у тій же транзакції.
 - **Outbox**: `outgoing_events` Mongo-колекція + `OutgoingEventsStore` (internal). Поля: `Id`, `EventType` (стабільне ім'я типу — не AssemblyQualifiedName, з [TL-75]), `Payload` (JSON), `OccurredAt`, `SentAt?`, `Retries`. З [TL-75] також claim/lease 60с — без дублювання publish під >1 репліку.
 - **OutgoingEventsSender** — BackgroundService, кожні `OutgoingEvents:PollIntervalSeconds` сек тягне `SentAt == null && DeadLetteredAt == null`, deserialize по `Type.GetType(EventType)`, `IPublishEndpoint.Publish(payload, type)`, `MarkSentAsync`. На exception — `RecordFailureAsync(id, error, maxRetries)` (інкрементить Retries + пише LastError + ставить DeadLetteredAt коли досягло MaxRetries, Step 23).
 - **Consumers** — у `Infrastructure/Messaging/Consumers/`. Тонкі: приймають integration event, викликають `IMediator.Send(<Command>)`. `MessageSentConsumer` викликає `FanoutChatNotificationCommand`.
 
+**⚠️ Подія без гілки в switch зникає БЕЗ СЛІДУ.** `OutgoingEventsWriter.WriteAsync` пропускає все, для чого map повернув `null` — ні в outbox, ні в лог, нічого. Так `ChatDeletedEvent` і `MemberBannedEvent` роками не публікувались: у Chats бан ставив `Status=Banned`, але Messaging/Presence/Realtime вирішують membership по СВОЇХ read-моделях і далі вважали юзера активним — тобто бан блокував лише повторний вхід, а слати повідомлення забанений міг. Виправлено 2026-07-28 разом із виводом Ban/Delete на API. Регресію пінить `IntegrationEventMapperCoverageTests` (Chats.Tests): кожен `IChangeEvent` у домені мусить мати зареєстрований маппер, або бути в списку `DeliberatelyUnpublished` з причиною (нині там `ChatRenamedEvent` — імен чату ніхто не зберігає, і `OwnershipTransferredEvent` — ролі вже несуть два `MemberRoleChanged`). Такий самий мета-тест варто завести й для інших сервісів-видавців.
+
 **How to apply (новий integration event):**
 1. Додати domain event у aggregate (якщо ще немає) — `aggregate.RecordEvent(new XEvent(...))`.
 2. Створити integration event у `src/TelegramLike.Contracts/<Context>/XIntegrationEvent.cs`.
-3. Створити мапер `XEventMapper : IIntegrationEventMapper` в Application сервісу-видавця.
-4. Зареєструвати мапер у per-service `InfrastructureSetup.cs` в `AddOutgoingEvents`: `services.AddSingleton<IIntegrationEventMapper, XEventMapper>();`
+3. Додати гілку у `XIntegrationEvents.Map` сервісу-видавця (`Application/IntegrationEvents/`). Реєструвати нічого не треба — map уже передано в `AddOutgoingEvents`.
+   **Гілка без консюмера — це шум:** подія лягає в outbox і в брокер, але нічого не змінює. Або додавай споживача разом із гілкою, або лишай подію внутрішньою (default arm) і фіксуй причину в `DeliberatelyInternal` відповідного тесту.
 5. Якщо потрібен consumer — створити в `Infrastructure/Messaging/Consumers/XConsumer.cs`, зареєструвати в `AddIntegrationMessaging` через `bus.AddConsumer<XConsumer>();`.
 6. Repository, що зберігає aggregate з цим event, **мусить дренувати domain events у транзакції** через `IOutgoingEventsWriter`. Це роблять: `MessageRepository.AddAsync/UpdateAsync`, `ChatRepository.AddAsync/UpdateAsync` (з Дня 10). Notifications (`UnreadCountChanged`) і Presence (online/offline/typing) публікують **напряму без outbox — свідомий виняток** (сигнальні/ефемерні події, ідемпотентні консюмери; див. Eventing rules у кореневому CLAUDE.md). Identity подій не публікує.
 
@@ -52,6 +56,7 @@ metadata:
 - `OutgoingEvents:PollIntervalSeconds` (default 2), `OutgoingEvents:BatchSize` (default 50), `OutgoingEvents:MaxRetries` (default 5, після нього → DLQ), `OutgoingEvents:SentRetentionDays` (default 7 — TTL на опубліковані рядки). У appsettings жодного з них не задано — усі працюють на дефолтах.
 
 **Тести:**
-- `MessageSentEventMapperTests` (Application.Tests) — unit на маппінг.
+- `ChatsIntegrationEventsTests` / `MessagingIntegrationEventsTests` — рефлексією інстанціюють КОЖЕН `IChangeEvent` домену і ганяють через справжній map: або integration event, або запис у `DeliberatelyInternal` з причиною. Плюс перевірка форм (enum→string, звуження MemberRoleChanged, EventId/OccurredAt переносяться — консюмери на них дедуплять).
+- `OutgoingEventsWriterTests` (у Chats.Tests, бо там replica-set фікстура) — справжній `OutgoingEventsWriter`, який доти НЕ мав жодного тесту (усі репозиторні тести підставляли дубль): маппінг+серіалізація в рядок, стабільне імʼя типу яке резолвиться через `Type.GetType`, `OccurredAt` береться з події а не з моменту запису, внутрішні події не пишуться, змішаний батч, і rollback разом із транзакцією викликача.
 - `OutboxIntegrationTests` (Infrastructure.Tests) — Testcontainers Mongo, перевіряє: `AddAsync` пише в outbox в одній транзакції з messages; `MarkSentAsync` працює; `RecordFailureAsync` бампить counter без DLQ нижче ліміту; `RecordFailureAsync` перемикає у DLQ після `maxRetries` і виключає з pending.
 - MassTransit test harness для consumer'ів — поки не додано. TODO якщо буде потрібен e2e тест.

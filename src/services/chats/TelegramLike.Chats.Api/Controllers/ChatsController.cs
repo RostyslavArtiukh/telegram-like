@@ -5,6 +5,7 @@ using TelegramLike.Chats.Api.Contracts;
 using TelegramLike.Chats.Application.Commands.CreateBroadcastChannel;
 using TelegramLike.Chats.Application.Commands.CreateDirectChat;
 using TelegramLike.Chats.Application.Commands.CreateGroupChat;
+using TelegramLike.Chats.Application.Commands.DeleteChat;
 using TelegramLike.Chats.Application.Commands.RenameChat;
 using TelegramLike.Chats.Application.Queries.GetChatById;
 using TelegramLike.Chats.Application.Queries.GetMyChats;
@@ -54,6 +55,14 @@ public sealed class ChatsController(IMediator mediator) : ApiControllerBase
     public async Task<IActionResult> Rename(Guid chatId, [FromBody] RenameChatRequest body, CancellationToken cancellationToken)
     {
         await mediator.Send(new RenameChatCommand(chatId, body.NewName, CurrentUserId), cancellationToken);
+        return NoContent();
+    }
+
+    // Soft delete, Owner only. DirectChat rejects it in the aggregate.
+    [HttpDelete("{chatId:guid}")]
+    public async Task<IActionResult> Delete(Guid chatId, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteChatCommand(chatId, CurrentUserId), cancellationToken);
         return NoContent();
     }
 }

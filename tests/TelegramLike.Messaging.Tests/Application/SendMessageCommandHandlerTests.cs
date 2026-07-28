@@ -123,6 +123,26 @@ public class SendMessageCommandHandlerTests
     }
 
     [Fact]
+    public async Task Send_DeletedChat_FailsClosedEvenThoughNoMemberIsActive()
+    {
+        // A deleted chat (or one whose members were all banned) is materialized here with every
+        // row deactivated. Reading "no active members" as "unknown chat" would put it straight
+        // into the fail-open branch above and let anyone keep posting into it.
+        var chatId = Guid.NewGuid();
+        var authorId = Guid.NewGuid();
+        _membership.GetActiveMemberIdsAsync(chatId, Arg.Any<CancellationToken>())
+            .Returns(new List<Guid>());
+        _membership.IsChatKnownAsync(chatId, Arg.Any<CancellationToken>())
+            .Returns(true); // rows exist, all inactive
+
+        var act = () => Handler.Handle(
+            Command(chatId, authorId, [Guid.NewGuid()]), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        await _messageRepository.DidNotReceive().AddAsync(Arg.Any<Message>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Send_ReplyToMessageFromDifferentChat_Throws()
     {
         var chatId = Guid.NewGuid();

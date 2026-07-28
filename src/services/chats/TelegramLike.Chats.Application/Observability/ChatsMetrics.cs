@@ -13,6 +13,7 @@ public sealed class ChatsMetrics : IDisposable
 
     private readonly Meter _meter;
     private readonly Counter<long> _chatsCreated;
+    private readonly Counter<long> _chatsDeleted;
     private readonly Counter<long> _membershipChanges;
 
     public ChatsMetrics()
@@ -24,6 +25,11 @@ public sealed class ChatsMetrics : IDisposable
             unit: "{chat}",
             description: "Chats created, by kind.");
 
+        _chatsDeleted = _meter.CreateCounter<long>(
+            "telegramlike.chats.deleted",
+            unit: "{chat}",
+            description: "Chats deleted by their owner.");
+
         _membershipChanges = _meter.CreateCounter<long>(
             "telegramlike.chat.membership.changes",
             unit: "{change}",
@@ -34,7 +40,9 @@ public sealed class ChatsMetrics : IDisposable
     public void RecordChatCreated(string kind) =>
         _chatsCreated.Add(1, new KeyValuePair<string, object?>("kind", kind));
 
-    /// <param name="change">"joined", "left" or "kicked".</param>
+    public void RecordChatDeleted() => _chatsDeleted.Add(1);
+
+    /// <param name="change">"joined", "left", "kicked" or "banned".</param>
     public void RecordMembershipChange(string change) =>
         _membershipChanges.Add(1, new KeyValuePair<string, object?>("change", change));
 

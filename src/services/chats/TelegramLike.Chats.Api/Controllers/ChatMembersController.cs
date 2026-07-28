@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TelegramLike.Chats.Api.Contracts;
+using TelegramLike.Chats.Application.Commands.BanMember;
 using TelegramLike.Chats.Application.Commands.ChangeMemberRole;
 using TelegramLike.Chats.Application.Commands.JoinChat;
 using TelegramLike.Chats.Application.Commands.KickMember;
@@ -40,6 +41,16 @@ public sealed class ChatMembersController(IMediator mediator) : ApiControllerBas
     public async Task<IActionResult> KickMember(Guid chatId, Guid memberUserId, CancellationToken cancellationToken)
     {
         await mediator.Send(new KickMemberCommand(chatId, memberUserId, CurrentUserId), cancellationToken);
+        return NoContent();
+    }
+
+    // Ban, unlike kick, is permanent: the member cannot rejoin. Group chats only.
+    [HttpPost("{chatId:guid}/members/{memberUserId:guid}/ban")]
+    public async Task<IActionResult> BanMember(
+        Guid chatId, Guid memberUserId, [FromBody] BanMemberRequest? body, CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new BanMemberCommand(chatId, memberUserId, CurrentUserId, body?.Reason), cancellationToken);
         return NoContent();
     }
 

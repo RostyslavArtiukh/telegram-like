@@ -244,6 +244,56 @@ public sealed class ChatsRoutingTests(ChatsApiFactory factory) : IClassFixture<C
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
+    // ── POST /chats/{chatId}/members/{targetUserId}/ban → 204 ─────────────
+
+    [Fact]
+    public async Task BanMember_Returns204()
+    {
+        factory.Mediator
+            .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
+            .Returns(Unit.Value);
+
+        var response = await Auth().PostAsync(
+            $"/chats/{SomeChatId}/members/{SomeUserId}/ban", Json(new { reason = "spam" }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task BanMember_WithoutABody_Returns204()
+    {
+        // The reason is optional, so the whole body may be omitted.
+        factory.Mediator
+            .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
+            .Returns(Unit.Value);
+
+        var response = await Auth().PostAsync($"/chats/{SomeChatId}/members/{SomeUserId}/ban", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    // ── DELETE /chats/{chatId} → 204 ──────────────────────────────────────
+
+    [Fact]
+    public async Task DeleteChat_Returns204()
+    {
+        factory.Mediator
+            .Send(Arg.Any<IRequest<Unit>>(), Arg.Any<CancellationToken>())
+            .Returns(Unit.Value);
+
+        var response = await Auth().DeleteAsync($"/chats/{SomeChatId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task DeleteChat_WithNonGuidId_Returns404()
+    {
+        var response = await Auth().DeleteAsync("/chats/not-a-guid");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     // ── POST /chats/{chatId}/members/{targetUserId}/role → 204 ────────────
 
     [Fact]

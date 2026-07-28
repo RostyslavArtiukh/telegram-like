@@ -18,7 +18,10 @@ public sealed class GetChatMessagesQueryHandler(
         // isn't a member; fall through for an unknown chat (same fail-open window as
         // SendMessage, e.g. a MemberJoined still in flight).
         var activeMembers = await membership.GetActiveMemberIdsAsync(request.ChatId, cancellationToken);
-        if (activeMembers.Count > 0 && !activeMembers.Contains(request.RequesterId))
+        var chatKnown = activeMembers.Count > 0
+                        || await membership.IsChatKnownAsync(request.ChatId, cancellationToken);
+
+        if (chatKnown && !activeMembers.Contains(request.RequesterId))
             throw new ForbiddenException("You are not an active member of this chat.");
 
         return await messageQueryService.GetChatMessagesAsync(

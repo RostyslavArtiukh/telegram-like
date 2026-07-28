@@ -117,4 +117,66 @@ public class ChatMembershipReadModelIntegrationTests(MongoFixture fx)
         (await sut.IsActiveMemberAsync(chatId, userId)).Should().BeTrue(
             "a leave older than the last rejoin must not remove the active member");
     }
+
+    // ── DeactivateChat: the whole membership goes at once (ChatDeleted) ────
+
+    [Fact]
+    public async Task DeactivateChat_RevokesEveryMemberOfThatChatOnly()
+    {
+        // StartTyping checks this read-model, so this is what stops typing indicators
+        // being broadcast into a chat that no longer exists.
+        var sut = NewReadModel();
+        var deletedChat = Guid.NewGuid();
+        var survivingChat = Guid.NewGuid();
+        var userA = Guid.NewGuid();
+        var userB = Guid.NewGuid();
+        await sut.UpsertActiveAsync(deletedChat, userA, T0);
+        await sut.UpsertActiveAsync(deletedChat, userB, T0);
+        await sut.UpsertActiveAsync(survivingChat, userA, T0);
+
+        await sut.DeactivateChatAsync(deletedChat, T0.AddSeconds(10));
+
+        (await sut.IsActiveMemberAsync(deletedChat, userA)).Should().BeFalse();
+        (await sut.IsActiveMemberAsync(deletedChat, userB)).Should().BeFalse();
+        (await sut.IsActiveMemberAsync(survivingChat, userA)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DeactivateChat_IsIdempotentAcrossRedeliveries()
+    {
+        var sut = NewReadModel();
+        var chatId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        await sut.UpsertActiveAsync(chatId, userId, T0);
+
+        await sut.DeactivateChatAsync(chatId, T0.AddSeconds(10));
+        await sut.DeactivateChatAsync(chatId, T0.AddSeconds(10));
+
+        (await sut.IsActiveMemberAsync(chatId, userId)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeactivateChat_StaleRedelivery_DoesNotBeatNewerMembership()
+    {
+        var sut = NewReadModel();
+        var chatId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        await sut.UpsertActiveAsync(chatId, userId, T0.AddSeconds(60));
+
+        await sut.DeactivateChatAsync(chatId, T0); // stale
+
+        (await sut.IsActiveMemberAsync(chatId, userId)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DeactivateChat_ForAnUnknownChat_CreatesNothing()
+    {
+        var sut = NewReadModel();
+        var unknownChat = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        await sut.DeactivateChatAsync(unknownChat, T0);
+
+        (await sut.IsActiveMemberAsync(unknownChat, userId)).Should().BeFalse();
+    }
 }

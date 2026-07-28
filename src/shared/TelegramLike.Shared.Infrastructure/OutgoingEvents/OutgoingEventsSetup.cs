@@ -1,17 +1,20 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TelegramLike.Shared.Application;
 
 namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 /// <summary>
-/// Wires up the whole outgoing-events queue (store + writer + background sender)
-/// for a service. The service itself only adds its <c>IIntegrationEventMapper</c>s.
+/// Wires up the whole outgoing-events queue (store + writer + background sender) for a
+/// service. The service supplies one <see cref="IntegrationEventMap"/> saying which of its
+/// change events go on the wire and in what shape.
 /// </summary>
 public static class OutgoingEventsSetup
 {
     public static IServiceCollection AddOutgoingEvents(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IntegrationEventMap map)
     {
         services.Configure<OutgoingEventsSenderOptions>(opts =>
         {
@@ -26,7 +29,14 @@ public static class OutgoingEventsSetup
         });
 
         services.AddScoped<OutgoingEventsStore>();
-        services.AddScoped<IOutgoingEventsWriter, OutgoingEventsWriter>();
+
+        // The map is a constructor argument, not a service. Only the writer ever needs it, so
+        // registering it in the container would just publish a resolvable type nothing asks
+        // for — and make "was it registered?" a runtime question again. Closing over the
+        // parameter makes it impossible to wire up the queue without one.
+        services.AddScoped<IOutgoingEventsWriter>(sp =>
+            new OutgoingEventsWriter(map, sp.GetRequiredService<OutgoingEventsStore>()));
+
         services.AddHostedService<OutgoingEventsSender>();
 
         // Metrics are part of the queue, not an opt-in: a silently stalled outbox is the

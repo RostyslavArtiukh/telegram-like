@@ -5,7 +5,7 @@ Online status + typing indicators. 4 projects, namespace `TelegramLike.Presence.
 ## Behaviour
 - **Online** = Redis key `presence:{userId}` with TTL (`Presence:HeartbeatTtlSeconds`, ~30s); Mongo `user_presence` is the durable record. Heartbeat refreshes the key. Only the offline→online transition publishes `UserCameOnlineIntegrationEvent`; `GoOffline` publishes `UserWentOffline`. Direct publish (no outbox) — presence is ephemeral.
 - **Typing** = Redis `typing:{chatId}:{userId}` TTL ~5s; `StartTyping` also publishes `UserTypingIntegrationEvent`.
-- **Local membership read-model** (`chat_memberships`, composite id `chatId:userId`) built from `MemberJoined/Kicked/Left` events plus a one-time snapshot backfill — lets `StartTyping` check membership without calling Chats. **Fail-closed** ([TL-101]): unknown pair → `ForbiddenException` (403), now that the read-model is backfilled for pre-existing chats.
+- **Local membership read-model** (`chat_memberships`, composite id `chatId:userId`) built from `MemberJoined/Kicked/Left/Banned` + `ChatDeleted` (whole-chat revoke via `DeactivateChatAsync`) events plus a one-time snapshot backfill — lets `StartTyping` check membership without calling Chats. **Fail-closed** ([TL-101]): unknown pair → `ForbiddenException` (403), now that the read-model is backfilled for pre-existing chats.
 
 ## Endpoints (`/presence`, authed)
 `heartbeat`, `offline`, `{userId}`, `typing/{chatId}/start|stop`, `typing/{chatId}`, `batch` (POST `[ids]` → `{id:isOnline}`).

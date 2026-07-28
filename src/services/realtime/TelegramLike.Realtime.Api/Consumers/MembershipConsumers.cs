@@ -38,6 +38,28 @@ internal sealed class MemberKickedMembershipConsumer(ChatMembershipTracker track
     }
 }
 
+internal sealed class MemberBannedMembershipConsumer(ChatMembershipTracker tracker)
+    : IConsumer<MemberBannedIntegrationEvent>
+{
+    public Task Consume(ConsumeContext<MemberBannedIntegrationEvent> context)
+    {
+        tracker.Leave(context.Message.ChatId, context.Message.UserId);
+        return Task.CompletedTask;
+    }
+}
+
+// Close, not forget: an unknown chat is the fail-open branch of JoinChat, so removing the
+// chat outright would let anyone subscribe to it. See ChatMembershipTracker.Close.
+internal sealed class ChatDeletedMembershipConsumer(ChatMembershipTracker tracker)
+    : IConsumer<ChatDeletedIntegrationEvent>
+{
+    public Task Consume(ConsumeContext<ChatDeletedIntegrationEvent> context)
+    {
+        tracker.Close(context.Message.ChatId);
+        return Task.CompletedTask;
+    }
+}
+
 // Backfill ([TL-103]): materializes a pre-existing chat's membership into this replica's
 // tracker so JoinChat becomes fail-closed for it. A restarted replica's temporary queue does
 // not replay history, so without this a chat only becomes "known" once a live membership event

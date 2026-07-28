@@ -153,6 +153,67 @@ public class ChatRepositoryIntegrationTests(MongoFixture fx)
         kickedRow.KickedBy.Should().Be(ownerId);
     }
 
+    // ── Rejoin must not accumulate ghost rows in chat_members ─────────────
+
+    [Fact]
+    public async Task Update_AfterLeaveRejoinCycles_KeepsExactlyOneRowPerMember()
+    {
+        // Update upserts by member row id and never deletes, so a rejoin that minted a
+        // fresh row grew chat_members by one document per cycle — permanently.
+        var repo = NewRepository();
+        var ownerId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var chat = GroupChat.Create(Guid.NewGuid(), ChatName.Create("g"), ownerId);
+        chat.Join(userId);
+        await repo.AddAsync(chat);
+
+        for (var i = 0; i < 3; i++)
+        {
+            var leaving = (GroupChat)(await repo.GetByIdAsync(chat.Id))!;
+            leaving.Leave(userId);
+            await repo.UpdateAsync(leaving);
+
+            var rejoining = (GroupChat)(await repo.GetByIdAsync(chat.Id))!;
+            rejoining.Join(userId);
+            await repo.UpdateAsync(rejoining);
+        }
+
+        var final = await repo.GetByIdAsync(chat.Id);
+        final!.Members.Where(m => m.UserId == userId).Should().ContainSingle();
+        final.ActiveMembers.Should().HaveCount(2, "the owner plus the one rejoined member");
+    }
+
+    [Fact]
+    public async Task Update_BanAfterLeaveRejoinHistory_LeavesNoActiveRowBehind()
+    {
+        // The consequence that made the ghost rows more than cosmetic: Ban resolves its
+        // target with FindAnyMember, which could pick the stale Left row and mark *that*
+        // one Banned while the member's live row stayed Active.
+        var repo = NewRepository();
+        var ownerId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var chat = GroupChat.Create(Guid.NewGuid(), ChatName.Create("g"), ownerId);
+        chat.Join(userId);
+        await repo.AddAsync(chat);
+
+        var leaving = (GroupChat)(await repo.GetByIdAsync(chat.Id))!;
+        leaving.Leave(userId);
+        await repo.UpdateAsync(leaving);
+
+        var rejoining = (GroupChat)(await repo.GetByIdAsync(chat.Id))!;
+        rejoining.Join(userId);
+        await repo.UpdateAsync(rejoining);
+
+        var banning = (GroupChat)(await repo.GetByIdAsync(chat.Id))!;
+        banning.Ban(userId, ownerId, "spam");
+        await repo.UpdateAsync(banning);
+
+        var final = await repo.GetByIdAsync(chat.Id);
+        final!.FindActiveMember(userId).Should().BeNull("a banned member must not remain active through a duplicate row");
+        final.Members.Where(m => m.UserId == userId).Should().ContainSingle()
+            .Which.Status.Should().Be(MemberStatus.Banned);
+    }
+
     // ── The transaction is all-or-nothing across both collections + outbox ─
 
     [Fact]

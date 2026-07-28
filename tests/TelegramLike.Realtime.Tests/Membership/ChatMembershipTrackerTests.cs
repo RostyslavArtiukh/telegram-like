@@ -116,4 +116,53 @@ public class ChatMembershipTrackerTests
 
         tracker.IsMember(chatId, userId).Should().BeTrue();
     }
+
+    // ── Close: a deleted chat must stay KNOWN, or JoinChat flips to fail-open ──
+
+    [Fact]
+    public void Close_KeepsTheChatKnownSoJoinChatStaysFailClosed()
+    {
+        // The subtle bit: forgetting the chat would make IsKnownChat false, which is the
+        // fail-OPEN branch — anyone could then subscribe to the deleted chat's group.
+        var tracker = NewTracker();
+        var chatId = Guid.NewGuid();
+        var member = Guid.NewGuid();
+        tracker.Join(chatId, member);
+
+        tracker.Close(chatId);
+
+        tracker.IsKnownChat(chatId).Should().BeTrue("an unknown chat is the fail-open branch");
+        tracker.IsMember(chatId, member).Should().BeFalse();
+        tracker.IsMember(chatId, Guid.NewGuid()).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Close_LeavesOtherChatsUntouched()
+    {
+        var tracker = NewTracker();
+        var deletedChat = Guid.NewGuid();
+        var survivingChat = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        tracker.Join(deletedChat, userId);
+        tracker.Join(survivingChat, userId);
+
+        tracker.Close(deletedChat);
+
+        tracker.IsMember(deletedChat, userId).Should().BeFalse();
+        tracker.IsMember(survivingChat, userId).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Close_OnAnUnknownChat_MarksItKnownAndEmpty()
+    {
+        // A replica that never saw the chat still learns it is gone, so it cannot fall
+        // back to the fail-open branch for it later.
+        var tracker = NewTracker();
+        var chatId = Guid.NewGuid();
+
+        tracker.Close(chatId);
+
+        tracker.IsKnownChat(chatId).Should().BeTrue();
+        tracker.IsMember(chatId, Guid.NewGuid()).Should().BeFalse();
+    }
 }

@@ -22,6 +22,7 @@
 @inject PresencePubSub PresencePubSub
 @inject CurrentUserAccessor CurrentUser
 @inject NavigationManager Navigation
+@inject IDialogService DialogService
 @implements IAsyncDisposable
 
 <PageTitle>@GetChatTitle()</PageTitle>
@@ -117,6 +118,8 @@ else
                             && member.Status == MemberStatus.Active
                             && member.UserId != currentUserId
                             && member.Role != MemberRole.Owner;
+                        // Ban is a GroupChat-only rule; a broadcast viewer can only be kicked.
+                        var canBanMember = canKickMember && openedChat.Type == ChatType.Group;
 
                         <MudListItem T="string">
                             <div class="d-flex align-center justify-space-between" style="width:100%">
@@ -154,6 +157,12 @@ else
                                                    OnClick="() => KickMemberAsync(member.UserId)"
                                                    Disabled="isManageActionRunning">Kick</MudButton>
                                     }
+                                    @if (canBanMember)
+                                    {
+                                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Error"
+                                                   OnClick="() => BanMemberAsync(member.UserId)"
+                                                   Disabled="isManageActionRunning">Ban</MudButton>
+                                    }
                                 </div>
                             </div>
                         </MudListItem>
@@ -162,9 +171,17 @@ else
 
                 @if (openedChat.Type != ChatType.Direct)
                 {
-                    <MudButton OnClick="LeaveChatAsync" Variant="Variant.Outlined" Color="Color.Error"
-                               Size="Size.Small" Disabled="isManageActionRunning"
-                               StartIcon="@Icons.Material.Filled.ExitToApp">Leave chat</MudButton>
+                    <div class="d-flex align-center" style="gap:8px">
+                        <MudButton OnClick="LeaveChatAsync" Variant="Variant.Outlined" Color="Color.Error"
+                                   Size="Size.Small" Disabled="isManageActionRunning"
+                                   StartIcon="@Icons.Material.Filled.ExitToApp">Leave chat</MudButton>
+                        @if (currentUserRole == MemberRole.Owner)
+                        {
+                            <MudButton OnClick="DeleteChatAsync" Variant="Variant.Filled" Color="Color.Error"
+                                       Size="Size.Small" Disabled="isManageActionRunning"
+                                       StartIcon="@Icons.Material.Filled.DeleteForever">Delete chat</MudButton>
+                        }
+                    </div>
                 }
             </MudCardContent>
         </MudCard>
@@ -888,6 +905,44 @@ else
         }
         catch (Exception ex) { manageActionError = ex.Message; }
         finally { isManageActionRunning = false; }
+    }
+
+    private async Task BanMemberAsync(Guid memberUserId)
+    {
+        // Irreversible — a banned member cannot rejoin — so a stray click must not do it.
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Ban member?",
+            $"{GetMemberDisplayName(memberUserId)} will be removed and will not be able to rejoin this chat.",
+            yesText: "Ban", cancelText: "Cancel");
+        if (confirmed != true) return;
+
+        manageActionError = null;
+        isManageActionRunning = true;
+        try
+        {
+            await ChatsApi.BanMemberAsync(currentUserId, ChatId, memberUserId);
+            await ReloadChatDetailsAsync();
+        }
+        catch (Exception ex) { manageActionError = ex.Message; }
+        finally { isManageActionRunning = false; }
+    }
+
+    private async Task DeleteChatAsync()
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Delete chat?",
+            "The chat closes for everyone and nobody can post in it again. This cannot be undone.",
+            yesText: "Delete", cancelText: "Cancel");
+        if (confirmed != true) return;
+
+        manageActionError = null;
+        isManageActionRunning = true;
+        try
+        {
+            await ChatsApi.DeleteChatAsync(currentUserId, ChatId);
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex) { manageActionError = ex.Message; isManageActionRunning = false; }
     }
 
     private async Task ChangeMemberRoleAsync(Guid memberUserId, MemberRole newRole)

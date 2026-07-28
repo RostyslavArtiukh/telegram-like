@@ -34,12 +34,48 @@ public class BroadcastChannelTests
     [Fact]
     public void Join_AfterBeingKicked_ReAddsAsFreshViewer()
     {
-        // BroadcastChannel has no Ban (unlike GroupChat); a kicked member's row is
-        // replaced on rejoin rather than permanently blocked.
+        // BroadcastChannel has no Ban (unlike GroupChat); a kicked member is revived
+        // as a plain Viewer on rejoin rather than permanently blocked.
         var ownerId = Guid.NewGuid();
         var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
         var userId = Guid.NewGuid();
         chat.Join(userId);
+        chat.Kick(userId, ownerId);
+
+        chat.Join(userId);
+
+        chat.FindActiveMember(userId)!.Role.Should().Be(MemberRole.Viewer);
+    }
+
+    [Fact]
+    public void Join_AfterBeingKicked_RevivesTheSameMemberRow()
+    {
+        // Same row-reuse contract as GroupChat: a replacement row would strand the
+        // kicked one in chat_members forever.
+        var ownerId = Guid.NewGuid();
+        var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
+        var userId = Guid.NewGuid();
+        chat.Join(userId);
+        var originalRowId = chat.FindActiveMember(userId)!.Id;
+        chat.Kick(userId, ownerId);
+
+        chat.Join(userId);
+
+        chat.Members.Where(m => m.UserId == userId).Should().ContainSingle()
+            .Which.Id.Should().Be(originalRowId);
+        chat.FindActiveMember(userId)!.KickedBy.Should().BeNull();
+    }
+
+    [Fact]
+    public void Join_AfterDemotionAndKick_ComesBackAsViewerNotAdmin()
+    {
+        // Reviving the row must still reset the role — a returning ex-admin rejoins
+        // with no more authority than any other viewer.
+        var ownerId = Guid.NewGuid();
+        var chat = BroadcastChannel.Create(Guid.NewGuid(), Name(), ownerId);
+        var userId = Guid.NewGuid();
+        chat.Join(userId);
+        chat.PromoteToAdmin(userId, ownerId);
         chat.Kick(userId, ownerId);
 
         chat.Join(userId);

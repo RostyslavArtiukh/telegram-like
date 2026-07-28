@@ -40,6 +40,12 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
             .Project(d => d.UserId)
             .ToListAsync(cancellationToken);
 
+    public async Task<bool> IsChatKnownAsync(Guid chatId, CancellationToken cancellationToken = default)
+        => await _chatMembershipsCollection
+            .Find(Builders<ChatMembershipDocument>.Filter.Eq(d => d.ChatId, chatId))
+            .Limit(1)
+            .AnyAsync(cancellationToken);
+
     public Task UpsertActiveAsync(Guid chatId, Guid userId, string? role, DateTime occurredAt, CancellationToken cancellationToken = default)
         => ApplyAsync(chatId, userId, isActive: true, role, occurredAt, cancellationToken);
 
@@ -48,6 +54,38 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
 
     public Task SetRoleAsync(Guid chatId, Guid userId, string role, DateTime occurredAt, CancellationToken cancellationToken = default)
         => ApplyAsync(chatId, userId, isActive: null, role, occurredAt, cancellationToken);
+
+    // Chat-wide deactivation for ChatDeleted. Same last-writer-wins guard as ApplyAsync, but
+    // UpdateMany over every row of the chat and never an upsert: a chat nobody materialized
+    // here has no membership to revoke, and inventing rows for it would be meaningless.
+    public Task DeactivateChatAsync(Guid chatId, DateTime occurredAt, CancellationToken cancellationToken = default)
+    {
+        var occurred = new BsonDateTime(occurredAt);
+        var isNewer = IsNewerThanStored(occurred);
+
+        var set = new BsonDocument("$set", new BsonDocument
+        {
+            { "IsActive", new BsonDocument("$cond", new BsonArray
+                { isNewer, false, new BsonDocument("$ifNull", new BsonArray { "$IsActive", true }) }) },
+            { "LastEventAt", new BsonDocument("$cond", new BsonArray
+                { isNewer, occurred, new BsonDocument("$ifNull", new BsonArray { "$LastEventAt", occurred }) }) },
+        });
+
+        var pipeline = Builders<ChatMembershipDocument>.Update.Pipeline(
+            PipelineDefinition<ChatMembershipDocument, ChatMembershipDocument>.Create(set));
+
+        return _chatMembershipsCollection.UpdateManyAsync(
+            Builders<ChatMembershipDocument>.Filter.Eq(d => d.ChatId, chatId),
+            pipeline,
+            cancellationToken: cancellationToken);
+    }
+
+    private static BsonDocument IsNewerThanStored(BsonDateTime occurred)
+        => new("$gte", new BsonArray
+        {
+            occurred,
+            new BsonDocument("$ifNull", new BsonArray { "$LastEventAt", BsonDateTime.Create(DateTime.UnixEpoch) })
+        });
 
     // Last-writer-wins by occurredAt via a conditional pipeline update: each supplied
     // field is applied only when occurredAt is newer than the stored LastEventAt
@@ -59,11 +97,7 @@ internal sealed class MongoChatMembershipReadModel(IMongoDatabase database) : IC
     {
         var id = ChatMembershipDocument.MakeId(chatId, userId);
         var occurred = new BsonDateTime(occurredAt);
-        var isNewer = new BsonDocument("$gte", new BsonArray
-        {
-            occurred,
-            new BsonDocument("$ifNull", new BsonArray { "$LastEventAt", BsonDateTime.Create(DateTime.UnixEpoch) })
-        });
+        var isNewer = IsNewerThanStored(occurred);
 
         BsonValue activeExpr = isActive.HasValue
             ? new BsonDocument("$cond", new BsonArray
