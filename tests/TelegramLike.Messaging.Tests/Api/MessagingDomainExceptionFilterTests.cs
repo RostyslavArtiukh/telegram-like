@@ -51,7 +51,6 @@ public sealed class MessagingDomainExceptionFilterTests
         {
             chatId = SomeChatId,
             text = (string?)null,
-            recipients = new[] { SomeUserId },
             isBroadcast = false
         });
         var response = await client.PostAsync("/messages", body);
@@ -105,7 +104,6 @@ public sealed class MessagingDomainExceptionFilterTests
         {
             chatId = SomeChatId,
             text = "x",
-            recipients = new[] { SomeUserId },
             isBroadcast = false
         });
 
@@ -139,7 +137,6 @@ public sealed class MessagingDomainExceptionFilterTests
         {
             chatId = SomeChatId,
             text = "x",
-            recipients = new[] { SomeUserId },
             isBroadcast = false
         });
         var response = await client.PostAsync("/messages", body);

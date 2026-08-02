@@ -43,19 +43,21 @@ public sealed class SendMessageCommandHandler(
         if (!chatKnown)
         {
             // Chat not yet materialized (legacy chat, or the creator's MemberJoined is
-            // still in flight). Fall back to the previous fail-open so a freshly created
-            // chat's first send isn't rejected, and keep the caller-supplied recipients.
+            // still in flight). Fail open on membership so a freshly created chat's first
+            // send isn't rejected — but with nobody to fan out to, see below.
             logger.LogWarning(
-                "SendMessage: chat {ChatId} is not in the membership read-model yet; allowing through (fail-open).",
+                "SendMessage: chat {ChatId} is not in the membership read-model yet; storing the message " +
+                "(fail-open) but fanning out to nobody — its audience is unknown until MemberJoined arrives.",
                 request.ChatId);
         }
 
-        // Recipients are authoritative from the read-model when the chat is known — this
-        // is what closes the recipient-spoofing vector; fall back to the caller's list
-        // only while the chat is still unknown.
-        var recipients = chatKnown
-            ? activeMembers.Where(id => id != request.AuthorId).ToList()
-            : request.Recipients;
+        // The read-model is the only source of recipients ([TL-118]). It used to fall back to a
+        // caller-supplied list for an unmaterialized chat, which meant the same "who is in this
+        // chat" derivation lived here AND in each UI host — two copies that could disagree, and
+        // a spoofing vector whenever the fallback engaged. An unknown chat now simply has no
+        // known audience: the message is stored and readable, it just raises no notification or
+        // realtime push, for the couple of seconds until Chats' MemberJoined lands.
+        var recipients = activeMembers.Where(id => id != request.AuthorId).ToList();
 
         // Broadcast-ness is authoritative from the chat-type read-model when the chat is
         // materialized ([TL-102]); the client-supplied flag is used only for a not-yet-known

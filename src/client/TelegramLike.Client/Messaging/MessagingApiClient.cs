@@ -7,11 +7,15 @@ namespace TelegramLike.Client.Messaging;
 
 public sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider tokenProvider)
 {
+    /// <summary>
+    /// Sends a message. There is no recipients parameter ([TL-118]) — the Messaging service
+    /// derives the audience from its own membership read-model, so a caller neither needs chat
+    /// membership loaded nor could influence who gets notified by passing a list.
+    /// </summary>
     public async Task<Guid> SendMessageAsync(
         Guid authorUserId,
         Guid chatId,
         string? text,
-        IReadOnlyList<Guid> recipients,
         bool isBroadcast,
         IReadOnlyList<OutgoingAttachment>? attachments = null,
         Guid? replyToMessageId = null,
@@ -31,7 +35,6 @@ public sealed class MessagingApiClient(HttpClient http, IAccessTokenProvider tok
             messageId,
             chatId,
             text,
-            recipients,
             isBroadcast,
             attachments,
             replyToMessageId,

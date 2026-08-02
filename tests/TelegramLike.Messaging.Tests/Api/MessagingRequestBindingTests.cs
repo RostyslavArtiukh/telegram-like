@@ -17,8 +17,9 @@ using TelegramLike.Messaging.Domain.ValueObjects;
 namespace TelegramLike.Messaging.Tests.Api;
 
 /// <summary>
-/// Request binding: BFF-enriched fields (recipients, isBroadcast, userIsPremium,
-/// retractedByModerator) bind from JSON body into the exact command properties.
+/// Request binding: caller-supplied fields (isBroadcast, retractedByModerator) bind from the
+/// JSON body into the exact command properties, while fields that moved server-side
+/// (recipients, userIsPremium) stay ignored even when a client still sends them.
 /// Enum values (Emoji, AttachmentType) round-trip as name strings, not integers.
 /// </summary>
 public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
@@ -35,15 +36,18 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
     private static StringContent Json(object body)
         => new(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
-    // ── SendMessage: BFF-enriched recipients + isBroadcast ────────────────
+    // ── SendMessage: isBroadcast binds, a stray recipients list does not ──
 
     [Fact]
-    public async Task SendMessage_BindsBffEnrichedRecipients()
+    public async Task SendMessage_IgnoresACallerSuppliedRecipientsList()
     {
         factory.Mediator
             .Send(Arg.Any<IRequest<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(Guid.NewGuid());
 
+        // Recipients left the wire in [TL-118] — the audience comes from Messaging's own
+        // membership read-model. An old client (or an attacker) still sending the field must
+        // get it dropped at binding, not carried into the command.
         var body = Json(new
         {
             chatId = ChatId,
@@ -51,17 +55,15 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
             recipients = new[] { Recipient1, Recipient2 },
             isBroadcast = true
         });
-        await Auth().PostAsync("/messages", body);
+        var response = await Auth().PostAsync("/messages", body);
 
+        response.IsSuccessStatusCode.Should().BeTrue("an unknown field must not fail the request");
         await factory.Mediator.Received(1).Send(
             Arg.Is<SendMessageCommand>(c =>
                 c.ChatId == ChatId &&
                 c.AuthorId == CurrentUserId &&
                 c.Text == "Hello" &&
-                c.IsBroadcast == true &&
-                c.Recipients.Count == 2 &&
-                c.Recipients.Contains(Recipient1) &&
-                c.Recipients.Contains(Recipient2)),
+                c.IsBroadcast == true),
             Arg.Any<CancellationToken>());
     }
 
@@ -78,7 +80,6 @@ public sealed class MessagingRequestBindingTests(MessagingApiFactory factory)
         {
             chatId = ChatId,
             text = "photo",
-            recipients = new[] { Recipient1 },
             isBroadcast = false,
             attachments = new[]
             {

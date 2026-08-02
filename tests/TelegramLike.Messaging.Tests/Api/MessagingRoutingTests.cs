@@ -88,7 +88,6 @@ public sealed class MessagingRoutingTests(MessagingApiFactory factory) : IClassF
         {
             chatId = SomeChatId,
             text = "hello",
-            recipients = new[] { SomeUserId },
             isBroadcast = false
         });
         var response = await Auth().PostAsync("/messages", body);

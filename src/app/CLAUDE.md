@@ -19,7 +19,7 @@ The default mobile target is the local **Android emulator** — no physical phon
 ## Patterns
 - **Realtime lifecycle:** connect once after login (`Login.EnterAsync`), `JoinChatAsync`/`LeaveChatAsync` per open chat (Chat.razor), disconnect on sign-out. Hub events fire on background threads → always `InvokeAsync(StateHasChanged)`.
 - Pushes carry ids only; components refetch the entity over HTTP (`GetMessageByIdAsync`) — same signal-then-fetch model as the events themselves.
-- Enrichment (recipients/isBroadcast) happens app-side via `ChatsApiClient` helpers before `SendMessageAsync` — mirrors the Web BFF until enrichment moves server-side.
+- Enrichment: only `isBroadcast` is still passed on send (read from the already-loaded chat, no extra call). Recipients moved server-side in [TL-118] — the app no longer looks up members before sending, which also removed a round-trip to Chats from the send path.
 - `PresenceHeartbeat` singleton: 20s heartbeat while signed in (Redis TTL 30s); `UsernameCache` batches id→username lookups.
 - Session store: in-memory on Windows (login is per-launch); on Android `SecureSessionStore` (SecureStorage-backed `ISessionStore`) is registered `#if ANDROID` **before** `AddTelegramLikeClient` in `MauiProgram` ([TL-67]).
 - **Android 15 edge-to-edge:** API 35+ forces edge-to-edge, so the WebView draws behind the transparent status/nav bars and the header slid under the clock/wifi icons. `MainActivity.OnCreate` fixes it with a `ViewCompat.SetOnApplyWindowInsetsListener` that pads the content view by the system-bar + cutout insets (and sets dark status-bar icons for the light background) ([TL-107]).

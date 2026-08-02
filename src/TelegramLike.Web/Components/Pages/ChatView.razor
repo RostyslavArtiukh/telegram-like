@@ -701,20 +701,15 @@ else
         isSendingMessage = true;
         try
         {
-            // BFF enrichment: Messaging has no access to Chats data, so we resolve
-            // recipients (all active members except author) and broadcast flag here.
-            var recipientIds = openedChat.Members
-                .Where(m => m.Status == MemberStatus.Active && m.UserId != currentUserId)
-                .Select(m => m.UserId)
-                .ToList();
-
+            // Recipients are Messaging's own business ([TL-118]) — it derives them from its
+            // membership read-model. Broadcast-ness is still passed as a fallback for a chat
+            // its chat-type read-model hasn't materialized yet.
             var isBroadcastChat = openedChat.Type == ChatType.Broadcast;
 
             await MessagingApi.SendMessageAsync(
                 authorUserId: currentUserId,
                 chatId: ChatId,
                 text: string.IsNullOrWhiteSpace(messageComposer.Text) ? null : messageComposer.Text,
-                recipients: recipientIds,
                 isBroadcast: isBroadcastChat,
                 attachments: stagedAttachments.Count > 0 ? stagedAttachments.ToList() : null,
                 replyToMessageId: messageBeingRepliedTo?.MessageId);
@@ -822,14 +817,12 @@ else
         isForwarding = true;
         try
         {
-            var recipientIds = await ChatsApi.GetActiveRecipientsAsync(currentUserId, targetChatId, currentUserId);
             var targetChatType = await ChatsApi.GetChatTypeAsync(currentUserId, targetChatId);
 
             await MessagingApi.SendMessageAsync(
                 authorUserId: currentUserId,
                 chatId: targetChatId,
                 text: messageBeingForwarded.Text,
-                recipients: recipientIds,
                 isBroadcast: targetChatType == ChatType.Broadcast,
                 attachments: messageBeingForwarded.Attachments
                     .Select(a => new OutgoingAttachment(a.Type, a.Url, a.SizeBytes, a.FileName))

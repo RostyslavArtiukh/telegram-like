@@ -20,14 +20,12 @@ public class SendMessageCommandHandlerTests
     private SendMessageCommandHandler Handler =>
         new(_messageRepository, _membership, _chatType, _metrics, NullLogger<SendMessageCommandHandler>.Instance);
 
-    private static SendMessageCommand Command(
-        Guid chatId, Guid authorId, IReadOnlyList<Guid>? recipients = null, bool isBroadcast = false)
+    private static SendMessageCommand Command(Guid chatId, Guid authorId, bool isBroadcast = false)
         => new(
             Guid.NewGuid(),
             chatId,
             authorId,
             "hello",
-            recipients ?? [],
             isBroadcast);
 
     [Fact]
@@ -43,9 +41,7 @@ public class SendMessageCommandHandlerTests
         _messageRepository.AddAsync(Arg.Do<Message>(m => captured = m), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
 
-        // Caller tries to spoof recipients with an id that isn't actually a member.
-        var spoofedRecipient = Guid.NewGuid();
-        await Handler.Handle(Command(chatId, authorId, [spoofedRecipient]), CancellationToken.None);
+        await Handler.Handle(Command(chatId, authorId), CancellationToken.None);
 
         captured.Should().NotBeNull();
         captured!.PendingEvents.OfType<TelegramLike.Messaging.Domain.Events.MessageSentEvent>()
@@ -104,22 +100,26 @@ public class SendMessageCommandHandlerTests
     }
 
     [Fact]
-    public async Task Send_UnknownChat_FailsOpenWithCallerSuppliedRecipients()
+    public async Task Send_UnknownChat_StoresTheMessageButFansOutToNobody()
     {
+        // The accepted cost of [TL-118]: with no caller-supplied list left, a chat whose
+        // MemberJoined is still in flight has no known audience. The send must still succeed —
+        // rejecting a just-created chat's first message would be the worse failure — it simply
+        // reaches nobody's notifications or realtime push until the read-model catches up.
         var chatId = Guid.NewGuid();
         var authorId = Guid.NewGuid();
         _membership.GetActiveMemberIdsAsync(chatId, Arg.Any<CancellationToken>())
             .Returns(new List<Guid>()); // not materialized yet
 
-        var callerRecipients = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
         Message? captured = null;
         _messageRepository.AddAsync(Arg.Do<Message>(m => captured = m), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
 
-        await Handler.Handle(Command(chatId, authorId, callerRecipients), CancellationToken.None);
+        await Handler.Handle(Command(chatId, authorId), CancellationToken.None);
 
+        captured.Should().NotBeNull();
         captured!.PendingEvents.OfType<TelegramLike.Messaging.Domain.Events.MessageSentEvent>()
-            .Single().Recipients.Should().BeEquivalentTo(callerRecipients);
+            .Single().Recipients.Should().BeEmpty();
     }
 
     [Fact]
@@ -135,8 +135,7 @@ public class SendMessageCommandHandlerTests
         _membership.IsChatKnownAsync(chatId, Arg.Any<CancellationToken>())
             .Returns(true); // rows exist, all inactive
 
-        var act = () => Handler.Handle(
-            Command(chatId, authorId, [Guid.NewGuid()]), CancellationToken.None);
+        var act = () => Handler.Handle(Command(chatId, authorId), CancellationToken.None);
 
         await act.Should().ThrowAsync<ForbiddenException>();
         await _messageRepository.DidNotReceive().AddAsync(Arg.Any<Message>(), Arg.Any<CancellationToken>());

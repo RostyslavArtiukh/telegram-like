@@ -108,7 +108,6 @@ public sealed class MessagingEnumSerializationTests(MessagingApiFactory factory)
             {
                 chatId = SomeChatId,
                 text = (string?)null,
-                recipients = new[] { SomeUserId },
                 isBroadcast = false,
                 attachments = new[]
                 {
@@ -182,7 +181,6 @@ public sealed class MessagingEnumSerializationTests(MessagingApiFactory factory)
             {
                 chatId = SomeChatId,
                 text = "hi",
-                recipients = new[] { SomeUserId },
                 isBroadcast = false
             }),
             Encoding.UTF8, "application/json");

@@ -643,14 +643,14 @@ else
         isSendingMessage = true;
         try
         {
-            // BFF-style enrichment, done client-side by the SDK helpers.
-            var recipientIds = await ChatsApi.GetActiveRecipientsAsync(currentUserId, ChatId, currentUserId);
+            // No recipient lookup here ([TL-118]) — Messaging derives the audience itself, which
+            // also spares this send an extra round-trip to Chats. Broadcast-ness is still passed
+            // as a fallback for a chat its chat-type read-model hasn't materialized yet.
             var isBroadcastChat = openedChat.Type == ChatType.Broadcast;
             var sentMessageId = await MessagingApi.SendMessageAsync(
                 currentUserId,
                 ChatId,
                 string.IsNullOrWhiteSpace(messageDraft) ? null : messageDraft.Trim(),
-                recipientIds,
                 isBroadcastChat,
                 attachments: stagedAttachments.Count > 0 ? stagedAttachments.ToList() : null,
                 replyToMessageId: messageBeingRepliedTo?.MessageId);
@@ -767,14 +767,12 @@ else
         isForwarding = true;
         try
         {
-            var recipientIds = await ChatsApi.GetActiveRecipientsAsync(currentUserId, targetChatId, currentUserId);
             var targetChatType = await ChatsApi.GetChatTypeAsync(currentUserId, targetChatId);
 
             await MessagingApi.SendMessageAsync(
                 authorUserId: currentUserId,
                 chatId: targetChatId,
                 text: messageBeingForwarded.Text,
-                recipients: recipientIds,
                 isBroadcast: targetChatType == ChatType.Broadcast,
                 attachments: messageBeingForwarded.Attachments
                     .Select(a => new OutgoingAttachment(a.Type, a.Url, a.SizeBytes, a.FileName))

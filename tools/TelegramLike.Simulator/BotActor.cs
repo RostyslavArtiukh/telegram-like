@@ -151,7 +151,7 @@ public sealed class BotActor(
         {
             await Task.Delay(Random.Shared.Next(800, 2500), ct);
             var messageId = await bot.Messaging.SendMessageAsync(
-                bot.UserId, chat.ChatId, text, chat.Recipients,
+                bot.UserId, chat.ChatId, text,
                 isBroadcast: chat.Type == ChatType.Broadcast,
                 replyToMessageId: replyTo,
                 cancellationToken: ct);

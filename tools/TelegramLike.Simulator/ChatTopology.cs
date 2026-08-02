@@ -2,12 +2,12 @@ using TelegramLike.Client.Chats;
 
 namespace TelegramLike.Simulator;
 
-/// <summary>Чат очима конкретного бота: куди слати, кому (recipients без себе) і чи можна писати.</summary>
+/// <summary>Чат очима конкретного бота: куди слати і чи можна писати. Кому саме —
+/// вирішує Messaging зі свого read-model ([TL-118]), боту це знати не треба.</summary>
 public sealed record ChatHandle(
     Guid ChatId,
     string Name,
     ChatType Type,
-    IReadOnlyList<Guid> Recipients,
     bool CanSend);
 
 /// <summary>
@@ -60,18 +60,10 @@ public static class ChatTopology
                 }
             }
 
-            // Активних учасників читаємо один раз очима власника; recipients
-            // кожному боту — всі активні мінус він сам (як це робить Web BFF).
-            var activeIds = (await owner.Chats.GetChatMembersAsync(owner.UserId, chatId, ct))
-                .Where(m => m.Status == MemberStatus.Active)
-                .Select(m => m.UserId)
-                .ToHashSet();
-
             foreach (var member in members)
             {
-                var recipients = activeIds.Where(id => id != member.UserId).ToList();
                 var canSend = type != ChatType.Broadcast || member == owner;
-                handles[indexOf[member]].Add(new ChatHandle(chatId, name, type, recipients, canSend));
+                handles[indexOf[member]].Add(new ChatHandle(chatId, name, type, canSend));
             }
         }
 
@@ -82,8 +74,8 @@ public static class ChatTopology
             var a = bots[i];
             var b = bots[(i + 1) % bots.Count];
             var chatId = await a.Chats.CreateDirectChatAsync(a.UserId, b.UserId, ct);
-            handles[indexOf[a]].Add(new ChatHandle(chatId, $"діалог з {b.Username}", ChatType.Direct, [b.UserId], true));
-            handles[indexOf[b]].Add(new ChatHandle(chatId, $"діалог з {a.Username}", ChatType.Direct, [a.UserId], true));
+            handles[indexOf[a]].Add(new ChatHandle(chatId, $"діалог з {b.Username}", ChatType.Direct, true));
+            handles[indexOf[b]].Add(new ChatHandle(chatId, $"діалог з {a.Username}", ChatType.Direct, true));
         }
 
         return handles;

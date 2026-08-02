@@ -93,16 +93,6 @@ public sealed class ChatsApiClient(HttpClient http, IAccessTokenProvider tokenPr
     public Task DeleteChatAsync(Guid deletedByUserId, Guid chatId, CancellationToken cancellationToken = default)
         => SendVoid(HttpMethod.Delete, $"/chats/{chatId}", content: null, cancellationToken);
 
-    public async Task<IReadOnlyList<Guid>> GetActiveRecipientsAsync(
-        Guid actingUserId, Guid chatId, Guid excludeUserId, CancellationToken cancellationToken = default)
-    {
-        var members = await GetChatMembersAsync(actingUserId, chatId, cancellationToken);
-        return members
-            .Where(m => m.Status == MemberStatus.Active && m.UserId != excludeUserId)
-            .Select(m => m.UserId)
-            .ToList();
-    }
-
     public async Task<ChatType?> GetChatTypeAsync(Guid actingUserId, Guid chatId, CancellationToken cancellationToken = default)
     {
         var details = await GetChatByIdAsync(actingUserId, chatId, cancellationToken);

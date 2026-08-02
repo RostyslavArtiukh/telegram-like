@@ -10,14 +10,14 @@ namespace TelegramLike.Messaging.Api.Contracts;
 public sealed record SendMessageAttachmentDto(AttachmentType Type, string Url, long SizeBytes, string? FileName);
 
 /// <summary>
-/// Body for <c>POST /messages/</c>. <see cref="Recipients"/> and <see cref="IsBroadcast"/> are
-/// BFF-enriched cross-context inputs — the Web BFF resolves them from Chats data and supplies
-/// them here so Messaging never cross-queries. Shape preserved verbatim from the minimal API.
+/// Body for <c>POST /messages/</c>. There is no <c>recipients</c> field ([TL-118]): the audience
+/// is derived server-side from the membership read-model, so callers can neither supply nor spoof
+/// it. <see cref="IsBroadcast"/> remains a caller-supplied fallback for a chat the chat-type
+/// read-model hasn't materialized yet.
 /// </summary>
 public sealed record SendMessageRequest(
     Guid ChatId,
     string? Text,
-    IReadOnlyList<Guid> Recipients,
     bool IsBroadcast,
     IReadOnlyList<SendMessageAttachmentDto>? Attachments = null,
     Guid? ReplyToMessageId = null,

@@ -31,7 +31,6 @@ public sealed class MessagesController(IMediator mediator) : ApiControllerBase
             body.ChatId,
             CurrentUserId,
             body.Text,
-            body.Recipients,
             body.IsBroadcast,
             attachments,
             body.ReplyToMessageId,

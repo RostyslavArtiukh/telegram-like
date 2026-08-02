@@ -12,10 +12,10 @@ public sealed record SendMessageCommand(
     Guid ChatId,
     Guid AuthorId,
     string? Text,
-    // Server-authoritative for materialized chats ([TL-70]/[TL-102]): recipients come from the
-    // membership read-model and isBroadcast from the chat-type read-model. These caller-supplied
-    // values are a fallback used only while a just-created chat isn't materialized yet, then ignored.
-    IReadOnlyList<Guid> Recipients,
+    // Recipients are not here on purpose ([TL-118]): they are derived from the membership
+    // read-model, never supplied. IsBroadcast is still a caller fallback, used only while the
+    // chat-type read-model hasn't materialized the chat ([TL-102]) — unlike a missed fan-out,
+    // guessing broadcast-ness wrong is baked into the stored message permanently.
     bool IsBroadcast,
     IReadOnlyList<SendMessageAttachment>? Attachments = null,
     Guid? ReplyToMessageId = null,
