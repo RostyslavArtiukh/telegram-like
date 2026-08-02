@@ -18,6 +18,8 @@ metadata:
 
 Кількість проєктів лишили 4 (поділ по шарах навмисний — ізоляція залежностей, задокументовано у CLAUDE.md), лише перейменували. Механіка: глобальний sed по 116 файлах (`.cs`/`.csproj`/`.sln`/`.md`/Dockerfile) + `git mv` тек. ⚠️ Граблі: під час sed-проходу C# Dev Kit (Roslyn LanguageServer) паралельно переписував `.csproj`/`.sln` і поламав `Presence.Application.csproj` (зник ProjectReference на Presence.Domain) та `TelegramLike.sln` (зникла реєстрація Presence.Domain) — довелось відновлювати вручну. Rename тек блокувався (Permission denied, Roslyn тримає хендли) — обхід: перенос файлів поштучно `git mv` у нову теку + `rm -rf` старої.
 
+⚠️ **З [TL-120] це вже не ProjectReference, а версіоновані NuGet-пакети** (PackageId/Version 1.0.0, власний `TelegramLike.Shared.slnx` поза `TelegramLike.sln`, локальний feed `artifacts/packages`, bootstrap `build/pack-shared.ps1`). Деталі й граблі — [[maintainability-review-fixes]].
+
 **Мапа неймінгу (старе → нове):**
 - `Entity` → `ObjectWithId`; `AggregateRoot` → `ObjectWithEvents`; `IDomainEvent` → `IChangeEvent`
 - `RaiseDomainEvent` → `RecordEvent`; `DomainEvents` → `PendingEvents`; `ClearDomainEvents` → `ClearPendingEvents`
