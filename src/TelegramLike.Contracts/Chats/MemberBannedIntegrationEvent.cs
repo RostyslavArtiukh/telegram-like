@@ -12,6 +12,7 @@ namespace TelegramLike.Contracts.Chats;
 /// fan-out, so no consumer needs the audience.
 /// </para>
 /// </summary>
+[IntegrationEventName("chats.member-banned.v1")]
 public sealed record MemberBannedIntegrationEvent(
     Guid EventId,
     DateTime OccurredAt,

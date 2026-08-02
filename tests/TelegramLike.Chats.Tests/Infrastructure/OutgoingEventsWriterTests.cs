@@ -57,18 +57,17 @@ public class OutgoingEventsWriterTests(MongoFixture fx)
     }
 
     [Fact]
-    public async Task Write_StoresAVersionAgnosticTypeNameTheSenderCanResolve()
+    public async Task Write_StoresTheDeclaredWireNameTheSenderCanResolve()
     {
-        // A version-qualified name resolves to null after an assembly bump, stranding
-        // in-flight rows until they dead-letter — so the sender must be able to load it.
+        // A CLR name ties every queued row to the class keeping its name and namespace, so a
+        // rename strands rows a rollback can't rescue — they carry the old build's name.
         var writer = NewWriter(out var collection);
 
         await WriteAsync(writer, new MemberLeftEvent(Guid.NewGuid(), Guid.NewGuid()));
 
         var row = await collection.Find(FilterDefinition<OutgoingEventDocument>.Empty).SingleAsync();
-        row.EventType.Should().Be(
-            "TelegramLike.Contracts.Chats.MemberLeftIntegrationEvent, TelegramLike.Contracts");
-        Type.GetType(row.EventType).Should().Be(typeof(MemberLeftIntegrationEvent));
+        row.EventType.Should().Be("chats.member-left.v1");
+        IntegrationEventNames.Resolve(row.EventType).Should().Be(typeof(MemberLeftIntegrationEvent));
     }
 
     [Fact]
@@ -112,7 +111,7 @@ public class OutgoingEventsWriterTests(MongoFixture fx)
 
         var rows = await collection.Find(FilterDefinition<OutgoingEventDocument>.Empty).ToListAsync();
         rows.Should().HaveCount(2);
-        rows.Should().OnlyContain(r => r.EventType.Contains("MemberRoleChangedIntegrationEvent"));
+        rows.Should().OnlyContain(r => r.EventType == "chats.member-role-changed.v1");
     }
 
     [Fact]

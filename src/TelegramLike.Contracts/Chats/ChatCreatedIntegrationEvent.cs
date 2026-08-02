@@ -8,6 +8,7 @@ namespace TelegramLike.Contracts.Chats;
 /// a client-supplied flag. Only Messaging consumes it. <see cref="Type"/> is the
 /// <c>ChatType</c> name (<c>"Direct"</c>/<c>"Group"</c>/<c>"Broadcast"</c>).
 /// </summary>
+[IntegrationEventName("chats.chat-created.v1")]
 public sealed record ChatCreatedIntegrationEvent(
     Guid EventId,
     DateTime OccurredAt,

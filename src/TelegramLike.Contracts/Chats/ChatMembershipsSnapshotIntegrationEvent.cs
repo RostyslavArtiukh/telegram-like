@@ -17,6 +17,7 @@ namespace TelegramLike.Contracts.Chats;
 /// always wins over the historical snapshot — the backfill can never resurrect or role-revert.
 /// </para>
 /// </summary>
+[IntegrationEventName("chats.chat-memberships-snapshot.v1")]
 public sealed record ChatMembershipsSnapshotIntegrationEvent(
     Guid EventId,
     DateTime OccurredAt,

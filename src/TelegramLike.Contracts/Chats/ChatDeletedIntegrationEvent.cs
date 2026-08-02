@@ -13,6 +13,7 @@ namespace TelegramLike.Contracts.Chats;
 /// deactivation as final rather than something a later event might reverse.
 /// </para>
 /// </summary>
+[IntegrationEventName("chats.chat-deleted.v1")]
 public sealed record ChatDeletedIntegrationEvent(
     Guid EventId,
     DateTime OccurredAt,

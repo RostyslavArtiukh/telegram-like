@@ -28,7 +28,10 @@ public sealed class OutgoingEventsWriter(
 
             outgoing.Add(new OutgoingEvent(
                 Id: Guid.NewGuid(),
-                EventType: StableTypeName(integrationEvent.GetType()),
+                // The event's declared wire name, not its CLR name: a queued row outlives the
+                // build that wrote it, so it must not depend on the class keeping its name or
+                // namespace. See IntegrationEventNames.
+                EventType: IntegrationEventNames.NameOf(integrationEvent.GetType()),
                 Payload: payload,
                 OccurredAt: changeEvent.OccurredAt));
         }
@@ -36,10 +39,4 @@ public sealed class OutgoingEventsWriter(
         if (outgoing.Count > 0)
             await store.AddAsync(outgoing, session, cancellationToken);
     }
-
-    // Store a version-agnostic "Namespace.Type, Assembly" name instead of the fully
-    // version-qualified AssemblyQualifiedName. Type.GetType resolves both, but the
-    // qualified form returns null for in-flight rows after an assembly version bump,
-    // silently stranding them until they dead-letter.
-    private static string StableTypeName(Type t) => $"{t.FullName}, {t.Assembly.GetName().Name}";
 }

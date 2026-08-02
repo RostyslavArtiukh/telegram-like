@@ -19,6 +19,13 @@ A context folder here is the **shared schema**, not the service's domain (that l
 - **Now public API — a shipped external app depends on this.** Since TL-64/66 the `TelegramLike.Client` SDK (and a MAUI build) reference these types, including `Realtime/RealtimeEvents.cs` (the SignalR push contracts, shared server↔client). Backend and client no longer deploy in lockstep, so treat every type here as versioned public surface: **additive-only** evolution, semver the SDK NuGet, and never rename/retype a field a deployed client reads.
 - No `Identity/` folder: Identity publishes no integration events, and user data is fetched over HTTP into Web-local DTOs (`Web/Services/IdentityApi`).
 
+## Every integration event declares a wire name ([TL-117])
+`[IntegrationEventName("context.event.v1")]` on the record — lowercase `context.event.vN`, kebab-case — is the event's identity. **The outbox stores that string, never the CLR name**, so a queued row no longer depends on the class keeping its name or namespace; rename or move the record freely, and only this string is the contract. Adding an event without the attribute fails `IntegrationEventNamesTests` in CI (and would throw at the first publish).
+
+Two consequences worth knowing:
+- **Never change a name once rows carry it.** A new shape gets a *new type* with `.v2`, per the rules below — editing the string strands every pending row exactly the way CLR names used to.
+- **It doesn't make renames free on the wire.** MassTransit still routes by CLR type urn, so a rename still breaks *in-flight broker messages and consumers*; the wire name only fixes the *stored* outbox rows. `IntegrationEventNames.Resolve` also falls back to CLR resolution so rows written before [TL-117] still publish.
+
 ## Versioning convention (when additive isn't enough)
 MassTransit routes by the full type name/namespace and there is no schema registry, so a rename or field re-type is a wire break with no coexistence path. Rules:
 1. **Additive first.** New optional data → a nullable trailing field with a default (e.g. `MemberJoinedIntegrationEvent.Role` in [TL-74b]). Old publishers/consumers keep working; consumers that care read the new field, others ignore it.

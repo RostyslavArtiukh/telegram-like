@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using TelegramLike.Shared.Application;
 
 namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
@@ -68,9 +69,12 @@ public sealed class OutgoingEventsSender(
         {
             try
             {
-                var type = Type.GetType(outgoingEvent.EventType)
+                var type = IntegrationEventNames.Resolve(outgoingEvent.EventType)
                            ?? throw new InvalidOperationException(
-                               $"Cannot resolve integration event type '{outgoingEvent.EventType}'.");
+                               $"Cannot resolve integration event type '{outgoingEvent.EventType}'. " +
+                               "Either its [IntegrationEventName] was removed or renamed — a wire " +
+                               "name must never change once rows carry it — or this is a legacy " +
+                               "CLR-named row whose type no longer exists.");
 
                 var payload = JsonSerializer.Deserialize(outgoingEvent.Payload, type)
                               ?? throw new InvalidOperationException(

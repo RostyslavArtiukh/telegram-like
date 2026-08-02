@@ -110,15 +110,19 @@ public sealed class OutboxMetrics : IDisposable
     public void UpdateBacklog(OutboxBacklog backlog) => _backlog = backlog;
 
     /// <summary>
-    /// Turns the stored assembly-qualified name ("Some.Namespace.MessageSent, Some.Assembly")
-    /// into just "MessageSent" — the label has to stay short and low-cardinality.
+    /// The label form of a stored event type. A declared wire name ("chats.member-joined.v1")
+    /// is already short, low-cardinality and stable across renames, so it is used as-is —
+    /// which is exactly what makes it a better label than a class name. Legacy rows still
+    /// hold an assembly-qualified CLR name and are trimmed down to "MessageSent".
     /// </summary>
     private static string ShortEventType(string eventType)
     {
         var typeName = eventType.AsSpan();
 
         var comma = typeName.IndexOf(',');
-        if (comma >= 0) typeName = typeName[..comma];
+        if (comma < 0) return eventType;
+
+        typeName = typeName[..comma];
 
         var lastDot = typeName.LastIndexOf('.');
         if (lastDot >= 0) typeName = typeName[(lastDot + 1)..];

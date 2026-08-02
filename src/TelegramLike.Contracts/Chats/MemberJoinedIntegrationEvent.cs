@@ -2,6 +2,7 @@ using TelegramLike.Contracts.Common;
 
 namespace TelegramLike.Contracts.Chats;
 
+[IntegrationEventName("chats.member-joined.v1")]
 public sealed record MemberJoinedIntegrationEvent(
     Guid EventId,
     DateTime OccurredAt,
