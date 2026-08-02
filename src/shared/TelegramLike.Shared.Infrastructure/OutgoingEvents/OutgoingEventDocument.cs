@@ -32,6 +32,12 @@ public sealed class OutgoingEventDocument
     [BsonIgnoreIfNull]
     public DateTime? ClaimedUntil { get; set; }
 
+    // Which claim attempt won this row. Two replicas can pick the same candidates, but only
+    // one update per row passes the lease check, so reading back by token is how a replica
+    // learns which of its candidates it actually got — without a round-trip per row.
+    [BsonIgnoreIfNull]
+    public string? ClaimToken { get; set; }
+
     public static OutgoingEventDocument FromEvent(OutgoingEvent outgoingEvent) => new()
     {
         Id = outgoingEvent.Id,

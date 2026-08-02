@@ -28,46 +28,77 @@ public sealed class OutgoingEventsStore(IMongoDatabase database)
     // replica double-send.
     private static readonly TimeSpan ClaimLease = TimeSpan.FromSeconds(60);
 
+    /// <summary>
+    /// Claims up to <paramref name="batchSize"/> pending rows for this replica and returns them
+    /// oldest first. A claimed row is invisible to other replicas until its lease expires, so
+    /// concurrent senders get disjoint batches instead of all publishing every pending event.
+    /// </summary>
+    /// <remarks>
+    /// Three round-trips regardless of batch size, where this used to cost one
+    /// <c>FindOneAndUpdate</c> per row — fifty sequential round-trips before a single event
+    /// could be published, which is most of what capped a replica's throughput ([TL-125]).
+    /// <para>
+    /// It is still race-free without a transaction: the update re-checks the lease
+    /// <i>per document</i>, and Mongo applies each document update atomically. Two replicas
+    /// that pick overlapping candidates therefore split them — whoever stamps a row first owns
+    /// it, and the loser's update simply doesn't match. The read-back is what tells each
+    /// replica which of its candidates it actually won.
+    /// </para>
+    /// </remarks>
     public async Task<IReadOnlyList<OutgoingEvent>> GetPendingAsync(
         int batchSize,
         CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
         var claimUntil = now.Add(ClaimLease);
+        var claimToken = Guid.NewGuid().ToString("N");
 
-        // Atomically claim up to batchSize unsent, un-dead-lettered rows whose lease is
-        // absent or expired. Each FindOneAndUpdate hands a row to exactly one replica,
-        // so concurrent senders get disjoint batches instead of all publishing every
-        // pending event (the >1-replica duplicate-publish bug).
-        var filter = Builders<OutgoingEventDocument>.Filter.And(
+        var claimable = Builders<OutgoingEventDocument>.Filter.And(
             Builders<OutgoingEventDocument>.Filter.Eq(d => d.SentAt, null),
             Builders<OutgoingEventDocument>.Filter.Eq(d => d.DeadLetteredAt, null),
             Builders<OutgoingEventDocument>.Filter.Or(
                 Builders<OutgoingEventDocument>.Filter.Eq(d => d.ClaimedUntil, null),
                 Builders<OutgoingEventDocument>.Filter.Lt(d => d.ClaimedUntil, now)));
 
-        var claim = Builders<OutgoingEventDocument>.Update.Set(d => d.ClaimedUntil, claimUntil);
-        var opts = new FindOneAndUpdateOptions<OutgoingEventDocument>
-        {
-            Sort = Builders<OutgoingEventDocument>.Sort.Ascending(d => d.OccurredAt),
-            ReturnDocument = ReturnDocument.After
-        };
+        var candidateIds = await _collection
+            .Find(claimable)
+            .SortBy(d => d.OccurredAt)
+            .Limit(batchSize)
+            .Project(d => d.Id)
+            .ToListAsync(cancellationToken);
 
-        var claimed = new List<OutgoingEventDocument>(batchSize);
-        for (var i = 0; i < batchSize; i++)
-        {
-            var doc = await _collection.FindOneAndUpdateAsync(filter, claim, opts, cancellationToken);
-            if (doc is null) break;
-            claimed.Add(doc);
-        }
+        if (candidateIds.Count == 0) return [];
+
+        await _collection.UpdateManyAsync(
+            Builders<OutgoingEventDocument>.Filter.And(
+                Builders<OutgoingEventDocument>.Filter.In(d => d.Id, candidateIds),
+                claimable),
+            Builders<OutgoingEventDocument>.Update
+                .Set(d => d.ClaimedUntil, claimUntil)
+                .Set(d => d.ClaimToken, claimToken),
+            cancellationToken: cancellationToken);
+
+        // Narrowed by id as well as token so this rides the _id index; a token-only filter
+        // would scan the collection, which is the very thing the outbox indexes exist to avoid.
+        var claimed = await _collection
+            .Find(Builders<OutgoingEventDocument>.Filter.And(
+                Builders<OutgoingEventDocument>.Filter.In(d => d.Id, candidateIds),
+                Builders<OutgoingEventDocument>.Filter.Eq(d => d.ClaimToken, claimToken)))
+            .SortBy(d => d.OccurredAt)
+            .ToListAsync(cancellationToken);
 
         return claimed.Select(d => d.ToEvent()).ToList();
     }
 
+    // The claim fields are dropped along the way: a sent row is publish history, and a lease
+    // that outlives the thing it was protecting only misleads whoever reads the collection.
     public Task MarkSentAsync(Guid id, CancellationToken cancellationToken = default) =>
         _collection.UpdateOneAsync(
             Builders<OutgoingEventDocument>.Filter.Eq(d => d.Id, id),
-            Builders<OutgoingEventDocument>.Update.Set(d => d.SentAt, DateTime.UtcNow),
+            Builders<OutgoingEventDocument>.Update
+                .Set(d => d.SentAt, DateTime.UtcNow)
+                .Unset(d => d.ClaimedUntil)
+                .Unset(d => d.ClaimToken),
             cancellationToken: cancellationToken);
 
     public async Task RecordFailureAsync(

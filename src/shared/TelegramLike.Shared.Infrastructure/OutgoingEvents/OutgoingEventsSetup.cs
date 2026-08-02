@@ -25,6 +25,8 @@ public static class OutgoingEventsSetup
                 opts.BatchSize = batch;
             if (int.TryParse(configuration["OutgoingEvents:MaxRetries"], out var maxRetries))
                 opts.MaxRetries = maxRetries;
+            if (int.TryParse(configuration["OutgoingEvents:PublishConcurrency"], out var concurrency))
+                opts.PublishConcurrency = concurrency;
             if (int.TryParse(configuration["OutgoingEvents:SentRetentionDays"], out var retentionDays))
                 opts.SentRetentionDays = retentionDays;
         });
