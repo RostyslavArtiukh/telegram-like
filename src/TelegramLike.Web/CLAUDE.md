@@ -12,6 +12,11 @@ Health ([TL-99]): `/health/live` + `/health/ready` — readiness is the MassTran
 ## Real-time (no SignalR Hub)
 RabbitMQ integration event → Web `IConsumer` → in-memory `XPubSub` (конкретні класи, без інтерфейсів) → Razor component (`Subscribe` on init, `InvokeAsync(StateHasChanged)`, unsubscribe on dispose). One pubsub per UI action, not per event type. See the `realtime_blazor_pubsub` memory.
 
+All five pubsubs are thin wrappers over one `CircuitTopics<TCallback>` ([TL-126]) — they were five copies of the same registry, each of which **never released a topic**, so a replica accumulated an entry per chat ever opened and per user ever rendered and only ever grew. A topic is now dropped with its last subscriber, under that topic's lock so a subscribe racing the removal can't attach to a detached dictionary (a silently dead subscription = real-time stops for that chat with nothing logged). Covered by `TelegramLike.Web.Tests`.
+
+## This host is stateful — that's the scaling shape
+A circuit holds its tab's component state on **one** instance, so memory follows open tabs (not request rate) and the tier needs **sticky sessions**. The in-memory pubsub is correct precisely because of it: every replica has its own RabbitMQ queue (`Temporary = true` + `InstanceId`) and pushes only to its own circuits. `Program.cs` states the memory ceiling explicitly instead of inheriting framework defaults — `Circuits:DisconnectedCircuitMaxRetained` / `DisconnectedCircuitRetentionMinutes` (the defaults hold 100 whole circuits for 3 min after the browser is gone) and `Circuits:MaxBufferedUnacknowledgedRenderBatches` (per-tab, so it multiplies).
+
 ## Render-mode gotcha
 Layout and `Routes` render as static SSR; only components with `@rendermode InteractiveServer` are live. Anything needing a persistent circuit (timers, heartbeat) must live in an interactive component — otherwise it disposes once the HTTP response is sent (see `PresenceHeartbeat`, which keeps presence alive).
 

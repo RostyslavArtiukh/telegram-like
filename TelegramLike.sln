@@ -89,6 +89,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Presence.Tests
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Realtime.Tests", "tests\TelegramLike.Realtime.Tests\TelegramLike.Realtime.Tests.csproj", "{AA9A930C-FFEF-4C0E-AF3E-E87943ED2E01}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramLike.Web.Tests", "tests\TelegramLike.Web.Tests\TelegramLike.Web.Tests.csproj", "{5FCD548F-8553-43D5-B06D-5A6F6152A27C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -483,6 +485,18 @@ Global
 		{AA9A930C-FFEF-4C0E-AF3E-E87943ED2E01}.Release|x64.Build.0 = Release|Any CPU
 		{AA9A930C-FFEF-4C0E-AF3E-E87943ED2E01}.Release|x86.ActiveCfg = Release|Any CPU
 		{AA9A930C-FFEF-4C0E-AF3E-E87943ED2E01}.Release|x86.Build.0 = Release|Any CPU
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C}.Debug|x64.Build.0 = Debug|Any CPU
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C}.Debug|x86.Build.0 = Debug|Any CPU
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C}.Release|x64.ActiveCfg = Release|Any CPU
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C}.Release|x64.Build.0 = Release|Any CPU
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C}.Release|x86.ActiveCfg = Release|Any CPU
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -529,5 +543,6 @@ Global
 		{DBDA109B-24D6-4AD4-A0A6-D4202C08D671} = {8161A879-7D32-4130-9F3E-F10774B31A59}
 		{02152EB7-DE7A-4BEF-BB12-7632EBEE97F0} = {8161A879-7D32-4130-9F3E-F10774B31A59}
 		{AA9A930C-FFEF-4C0E-AF3E-E87943ED2E01} = {8161A879-7D32-4130-9F3E-F10774B31A59}
+		{5FCD548F-8553-43D5-B06D-5A6F6152A27C} = {8161A879-7D32-4130-9F3E-F10774B31A59}
 	EndGlobalSection
 EndGlobal

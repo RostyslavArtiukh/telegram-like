@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace TelegramLike.Web.Services.NewMessage;
 
 /// Bridges MessageSentIntegrationEvent (RabbitMQ) to Blazor Server circuits.
@@ -7,35 +5,11 @@ namespace TelegramLike.Web.Services.NewMessage;
 /// replaces the previous 3-second polling.
 internal sealed class NewMessagePubSub
 {
-    private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, Func<Guid, Task>>> _subs = new();
+    private readonly CircuitTopics<Func<Guid, Task>> _byChat = new();
 
-    public IDisposable Subscribe(Guid chatId, Func<Guid, Task> onNewMessage)
-    {
-        var token = Guid.NewGuid();
-        var chatSubs = _subs.GetOrAdd(chatId, _ => new ConcurrentDictionary<Guid, Func<Guid, Task>>());
-        chatSubs[token] = onNewMessage;
-        return new Subscription(this, chatId, token);
-    }
+    public IDisposable Subscribe(Guid chatId, Func<Guid, Task> onNewMessage) =>
+        _byChat.Subscribe(chatId, onNewMessage);
 
-    public async Task PublishAsync(Guid chatId, Guid messageId)
-    {
-        if (!_subs.TryGetValue(chatId, out var chatSubs)) return;
-
-        foreach (var cb in chatSubs.Values)
-        {
-            try { await cb(messageId); }
-            catch { /* one bad subscriber should not block others */ }
-        }
-    }
-
-    private void Unsubscribe(Guid chatId, Guid token)
-    {
-        if (_subs.TryGetValue(chatId, out var chatSubs))
-            chatSubs.TryRemove(token, out _);
-    }
-
-    private sealed class Subscription(NewMessagePubSub owner, Guid chatId, Guid token) : IDisposable
-    {
-        public void Dispose() => owner.Unsubscribe(chatId, token);
-    }
+    public Task PublishAsync(Guid chatId, Guid messageId) =>
+        _byChat.PublishAsync(chatId, onNewMessage => onNewMessage(messageId));
 }

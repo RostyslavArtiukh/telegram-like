@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace TelegramLike.Web.Services.Presence;
 
 /// Bridges UserCameOnline / UserWentOffline integration events from the Presence
@@ -10,35 +8,11 @@ namespace TelegramLike.Web.Services.Presence;
 /// catch presence that fell off via Redis TTL.
 internal sealed class PresencePubSub
 {
-    private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, Func<bool, Task>>> _subs = new();
+    private readonly CircuitTopics<Func<bool, Task>> _byUser = new();
 
-    public IDisposable Subscribe(Guid userId, Func<bool, Task> onPresenceChanged)
-    {
-        var token = Guid.NewGuid();
-        var userSubs = _subs.GetOrAdd(userId, _ => new ConcurrentDictionary<Guid, Func<bool, Task>>());
-        userSubs[token] = onPresenceChanged;
-        return new Subscription(this, userId, token);
-    }
+    public IDisposable Subscribe(Guid userId, Func<bool, Task> onPresenceChanged) =>
+        _byUser.Subscribe(userId, onPresenceChanged);
 
-    public async Task PublishAsync(Guid userId, bool isOnline)
-    {
-        if (!_subs.TryGetValue(userId, out var userSubs)) return;
-
-        foreach (var cb in userSubs.Values)
-        {
-            try { await cb(isOnline); }
-            catch { /* one bad subscriber should not block others */ }
-        }
-    }
-
-    private void Unsubscribe(Guid userId, Guid token)
-    {
-        if (_subs.TryGetValue(userId, out var userSubs))
-            userSubs.TryRemove(token, out _);
-    }
-
-    private sealed class Subscription(PresencePubSub owner, Guid userId, Guid token) : IDisposable
-    {
-        public void Dispose() => owner.Unsubscribe(userId, token);
-    }
+    public Task PublishAsync(Guid userId, bool isOnline) =>
+        _byUser.PublishAsync(userId, onPresenceChanged => onPresenceChanged(isOnline));
 }

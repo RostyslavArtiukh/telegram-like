@@ -60,8 +60,30 @@ builder.Services.AddOpenTelemetry()
             .AddPrometheusExporter();
     });
 
+// Blazor Server keeps each open tab's component state in memory on ONE instance, so this
+// host's footprint follows open tabs rather than request rate, and it needs sticky sessions.
+// That is a property of the chosen stack, not a defect — but it is the thing that decides how
+// this tier scales, so the ceiling is spelled out here rather than left to framework defaults
+// ([TL-126]). The defaults retain 100 fully-materialized circuits for 3 minutes after their
+// browser disappears, which is memory held for users who are, in most cases, gone.
+var circuits = builder.Configuration.GetSection("Circuits");
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(options => options.DetailedErrors = builder.Environment.IsDevelopment());
+    .AddInteractiveServerComponents(options =>
+    {
+        options.DetailedErrors = builder.Environment.IsDevelopment();
+
+        // How many disconnected circuits to hold for a possible reconnect, and for how long.
+        // Lower = a tab that survives a brief network blip more often has to reload; higher =
+        // a larger idle floor under the process. Tune per instance size, don't leave implicit.
+        options.DisconnectedCircuitMaxRetained = circuits.GetValue("DisconnectedCircuitMaxRetained", 100);
+        options.DisconnectedCircuitRetentionPeriod =
+            TimeSpan.FromMinutes(circuits.GetValue("DisconnectedCircuitRetentionMinutes", 3.0));
+
+        // Render batches held per circuit awaiting client acknowledgement. This is the
+        // per-tab buffer, so it multiplies by every open tab on the instance.
+        options.MaxBufferedUnacknowledgedRenderBatches =
+            circuits.GetValue("MaxBufferedUnacknowledgedRenderBatches", 10);
+    });
 
 // Controllers back the /auth callbacks (Controllers/AuthController.cs) — the only
 // classic HTTP endpoints in this Blazor host; everything else is Razor components.

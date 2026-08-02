@@ -1,6 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <!-- The pubsub registry and its consumers are internal (the BFF exposes nothing), and
+         they are the only real logic in this host — so the tests need to see them. -->
+    <InternalsVisibleTo Include="TelegramLike.Web.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\client\TelegramLike.Client\TelegramLike.Client.csproj" />
     <PackageReference Include="TelegramLike.Contracts" Version="1.1.0" />
   </ItemGroup>
