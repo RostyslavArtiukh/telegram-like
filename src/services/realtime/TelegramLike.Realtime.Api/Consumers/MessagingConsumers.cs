@@ -18,11 +18,22 @@ internal sealed class MessageSentConsumer(IHubContext<RealtimeHub> hub) : IConsu
         var e = context.Message;
         var push = new MessageSentPush(e.MessageId, e.ChatId, e.AuthorId);
 
-        await hub.Clients.Group(RealtimeGroups.Chat(e.ChatId))
-            .SendAsync(RealtimeEventNames.MessageSent, push, context.CancellationToken);
+        // The chat-group push is per MESSAGE, so it belongs to the first part only. A large
+        // chat's send arrives as several parts ([TL-124]); pushing on each would tell every
+        // open client to refetch the same message once per part.
+        if (e.PartIndex == 0)
+        {
+            await hub.Clients.Group(RealtimeGroups.Chat(e.ChatId))
+                .SendAsync(RealtimeEventNames.MessageSent, push, context.CancellationToken);
+        }
 
-        var userGroups = e.Recipients.Append(e.AuthorId).Distinct()
-            .Select(RealtimeGroups.User).ToList();
+        // The per-user push is per RECIPIENT, so each part pushes to its own slice. The author
+        // rides along with the first part so their other devices are told exactly once.
+        var userGroups = e.Recipients
+            .Concat(e.PartIndex == 0 ? [e.AuthorId] : Array.Empty<Guid>())
+            .Distinct()
+            .Select(RealtimeGroups.User)
+            .ToList();
         await hub.Clients.Groups(userGroups)
             .SendAsync(RealtimeEventNames.ChatActivity, push, context.CancellationToken);
     }

@@ -4,8 +4,8 @@ using TelegramLike.Shared.Domain;
 namespace TelegramLike.Shared.Application;
 
 /// <summary>
-/// Translates one service-internal <see cref="IChangeEvent"/> into the integration event
-/// (from Contracts) that other services are allowed to see, or <c>null</c> when the event
+/// Translates one service-internal <see cref="IChangeEvent"/> into the integration events
+/// (from Contracts) that other services are allowed to see. An empty result means the event
 /// deliberately stays inside this service.
 /// </summary>
 /// <remarks>
@@ -18,5 +18,10 @@ namespace TelegramLike.Shared.Application;
 /// published event is visible in a single switch, so an event that stays internal is an
 /// explicit arm rather than a missing DI line that silently drops it.
 /// </para>
+/// <para>
+/// The result is a list rather than a single event because one change can be more than one wire
+/// message: an audience too large to embed in one event is split into parts here, at the seam
+/// that already owns "what this looks like on the wire". See <see cref="FanoutParts"/>.
+/// </para>
 /// </remarks>
-public delegate IIntegrationEvent? IntegrationEventMap(IChangeEvent changeEvent);
+public delegate IReadOnlyList<IIntegrationEvent> IntegrationEventMap(IChangeEvent changeEvent);

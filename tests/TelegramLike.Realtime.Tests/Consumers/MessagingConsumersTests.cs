@@ -77,6 +77,39 @@ public class MessagingConsumersTests
     }
 
     [Fact]
+    public async Task MessageSentConsumer_OnALaterPart_PushesToThatSlicesUsersOnly_NotTheChatGroupAgain()
+    {
+        // A send into a large chat arrives as several parts ([TL-124]). The chat-group push is
+        // per message, so repeating it per part would make every open client refetch the same
+        // message once per part; the per-user push is per recipient, so this part still fans
+        // out to its own slice. The author rides on part 0 only, so they are told exactly once.
+        var chatId = Guid.NewGuid();
+        var authorId = Guid.NewGuid();
+        var recipient = Guid.NewGuid();
+
+        var evt = new MessageSentIntegrationEvent(
+            Guid.NewGuid(), DateTime.UtcNow, Guid.NewGuid(), chatId, authorId,
+            new[] { recipient }, PartIndex: 1, PartCount: 2);
+
+        var (hub, clients) = HubTestDoubles.Create();
+        var chatProxy = Substitute.For<IClientProxy>();
+        var userProxy = Substitute.For<IClientProxy>();
+        clients.Group(RealtimeGroups.Chat(chatId)).Returns(chatProxy);
+        clients.Groups(Arg.Any<IReadOnlyList<string>>()).Returns(userProxy);
+
+        var consumer = new MessageSentConsumer(hub);
+        await consumer.Consume(HubTestDoubles.ContextFor(evt));
+
+        clients.DidNotReceive().Group(RealtimeGroups.Chat(chatId));
+        clients.Received(1).Groups(Arg.Is<IReadOnlyList<string>>(g =>
+            g.Count == 1 && g.Contains(RealtimeGroups.User(recipient))));
+        await userProxy.Received(1).SendCoreAsync(
+            RealtimeEventNames.ChatActivity,
+            Arg.Is<object?[]>(a => HubTestDoubles.SinglePayload<MessageSentPush>(a, _ => true)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task MessageRetractedConsumer_SendsOnlyToChatGroup()
     {
         var chatId = Guid.NewGuid();

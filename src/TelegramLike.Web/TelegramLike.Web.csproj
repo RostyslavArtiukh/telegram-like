@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\client\TelegramLike.Client\TelegramLike.Client.csproj" />
-    <PackageReference Include="TelegramLike.Contracts" Version="1.0.0" />
+    <PackageReference Include="TelegramLike.Contracts" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>

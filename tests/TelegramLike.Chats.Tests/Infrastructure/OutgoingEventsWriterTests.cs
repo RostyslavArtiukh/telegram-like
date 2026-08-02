@@ -115,6 +115,30 @@ public class OutgoingEventsWriterTests(MongoFixture fx)
     }
 
     [Fact]
+    public async Task Write_QueuesOneRowPerPart_WhenAChangeFansOutTooWideForOneMessage()
+    {
+        // One change event, several wire messages ([TL-124]): the map splits an audience that
+        // would otherwise make a single unbounded row, and each part has to become its own
+        // queued row — they are published, retried and dead-lettered independently.
+        var writer = NewWriter(out var collection);
+        var recipients = Enumerable.Range(0, FanoutParts.MaxPerEvent + 1)
+            .Select(_ => Guid.NewGuid())
+            .ToList();
+
+        await WriteAsync(writer, new MemberJoinedEvent(Guid.NewGuid(), Guid.NewGuid(), MemberRole.Member, recipients));
+
+        var rows = await collection.Find(FilterDefinition<OutgoingEventDocument>.Empty).ToListAsync();
+        rows.Should().HaveCount(2);
+        rows.Should().OnlyContain(r => r.EventType == "chats.member-joined.v1");
+
+        var payloads = rows
+            .Select(r => JsonSerializer.Deserialize<MemberJoinedIntegrationEvent>(r.Payload)!)
+            .OrderBy(p => p.PartIndex)
+            .ToList();
+        payloads.SelectMany(p => p.Recipients).Should().Equal(recipients);
+    }
+
+    [Fact]
     public async Task Write_WithNoEvents_DoesNotThrow()
     {
         var writer = NewWriter(out _);

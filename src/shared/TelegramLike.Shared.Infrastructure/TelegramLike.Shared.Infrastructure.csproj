@@ -8,12 +8,12 @@
 
   <PropertyGroup>
     <PackageId>TelegramLike.Shared.Infrastructure</PackageId>
-    <Version>1.0.0</Version>
+    <Version>2.0.0</Version>
     <Description>Infrastructure building blocks shared by TelegramLike services: the transactional outbox (outgoing-events queue, sender and metrics), declared Mongo indexes, and the Mongo/Redis/RabbitMQ setup helpers.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TelegramLike.Shared.Application" Version="1.0.0" />
+    <PackageReference Include="TelegramLike.Shared.Application" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>

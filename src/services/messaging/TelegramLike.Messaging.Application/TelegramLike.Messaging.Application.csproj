@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TelegramLike.Messaging.Domain\TelegramLike.Messaging.Domain.csproj" />
-    <PackageReference Include="TelegramLike.Contracts" Version="1.0.0" />
+    <PackageReference Include="TelegramLike.Contracts" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="TelegramLike.Shared.Application" Version="1.0.0" />
+    <PackageReference Include="TelegramLike.Shared.Application" Version="2.0.0" />
   </ItemGroup>
 
 </Project>

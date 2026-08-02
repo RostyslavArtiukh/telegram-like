@@ -9,4 +9,7 @@ public sealed record MemberKickedIntegrationEvent(
     Guid ChatId,
     Guid UserId,
     Guid KickedBy,
-    IReadOnlyList<Guid> Recipients) : IIntegrationEvent;
+    // This part's slice of the audience, not the whole chat — see MessageSentIntegrationEvent.
+    IReadOnlyList<Guid> Recipients,
+    int PartIndex = 0,
+    int PartCount = 1) : IIntegrationEvent;

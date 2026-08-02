@@ -11,7 +11,7 @@
        change -> minor, anything a deployed consumer could notice -> major. See CLAUDE.md. -->
   <PropertyGroup>
     <PackageId>TelegramLike.Contracts</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Description>Integration-event and BFF wire contracts shared by every TelegramLike service and client. POCO records only, zero dependencies.</Description>
   </PropertyGroup>
 

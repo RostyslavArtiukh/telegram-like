@@ -5,6 +5,8 @@ using TelegramLike.Chats.Domain.Aggregates;
 using TelegramLike.Chats.Domain.Events;
 using TelegramLike.Chats.Domain.ValueObjects;
 using TelegramLike.Contracts.Chats;
+using TelegramLike.Contracts.Common;
+using TelegramLike.Shared.Application;
 using TelegramLike.Shared.Domain;
 
 namespace TelegramLike.Chats.Tests.Application;
@@ -30,6 +32,14 @@ public class ChatsIntegrationEventsTests
             "Redundant: TransferOwnership also raises the two MemberRoleChangedEvents that already "
             + "carry the new roles to the read-models. This one is a Chats-internal audit record.",
     };
+
+    // The map returns a list because one change can fan out into several wire messages
+    // ([TL-124]). Every event asserted below produces exactly one, and Single() says so.
+    private static IIntegrationEvent Only(IChangeEvent changeEvent) =>
+        ChatsIntegrationEvents.Map(changeEvent).Single();
+
+    private static bool StaysInternal(IChangeEvent changeEvent) =>
+        ChatsIntegrationEvents.Map(changeEvent).Count == 0;
 
     private static IReadOnlyList<Type> AllChangeEventTypes() =>
         typeof(Chat).Assembly
@@ -61,7 +71,7 @@ public class ChatsIntegrationEventsTests
     public void EveryChangeEventIsEitherMappedOrDeliberatelyInternal()
     {
         var unmapped = AllChangeEventTypes()
-            .Where(t => ChatsIntegrationEvents.Map(Instantiate(t)) is null)
+            .Where(t => StaysInternal(Instantiate(t)))
             .Select(t => t.Name)
             .Where(name => !DeliberatelyInternal.ContainsKey(name))
             .ToList();
@@ -77,7 +87,7 @@ public class ChatsIntegrationEventsTests
         // An entry that now has an arm (or no longer names a real event) would quietly widen
         // the exemption for a future event of the same name.
         var actuallyInternal = AllChangeEventTypes()
-            .Where(t => ChatsIntegrationEvents.Map(Instantiate(t)) is null)
+            .Where(t => StaysInternal(Instantiate(t)))
             .Select(t => t.Name)
             .ToHashSet();
 
@@ -103,7 +113,7 @@ public class ChatsIntegrationEventsTests
         var userId = Guid.NewGuid();
         var source = new MemberRoleChangedEvent(chatId, userId, MemberRole.Member, MemberRole.Admin, Guid.NewGuid());
 
-        var mapped = ChatsIntegrationEvents.Map(source).Should().BeOfType<MemberRoleChangedIntegrationEvent>().Subject;
+        var mapped = Only(source).Should().BeOfType<MemberRoleChangedIntegrationEvent>().Subject;
 
         mapped.ChatId.Should().Be(chatId);
         mapped.UserId.Should().Be(userId);
@@ -117,10 +127,8 @@ public class ChatsIntegrationEventsTests
     {
         // Contracts has no project references on purpose (it ships in the client SDK), so a
         // domain enum has to become a string here or it could not be referenced at all.
-        var created = ChatsIntegrationEvents.Map(
-            new ChatCreatedEvent(Guid.NewGuid(), ChatType.Broadcast, Guid.NewGuid()));
-        var joined = ChatsIntegrationEvents.Map(
-            new MemberJoinedEvent(Guid.NewGuid(), Guid.NewGuid(), MemberRole.Viewer, []));
+        var created = Only(new ChatCreatedEvent(Guid.NewGuid(), ChatType.Broadcast, Guid.NewGuid()));
+        var joined = Only(new MemberJoinedEvent(Guid.NewGuid(), Guid.NewGuid(), MemberRole.Viewer, []));
 
         created.Should().BeOfType<ChatCreatedIntegrationEvent>().Which.Type.Should().Be("Broadcast");
         joined.Should().BeOfType<MemberJoinedIntegrationEvent>().Which.Role.Should().Be("Viewer");
@@ -133,7 +141,7 @@ public class ChatsIntegrationEventsTests
         var userId = Guid.NewGuid();
         var bannedBy = Guid.NewGuid();
 
-        var mapped = ChatsIntegrationEvents.Map(new MemberBannedEvent(chatId, userId, bannedBy, "spam"))
+        var mapped = Only(new MemberBannedEvent(chatId, userId, bannedBy, "spam"))
             .Should().BeOfType<MemberBannedIntegrationEvent>().Subject;
 
         mapped.ChatId.Should().Be(chatId);
@@ -149,9 +157,34 @@ public class ChatsIntegrationEventsTests
         // fresh ones here would break idempotency on redelivery.
         var source = new MemberLeftEvent(Guid.NewGuid(), Guid.NewGuid());
 
-        var mapped = ChatsIntegrationEvents.Map(source)!;
+        var mapped = Only(source);
 
         mapped.EventId.Should().Be(source.EventId);
         mapped.OccurredAt.Should().Be(source.OccurredAt);
+    }
+
+    [Fact]
+    public void MemberJoined_SplitsALargeAudienceAcrossParts_WithoutLosingOrDuplicatingAnyone()
+    {
+        // A join announcement embeds everyone to notify, so its size follows the size of the
+        // chat. Split, the parts must still add up to exactly the original audience.
+        var recipients = Enumerable.Range(0, FanoutParts.MaxPerEvent * 2 + 1)
+            .Select(_ => Guid.NewGuid())
+            .ToList();
+        var source = new MemberJoinedEvent(Guid.NewGuid(), Guid.NewGuid(), MemberRole.Member, recipients);
+
+        var parts = ChatsIntegrationEvents.Map(source).Cast<MemberJoinedIntegrationEvent>().ToList();
+
+        parts.Should().HaveCount(3);
+        parts.Select(p => p.PartIndex).Should().Equal(0, 1, 2);
+        parts.Should().OnlyContain(p => p.PartCount == 3);
+        parts.SelectMany(p => p.Recipients).Should().Equal(recipients);
+
+        // Every part repeats the fields that describe the join itself...
+        parts.Should().OnlyContain(p => p.UserId == source.UserId && p.Role == "Member");
+        // ...but each carries a distinct id, because Notifications deduplicates by
+        // (recipient, source event) and a shared id would look like a redelivery.
+        parts.Select(p => p.EventId).Should().OnlyHaveUniqueItems();
+        parts[0].EventId.Should().Be(source.EventId);
     }
 }
