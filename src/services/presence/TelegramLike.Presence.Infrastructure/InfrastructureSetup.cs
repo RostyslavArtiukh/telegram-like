@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 using TelegramLike.Shared.Infrastructure;
+using TelegramLike.Shared.Infrastructure.Storage;
 using TelegramLike.Presence.Application.Storage;
 using TelegramLike.Presence.Application.Queries;
 using TelegramLike.Presence.Domain.Repositories;
@@ -23,6 +24,7 @@ public static class InfrastructureSetup
         services.AddScoped<IUserPresenceRepository, UserPresenceRepository>();
         services.AddScoped<IUserPresenceQueryService, UserPresenceQueryService>();
         services.AddScoped<IChatMembershipReadModel, MongoChatMembershipReadModel>();
+        services.AddMongoIndexes<ChatMembershipIndexes>();
 
         var heartbeatTtl = TimeSpan.FromSeconds(
             int.TryParse(configuration["Presence:HeartbeatTtlSeconds"], out var hb) ? hb : 30);

@@ -28,6 +28,9 @@ public static class InfrastructureSetup
         services.AddMongoIndexes<MessageIndexes>();
         services.AddMongoIndexes<MessageReadReceiptIndexes>();
         services.AddMongoIndexes<HiddenMessageIndexes>();
+        services.AddMongoIndexes<ChatMembershipIndexes>();
+        // chat_types needs none: its _id IS the chat id, and every read and write of it is a
+        // point lookup on that id.
 
         services.AddOutgoingEvents(configuration, MessagingIntegrationEvents.Map);
 

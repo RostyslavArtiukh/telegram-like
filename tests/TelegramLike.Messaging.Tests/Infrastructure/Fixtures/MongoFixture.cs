@@ -32,6 +32,7 @@ public sealed class MongoFixture : IAsyncLifetime
         await MessageIndexes.EnsureIndexesAsync(Database);
         await MessageReadReceiptIndexes.EnsureIndexesAsync(Database);
         await HiddenMessageIndexes.EnsureIndexesAsync(Database);
+        await ChatMembershipIndexes.EnsureIndexesAsync(Database);
     }
 
     public async Task DisposeAsync()

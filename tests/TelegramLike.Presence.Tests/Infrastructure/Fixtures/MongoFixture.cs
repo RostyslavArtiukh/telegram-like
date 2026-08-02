@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using Testcontainers.MongoDb;
+using TelegramLike.Presence.Infrastructure.Storage;
 
 namespace TelegramLike.Presence.Tests.Infrastructure.Fixtures;
 
@@ -20,6 +21,9 @@ public sealed class MongoFixture : IAsyncLifetime
 
         MongoClient = new MongoClient(settings);
         Database = MongoClient.GetDatabase($"tl_presence_test_{Guid.NewGuid():N}");
+
+        // Same indexes as production.
+        await ChatMembershipIndexes.EnsureIndexesAsync(Database);
     }
 
     public async Task DisposeAsync()
