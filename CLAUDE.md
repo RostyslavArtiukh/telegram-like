@@ -52,7 +52,7 @@ Never read another service's database. Embed needed data in integration events, 
 
 ## Conventions
 - **Commit / iteration prefix: `[TL-N]`** — single running counter (history: Day N → Step N → [TL-N]). Housekeeping (memory/docs sync) → plain `docs:` with no number.
-- End commit messages with: `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
+- End commit messages with a `Co-Authored-By: <model> <noreply@anthropic.com>` trailer naming **the model that actually ran the session** — don't hardcode a model name here, it drifts (this line said `Claude Fable 5` for [TL-117..128] because a one-off Fable session wrote its own name into it).
 - New service/context = the 6-phase recipe (scaffold+Domain → Application → Infrastructure → Api → Web wiring → cleanup → compose). Details in the `microservices_migration` memory.
 
 ## Commands
