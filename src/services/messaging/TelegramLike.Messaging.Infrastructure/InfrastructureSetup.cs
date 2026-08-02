@@ -26,6 +26,7 @@ public static class InfrastructureSetup
         services.AddScoped<IChatMembershipReadModel, MongoChatMembershipReadModel>();
         services.AddScoped<IChatTypeReadModel, MongoChatTypeReadModel>();
         services.AddMongoIndexes<MessageIndexes>();
+        services.AddMongoIndexes<MessageReadReceiptIndexes>();
 
         services.AddOutgoingEvents(configuration, MessagingIntegrationEvents.Map);
 
