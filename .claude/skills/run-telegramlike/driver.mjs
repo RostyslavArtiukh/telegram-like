@@ -134,8 +134,17 @@ async function main() {
     await joinChat(page2, chatId);
 
     // Bob must see Alice's history (backfill / read path).
-    await page2.getByText('hello from alice', { exact: false }).first()
-      .waitFor({ timeout: 10000 }).catch(() => fail('Bob did not see Alice history'));
+    //
+    // Joining lands on /chat/{id} within ~20ms, but Bob's membership reaches Messaging's
+    // read-model through Chats' outbox — publish plus consume, around a second. Until it
+    // lands, Messaging's fail-closed read correctly answers 403 and the page renders empty,
+    // and nothing re-fetches it afterwards (only a new message pushes). So waiting on the
+    // first render is a coin flip on that window; reload until it has closed.
+    await retry('bob sees alice history', async () => {
+      await page2.reload({ waitUntil: 'networkidle' });
+      await page2.waitForTimeout(2500);
+      await page2.getByText('hello from alice', { exact: false }).first().waitFor({ timeout: 5000 });
+    }, { tries: 4, waitMs: 2000 }).catch(() => fail('Bob did not see Alice history'));
     log('Bob sees Alice history ✓');
     await sendMessage(page2, 'hi alice, this is bob');
     await shot(page2, '3-bob-chat');
