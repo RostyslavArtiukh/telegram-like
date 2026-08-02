@@ -10,6 +10,11 @@ var builder = WebApplication.CreateBuilder(args);
 // service validates the Identity-issued JWT.
 builder.Services.AddGatewayReverseProxy(builder.Configuration);
 
+// Per-caller rate limiting ([TL-128]). The front door is the only place that sees every
+// request, and until now nothing bounded how fast one client could call — one authenticated
+// client in a loop could saturate Messaging and, through fan-out, the whole event chain.
+builder.Services.AddGatewayRateLimiting(builder.Configuration);
+
 // Trace the gateway hop too, so a request shows Web BFF -> gateway -> service in
 // Jaeger. HttpClientInstrumentation captures the outbound proxied call.
 builder.Services.AddOpenTelemetry()
@@ -45,6 +50,12 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapGet("/health/ready", () => Results.Ok(new { status = "ok" }));
 
 app.MapPrometheusScrapingEndpoint();
+
+// Before the proxy, so a shed request never reaches a backend. Health and metrics are exempt
+// inside the limiter itself rather than by ordering, so the exemption is stated where the
+// policy is. Rejections surface as 429s in the existing RED dashboard; they are deliberately
+// not 5xx, so HighHttp5xxRate does not fire on a client being told to slow down.
+app.UseRateLimiter();
 
 app.MapReverseProxy();
 
