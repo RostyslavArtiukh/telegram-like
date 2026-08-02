@@ -20,7 +20,10 @@ metadata:
 - Пакувати треба **в порядку залежностей**: `Shared.Application` резолвить `Shared.Domain` як пакет, тож одним `dotnet pack` по slnx на холодному feed не вийде.
 - ⚠️ **Головні граблі:** NuGet кешує розпакований пакет за id+version, тому перепак тієї ж версії лишає споживачів на попередньому білді — мовчки, як stale-publish у Docker. Скрипт евіктить лише наші id з `~/.nuget/packages` (ніколи `nuget locals --clear` — тут немає мережі для перезавантаження чужих пакетів).
 - Dockerfile-и сервісів `COPY` feed перед restore → `docker compose build` без свіжого паку зашле stale shared-код.
-- **НЕ перевірено:** збірка docker-образів (Docker не був запущений). Зміна у Dockerfile — тільки COPY, але не виконувалась.
+- **Перевірено на живому стеку (2026-08-02):** усі 8 образів збираються, restore всередині контейнера тягне shared-пакети зі скопійованого feed, стек піднімається healthy.
+
+
+**Live-верифікація раунду (2026-08-02, після підняття Docker):** 566 тестів (з Testcontainers) зелені; 8 образів зібрано; стек healthy. Рантайм-підтвердження: [TL-119] кожен сервіс логує «Indexes ensured for X», presence — саме той warning; [TL-117] нові рядки outbox мають `chats.chat-created.v1` / `messaging.message-sent.v1`, а **синтетичний pending-рядок зі старим CLR-ім'ям опублікувався з 0 retries** — тобто fallback реально робить деплой безпечним без дренажу черги; у `/metrics` видно обидві форми лейбла `event_type` (нові — як є, legacy — вкорочений до `MemberJoinedIntegrationEvent`); [TL-118] `POST /messages` без поля recipients → у payload `MessageSent` рівно id другого учасника, unread-count у нього став 1.
 
 **Порядок роботи був 2→3→4→1** навмисно: пункти 2 і 4 правлять код у shared-шарі, і робити це після заморозки версій означало б bump+repack на кожен крок.
 
