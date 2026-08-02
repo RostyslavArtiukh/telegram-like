@@ -1,42 +1,35 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using TelegramLike.Chats.Domain.ValueObjects;
+using TelegramLike.Shared.Infrastructure.Storage;
 
 namespace TelegramLike.Chats.Infrastructure.Storage;
 
-internal sealed class ChatIndexInitializer(
-    IServiceScopeFactory scopeFactory,
-    ILogger<ChatIndexInitializer> logger) : IHostedService
+/// <summary>
+/// Unique (ChatId, UserId) on chat_members — the backstop behind <c>Member.Rejoin</c>: the
+/// aggregate revives a member's existing row instead of inserting a second one, and the index
+/// guarantees no other path can reintroduce a duplicate. Duplicates make <c>FindAnyMember</c>
+/// order-dependent — which is how <c>Ban</c> could mark a stale Left row Banned while the
+/// member's live row stayed Active.
+/// </summary>
+internal sealed class ChatIndexes(ILogger<ChatIndexes> logger) : IMongoIndexes
 {
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public string Collection => "chat_members";
+
+    public async Task EnsureAsync(IMongoDatabase database, CancellationToken cancellationToken = default)
     {
-        using var scope = scopeFactory.CreateScope();
-        var database = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
         var pruned = await EnsureIndexesAsync(database, cancellationToken);
 
         if (pruned > 0)
             logger.LogWarning(
                 "Pruned {Count} duplicate chat_members rows left by the pre-fix rejoin path.", pruned);
-
-        logger.LogInformation("Chats indexes ensured.");
     }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>
     /// Applies the Chats indexes, first clearing any duplicate membership rows that would
     /// block them. Exposed so integration tests apply the same indexes as production.
     /// </summary>
-    /// <remarks>
-    /// Unique (ChatId, UserId) on chat_members is the backstop behind <c>Member.Rejoin</c>:
-    /// the aggregate now revives a member's existing row instead of inserting a second one,
-    /// and the index guarantees no other path can reintroduce a duplicate. Duplicates make
-    /// <c>FindAnyMember</c> order-dependent — which is how <c>Ban</c> could mark a stale
-    /// Left row Banned while the member's live row stayed Active.
-    /// </remarks>
     /// <returns>How many duplicate rows were pruned.</returns>
     public static async Task<long> EnsureIndexesAsync(
         IMongoDatabase database, CancellationToken cancellationToken = default)

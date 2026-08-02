@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TelegramLike.Shared.Application;
+using TelegramLike.Shared.Infrastructure.Storage;
 
 namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
@@ -44,7 +45,7 @@ public static class OutgoingEventsSetup
         // takes the queue also takes its instrumentation.
         services.AddSingleton<OutboxMetrics>();
         services.AddHostedService<OutboxBacklogPoller>();
-        services.AddHostedService<OutgoingEventsIndexInitializer>();
+        services.AddMongoIndexes<OutgoingEventsIndexes>();
 
         return services;
     }

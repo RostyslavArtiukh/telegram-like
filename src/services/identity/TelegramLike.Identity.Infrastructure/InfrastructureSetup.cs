@@ -7,6 +7,7 @@ using TelegramLike.Identity.Infrastructure.Auth;
 using TelegramLike.Identity.Infrastructure.Caching;
 using TelegramLike.Identity.Infrastructure.Storage;
 using TelegramLike.Shared.Infrastructure;
+using TelegramLike.Shared.Infrastructure.Storage;
 
 namespace TelegramLike.Identity.Infrastructure;
 
@@ -21,7 +22,7 @@ public static class InfrastructureSetup
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
-        services.AddHostedService<UserIndexInitializer>();
+        services.AddMongoIndexes<UserIndexes>();
 
         var ttlDays = int.TryParse(configuration["Auth:SessionTokenTtlDays"], out var days) ? days : 7;
         services.AddSingleton<ISessionService>(sp => new RedisSessionService(

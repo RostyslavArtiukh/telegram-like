@@ -45,7 +45,7 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IMediator>();
             services.AddSingleton(Mediator);
 
-            // Strip hosted services — UserIndexInitializer awaits its Mongo connection
+            // Strip hosted services — the Mongo index initializer awaits its Mongo connection
             // in StartAsync (~30s server selection against the stub connection string),
             // which would crash the whole test host. Same pattern as MessagingApiFactory.
             services.RemoveAll<IHostedService>();

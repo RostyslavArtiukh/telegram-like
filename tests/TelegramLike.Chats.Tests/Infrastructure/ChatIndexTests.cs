@@ -39,7 +39,7 @@ public class ChatIndexTests(MongoFixture fx)
     {
         var database = NewDatabase();
 
-        await ChatIndexInitializer.EnsureIndexesAsync(database);
+        await ChatIndexes.EnsureIndexesAsync(database);
 
         var all = await (await Members(database).Indexes.ListAsync()).ToListAsync();
         var index = all.FirstOrDefault(i => i["name"].AsString == "uniq_chat_member");
@@ -52,7 +52,7 @@ public class ChatIndexTests(MongoFixture fx)
     public async Task EnsureIndexes_RejectsASecondRowForTheSameMember()
     {
         var database = NewDatabase();
-        await ChatIndexInitializer.EnsureIndexesAsync(database);
+        await ChatIndexes.EnsureIndexesAsync(database);
         var chatId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         await Members(database).InsertOneAsync(Row(chatId, userId, MemberStatus.Left, DateTime.UtcNow));
@@ -68,10 +68,10 @@ public class ChatIndexTests(MongoFixture fx)
     public async Task EnsureIndexes_WhenRunTwice_DoesNotThrow()
     {
         var database = NewDatabase();
-        await ChatIndexInitializer.EnsureIndexesAsync(database);
+        await ChatIndexes.EnsureIndexesAsync(database);
 
         // Every service restart re-runs this hosted service.
-        var rerun = async () => await ChatIndexInitializer.EnsureIndexesAsync(database);
+        var rerun = async () => await ChatIndexes.EnsureIndexesAsync(database);
 
         await rerun.Should().NotThrowAsync();
     }
@@ -93,7 +93,7 @@ public class ChatIndexTests(MongoFixture fx)
             live
         ]);
 
-        var pruned = await ChatIndexInitializer.EnsureIndexesAsync(database);
+        var pruned = await ChatIndexes.EnsureIndexesAsync(database);
 
         pruned.Should().Be(2);
         var remaining = await Members(database).Find(m => m.UserId == userId).ToListAsync();
@@ -113,7 +113,7 @@ public class ChatIndexTests(MongoFixture fx)
         var banned = Row(chatId, userId, MemberStatus.Banned, now.AddHours(-2));
         await Members(database).InsertManyAsync([banned, Row(chatId, userId, MemberStatus.Active, now)]);
 
-        await ChatIndexInitializer.EnsureIndexesAsync(database);
+        await ChatIndexes.EnsureIndexesAsync(database);
 
         var remaining = await Members(database).Find(m => m.UserId == userId).ToListAsync();
         remaining.Should().ContainSingle().Which.Status.Should().Be(MemberStatus.Banned);
@@ -130,7 +130,7 @@ public class ChatIndexTests(MongoFixture fx)
         var newest = Row(chatId, userId, MemberStatus.Left, now);
         await Members(database).InsertManyAsync([Row(chatId, userId, MemberStatus.Left, now.AddDays(-3)), newest]);
 
-        await ChatIndexInitializer.EnsureIndexesAsync(database);
+        await ChatIndexes.EnsureIndexesAsync(database);
 
         var remaining = await Members(database).Find(m => m.UserId == userId).ToListAsync();
         remaining.Should().ContainSingle().Which.Id.Should().Be(newest.Id);
@@ -153,7 +153,7 @@ public class ChatIndexTests(MongoFixture fx)
             Row(chatB, userA, MemberStatus.Active, now)
         ]);
 
-        var pruned = await ChatIndexInitializer.EnsureIndexesAsync(database);
+        var pruned = await ChatIndexes.EnsureIndexesAsync(database);
 
         pruned.Should().Be(0);
         (await Members(database).CountDocumentsAsync(FilterDefinition<ChatMemberDocument>.Empty)).Should().Be(3);
@@ -164,7 +164,7 @@ public class ChatIndexTests(MongoFixture fx)
     {
         var database = NewDatabase();
 
-        var act = async () => await ChatIndexInitializer.EnsureIndexesAsync(database);
+        var act = async () => await ChatIndexes.EnsureIndexesAsync(database);
 
         await act.Should().NotThrowAsync();
     }

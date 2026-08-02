@@ -7,6 +7,7 @@ using TelegramLike.Chats.Application.IntegrationEvents;
 using TelegramLike.Chats.Domain.Repositories;
 using TelegramLike.Chats.Infrastructure.Storage;
 using TelegramLike.Shared.Infrastructure;
+using TelegramLike.Shared.Infrastructure.Storage;
 using TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 namespace TelegramLike.Chats.Infrastructure;
@@ -21,7 +22,7 @@ public static class InfrastructureSetup
         services.AddScoped<IChatRepository, ChatRepository>();
         services.AddScoped<IChatQueryService, ChatQueryService>();
         services.AddScoped<IChatMembershipBackfillReader, MongoChatMembershipBackfillReader>();
-        services.AddHostedService<ChatIndexInitializer>();
+        services.AddMongoIndexes<ChatIndexes>();
 
         services.AddOutgoingEvents(configuration, ChatsIntegrationEvents.Map);
 

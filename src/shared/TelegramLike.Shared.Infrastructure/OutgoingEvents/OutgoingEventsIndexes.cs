@@ -1,9 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using TelegramLike.Shared.Infrastructure.Storage;
 
 namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
@@ -13,31 +11,19 @@ namespace TelegramLike.Shared.Infrastructure.OutgoingEvents;
 /// (SentAt, DeadLetteredAt) then order by OccurredAt, so without this they degrade into
 /// full scans as history grows. A TTL index bounds that history.
 /// </summary>
-internal sealed class OutgoingEventsIndexInitializer(
-    IServiceScopeFactory scopeFactory,
-    IOptions<OutgoingEventsSenderOptions> options,
-    ILogger<OutgoingEventsIndexInitializer> logger) : IHostedService
+internal sealed class OutgoingEventsIndexes(IOptions<OutgoingEventsSenderOptions> options) : IMongoIndexes
 {
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        using var scope = scopeFactory.CreateScope();
-        var database = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
-        var retentionDays = options.Value.SentRetentionDays;
-
-        await EnsureIndexesAsync(database, TimeSpan.FromDays(retentionDays), cancellationToken);
-
-        logger.LogInformation(
-            "Outgoing-events indexes ensured. Published rows expire {RetentionDays} day(s) after being sent.",
-            retentionDays);
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
     private const string CollectionName = "outgoing_events";
     private const string PendingIndexName = "pending_by_age";
     private const string SentTtlIndexName = "sent_ttl";
 
-    // Exposed so integration tests apply the same indexes as production.
+    public string Collection => CollectionName;
+
+    public Task EnsureAsync(IMongoDatabase database, CancellationToken cancellationToken = default) =>
+        EnsureIndexesAsync(database, TimeSpan.FromDays(options.Value.SentRetentionDays), cancellationToken);
+
+    // Exposed so integration tests apply the same indexes as production, and can vary the
+    // retention without going through options.
     public static async Task EnsureIndexesAsync(
         IMongoDatabase database,
         TimeSpan sentRetention,

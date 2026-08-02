@@ -1,6 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
+using TelegramLike.Shared.Infrastructure.Storage;
 
 namespace TelegramLike.Shared.Infrastructure;
 
@@ -19,6 +22,11 @@ public static class MongoDbSetup
         services.AddSingleton<IMongoClient>(_ => new MongoClient(connectionString));
         services.AddScoped<IMongoDatabase>(sp =>
             sp.GetRequiredService<IMongoClient>().GetDatabase(databaseName));
+
+        // Attached to the database itself, not to AddMongoIndexes<T>: a service that declares
+        // no indexes is exactly the case worth hearing about, and it would register nothing.
+        // Runs first among hosted services because AddMongoDb is each setup's first call.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, MongoIndexInitializer>());
 
         return services;
     }

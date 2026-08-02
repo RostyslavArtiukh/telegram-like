@@ -82,7 +82,7 @@ public class NotificationRepositoryIntegrationTests(MongoFixture fx)
     [Fact]
     public async Task AddManyIgnoringDuplicates_DedupesRedeliveredEventPerRecipient()
     {
-        await NotificationIndexInitializer.EnsureIndexesAsync(fx.Database);
+        await NotificationIndexes.EnsureIndexesAsync(fx.Database);
 
         var repo = NewRepo();
         var query = NewQuery();

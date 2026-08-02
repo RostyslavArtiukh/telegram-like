@@ -21,7 +21,7 @@ public class OutgoingEventsIndexTests(MongoFixture fx)
     private async Task<IMongoDatabase> NewIndexedDatabaseAsync(TimeSpan? retention = null)
     {
         var database = fx.MongoClient.GetDatabase($"tl_outbox_idx_test_{Guid.NewGuid():N}");
-        await OutgoingEventsIndexInitializer.EnsureIndexesAsync(database, retention ?? DefaultRetention);
+        await OutgoingEventsIndexes.EnsureIndexesAsync(database, retention ?? DefaultRetention);
         return database;
     }
 
@@ -66,7 +66,7 @@ public class OutgoingEventsIndexTests(MongoFixture fx)
     {
         var database = await NewIndexedDatabaseAsync();
 
-        await OutgoingEventsIndexInitializer.EnsureIndexesAsync(database, TimeSpan.FromDays(2));
+        await OutgoingEventsIndexes.EnsureIndexesAsync(database, TimeSpan.FromDays(2));
 
         // Re-creating a TTL index with different options is an error in Mongo, not an
         // update — so without the collMod fallback a retention change would be silently
@@ -82,7 +82,7 @@ public class OutgoingEventsIndexTests(MongoFixture fx)
 
         // Every service restart re-runs this hosted service.
         var rerun = async () =>
-            await OutgoingEventsIndexInitializer.EnsureIndexesAsync(database, DefaultRetention);
+            await OutgoingEventsIndexes.EnsureIndexesAsync(database, DefaultRetention);
 
         await rerun.Should().NotThrowAsync();
     }

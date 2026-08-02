@@ -7,6 +7,7 @@ using TelegramLike.Messaging.Domain.Repositories;
 using TelegramLike.Messaging.Infrastructure.Messaging.Consumers;
 using TelegramLike.Messaging.Infrastructure.Storage;
 using TelegramLike.Shared.Infrastructure;
+using TelegramLike.Shared.Infrastructure.Storage;
 using TelegramLike.Shared.Infrastructure.OutgoingEvents;
 
 namespace TelegramLike.Messaging.Infrastructure;
@@ -24,7 +25,7 @@ public static class InfrastructureSetup
         services.AddScoped<IMessageReadReceiptRepository, MessageReadReceiptRepository>();
         services.AddScoped<IChatMembershipReadModel, MongoChatMembershipReadModel>();
         services.AddScoped<IChatTypeReadModel, MongoChatTypeReadModel>();
-        services.AddHostedService<MessageIndexInitializer>();
+        services.AddMongoIndexes<MessageIndexes>();
 
         services.AddOutgoingEvents(configuration, MessagingIntegrationEvents.Map);
 

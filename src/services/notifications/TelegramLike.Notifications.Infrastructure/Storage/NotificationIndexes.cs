@@ -1,34 +1,25 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using TelegramLike.Shared.Infrastructure.Storage;
 
 namespace TelegramLike.Notifications.Infrastructure.Storage;
 
-internal sealed class NotificationIndexInitializer(
-    IServiceScopeFactory scopeFactory,
-    ILogger<NotificationIndexInitializer> logger) : IHostedService
+internal sealed class NotificationIndexes : IMongoIndexes
 {
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        using var scope = scopeFactory.CreateScope();
-        var database = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
-        await EnsureIndexesAsync(database, cancellationToken);
-        logger.LogInformation("Notification indexes ensured.");
-    }
+    public string Collection => "notifications";
 
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task EnsureAsync(IMongoDatabase database, CancellationToken cancellationToken = default) =>
+        EnsureIndexesAsync(database, cancellationToken);
 
-    // Exposed so integration tests can apply the same index as production.
-    // Unique partial index on (RecipientId, SourceEventId) — guards against
-    // duplicate Notification rows when RabbitMQ redelivers an integration event.
-    // Partial filter excludes legacy docs (created before this index existed) that
-    // have no SourceEventId field, so the migration is non-breaking.
+    // Exposed so integration tests can apply the same indexes as production.
     public static Task EnsureIndexesAsync(IMongoDatabase database, CancellationToken cancellationToken = default)
     {
         var collection = database.GetCollection<BsonDocument>("notifications");
 
+        // Unique partial index on (RecipientId, SourceEventId) — guards against duplicate
+        // Notification rows when RabbitMQ redelivers an integration event. The partial filter
+        // excludes legacy docs (created before this index existed) that have no SourceEventId
+        // field, so the migration is non-breaking.
         var uniqueSourceEvent = new CreateIndexModel<BsonDocument>(
             Builders<BsonDocument>.IndexKeys.Ascending("RecipientId").Ascending("SourceEventId"),
             new CreateIndexOptions<BsonDocument>

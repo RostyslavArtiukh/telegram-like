@@ -44,7 +44,7 @@ public sealed class NotificationsApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IMediator>();
             services.AddSingleton(Mediator);
 
-            // Strip hosted services — NotificationIndexInitializer awaits its Mongo
+            // Strip hosted services — the Mongo index initializer awaits its Mongo
             // connection in StartAsync (~30s server selection against the stub connection
             // string), which would crash the whole test host; this also drops the
             // MassTransit bus. Same pattern as MessagingApiFactory.

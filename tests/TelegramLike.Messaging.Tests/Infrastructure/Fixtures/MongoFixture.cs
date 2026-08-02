@@ -29,7 +29,7 @@ public sealed class MongoFixture : IAsyncLifetime
 
         // Same indexes as production, notably the unique (MessageId, MemberId) index
         // that makes MessageReadReceiptRepository.MarkAsReadAsync idempotent.
-        await MessageIndexInitializer.EnsureIndexesAsync(Database);
+        await MessageIndexes.EnsureIndexesAsync(Database);
     }
 
     public async Task DisposeAsync()
