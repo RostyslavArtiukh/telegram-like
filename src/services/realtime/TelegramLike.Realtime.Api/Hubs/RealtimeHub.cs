@@ -12,7 +12,7 @@ namespace TelegramLike.Realtime.Api.Hubs;
 /// integration events into these groups.
 /// </summary>
 [Authorize]
-public sealed class RealtimeHub(ChatMembershipTracker membership) : Hub
+public sealed class RealtimeHub(ChatMembershipCheck membership) : Hub
 {
     public override async Task OnConnectedAsync()
     {
@@ -25,25 +25,42 @@ public sealed class RealtimeHub(ChatMembershipTracker membership) : Hub
         await base.OnConnectedAsync();
     }
 
-    // Reject a non-member from subscribing to a chat's live events. The membership
-    // tracker is event-sourced and ephemeral, so it fails closed only for chats it has
-    // actually observed; an unknown chat (e.g. just after a restart, before events
-    // flow) stays fail-open to avoid locking legitimate members out.
-    public Task JoinChat(Guid chatId)
+    // Reject a non-member from subscribing to a chat's live events. The check answers from
+    // what this replica already knows and otherwise asks Chats on the caller's behalf, so a
+    // chat it has never observed is no longer waved through ([TL-127]).
+    public async Task JoinChat(Guid chatId)
     {
         var sub = Context.User?.FindFirst("sub")?.Value;
-        if (Guid.TryParse(sub, out var userId)
-            && membership.IsKnownChat(chatId)
-            && !membership.IsMember(chatId, userId))
-        {
+        if (!Guid.TryParse(sub, out var userId))
             throw new HubException("You are not a member of this chat.");
-        }
 
-        return Groups.AddToGroupAsync(Context.ConnectionId, RealtimeGroups.Chat(chatId));
+        var mayJoin = await membership.MayJoinAsync(chatId, userId, AccessToken(), Context.ConnectionAborted);
+        if (!mayJoin)
+            throw new HubException("You are not a member of this chat.");
+
+        await Groups.AddToGroupAsync(Context.ConnectionId, RealtimeGroups.Chat(chatId));
     }
 
     public Task LeaveChat(Guid chatId)
         => Groups.RemoveFromGroupAsync(Context.ConnectionId, RealtimeGroups.Chat(chatId));
+
+    // The token this connection authenticated with, forwarded so Chats answers as the user
+    // rather than as this service. WebSocket clients can't set headers on the upgrade, so it
+    // arrives as ?access_token= (the same place JwtBearerEvents reads it from); other
+    // transports use the header.
+    private string? AccessToken()
+    {
+        var http = Context.GetHttpContext();
+        if (http is null) return null;
+
+        var queryToken = http.Request.Query["access_token"].ToString();
+        if (!string.IsNullOrEmpty(queryToken)) return queryToken;
+
+        var header = http.Request.Headers.Authorization.ToString();
+        return header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+            ? header["Bearer ".Length..]
+            : null;
+    }
 }
 
 internal static class RealtimeGroups

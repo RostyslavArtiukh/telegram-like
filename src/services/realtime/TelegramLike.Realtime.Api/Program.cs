@@ -14,7 +14,19 @@ using TelegramLike.Realtime.Api.Observability;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSignalR();
-builder.Services.AddSingleton<ChatMembershipTracker>();
+
+// JoinChat's authorization check. It answers from what this replica already knows and asks
+// Chats — as the connecting user, with their own token — for anything it doesn't ([TL-127]).
+// Straight to the service, not via the gateway: the gateway is the front door for external
+// clients and in compose it already waits on this service, so going back through it would be
+// a cycle. The timeout is short because a JoinChat is waiting on it.
+builder.Services.AddSingleton<ChatMembershipCheck>();
+builder.Services.AddHttpClient<IChatMembershipSource, ChatsApiMembershipSource>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Chats:BaseUrl"] ?? "http://localhost:8083");
+    client.Timeout = TimeSpan.FromSeconds(
+        double.TryParse(builder.Configuration["Chats:TimeoutSeconds"], out var timeout) ? timeout : 3);
+});
 
 var jwtSecret = builder.Configuration["ServiceAuth:JwtSecret"]
                 ?? throw new InvalidOperationException("ServiceAuth:JwtSecret is not configured.");
@@ -89,8 +101,8 @@ builder.Services.AddMassTransit(bus =>
     bus.AddConsumer<MemberKickedMembershipConsumer>().Endpoint(PerInstanceQueue);
     bus.AddConsumer<MemberBannedMembershipConsumer>().Endpoint(PerInstanceQueue);
     bus.AddConsumer<ChatDeletedMembershipConsumer>().Endpoint(PerInstanceQueue);
-    // Backfill snapshots make JoinChat fail-closed for pre-existing chats ([TL-103]).
-    bus.AddConsumer<ChatMembershipsSnapshotMembershipConsumer>().Endpoint(PerInstanceQueue);
+    // No snapshot-backfill consumer any more ([TL-127]): it existed only to re-materialize a
+    // restarted replica's blind membership view, and nothing is materialized up front now.
 
     bus.UsingRabbitMq((ctx, cfg) =>
     {

@@ -8,8 +8,9 @@ namespace TelegramLike.Contracts.Chats;
 /// read-models become materialized (live memberships already flow as MemberJoined/Left/…).
 /// <para>
 /// This is a DEDICATED event on purpose: republishing <see cref="MemberJoinedIntegrationEvent"/>
-/// would also reach the notifications and realtime consumers and spam users with historical
-/// "joined" side effects. Only the two membership read-models subscribe to this event.
+/// would also reach the notifications consumer and spam users with historical "joined" side
+/// effects. Only the Messaging and Presence membership read-models subscribe to it — Realtime
+/// stopped in [TL-127], since it no longer materializes membership up front.
 /// </para>
 /// <para>
 /// Consumers apply each entry last-writer-wins by its own <see cref="ChatMembershipSnapshotEntry.JoinedAt"/>
@@ -18,9 +19,7 @@ namespace TelegramLike.Contracts.Chats;
 /// </para>
 /// <para>
 /// A big chat's snapshot is split into parts ([TL-124]) — <see cref="Members"/> is this part's
-/// slice. Every consumer applies entries one at a time, so parts need no coordination; the one
-/// consequence worth knowing is that Realtime's tracker treats a chat as "known" from the first
-/// part, so members carried by a later part are briefly not recognised.
+/// slice. Every consumer applies entries one at a time, so parts need no coordination.
 /// </para>
 /// </summary>
 [IntegrationEventName("chats.chat-memberships-snapshot.v1")]

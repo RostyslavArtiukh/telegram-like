@@ -292,6 +292,9 @@ services:
       RabbitMQ__Password: guest
       RabbitMQ__VirtualHost: telegramlike
       Tracing__OtlpEndpoint: "http://jaeger:4317"
+      # JoinChat asks Chats about membership, as the connecting user ([TL-127]). Straight to
+      # the service — the gateway waits on realtime above, so routing back would be a cycle.
+      Chats__BaseUrl: "http://chats:8080"
       ServiceAuth__JwtSecret: "2VfJYDFDbVxHRbBk0EgRPtdAAdXbENPFUbq0TNrBWOOBsljtAU1IwhBt4PPcYkj2"
       ServiceAuth__Issuer: telegramlike-identity
       ServiceAuth__Audience: telegramlike-services
