@@ -31,6 +31,7 @@ public sealed class MongoFixture : IAsyncLifetime
         // that makes MessageReadReceiptRepository.MarkAsReadAsync idempotent.
         await MessageIndexes.EnsureIndexesAsync(Database);
         await MessageReadReceiptIndexes.EnsureIndexesAsync(Database);
+        await HiddenMessageIndexes.EnsureIndexesAsync(Database);
     }
 
     public async Task DisposeAsync()

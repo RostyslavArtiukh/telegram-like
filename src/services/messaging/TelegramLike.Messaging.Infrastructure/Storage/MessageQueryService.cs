@@ -33,11 +33,10 @@ internal sealed class MessageQueryService(IMongoDatabase database) : IMessageQue
         var hasMore = docs.Count > pageSize;
         if (hasMore) docs.RemoveAt(docs.Count - 1);
 
-        var hiddenIds = await _hiddenMessagesCollection
-            .Find(h => h.UserId == requesterId)
-            .Project(h => h.MessageId)
-            .ToListAsync(cancellationToken);
-        var hiddenSet = hiddenIds.ToHashSet();
+        // Only ask about the ids on this page. Fetching every message the user ever hid —
+        // across every chat they are in — made the cost of one 20-message page grow with the
+        // lifetime of the account, for a set that can only ever intersect these 20 documents.
+        var hiddenSet = await HiddenOnThisPageAsync(docs, requesterId, cancellationToken);
 
         var items = docs
             .Where(d => !hiddenSet.Contains(d.Id))
@@ -55,6 +54,25 @@ internal sealed class MessageQueryService(IMongoDatabase database) : IMessageQue
 
         var isHidden = await _hiddenMessagesCollection.Find(h => h.MessageId == messageId && h.UserId == requesterId).AnyAsync(cancellationToken);
         return isHidden ? null : MapMessage(doc);
+    }
+
+    private async Task<HashSet<Guid>> HiddenOnThisPageAsync(
+        List<MessageDocument> page,
+        Guid requesterId,
+        CancellationToken cancellationToken)
+    {
+        if (page.Count == 0) return [];
+
+        var filter = Builders<HiddenMessageDocument>.Filter.And(
+            Builders<HiddenMessageDocument>.Filter.Eq(h => h.UserId, requesterId),
+            Builders<HiddenMessageDocument>.Filter.In(h => h.MessageId, page.Select(d => d.Id)));
+
+        var hidden = await _hiddenMessagesCollection
+            .Find(filter)
+            .Project(h => h.MessageId)
+            .ToListAsync(cancellationToken);
+
+        return hidden.ToHashSet();
     }
 
     private static MessageDto MapMessage(MessageDocument d) => new(
