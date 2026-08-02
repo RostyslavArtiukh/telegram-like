@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\TelegramLike.Contracts\TelegramLike.Contracts.csproj" />
+    <PackageReference Include="TelegramLike.Contracts" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>

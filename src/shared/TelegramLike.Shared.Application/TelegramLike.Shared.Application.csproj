@@ -1,19 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>TelegramLike.Shared.Application</PackageId>
+    <Version>1.0.0</Version>
+    <Description>Application-layer building blocks shared by TelegramLike services: MediatR request validation, the change-event to integration-event map, and the integration-event wire-name registry.</Description>
+  </PropertyGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\TelegramLike.Shared.Domain\TelegramLike.Shared.Domain.csproj" />
-    <ProjectReference Include="..\..\TelegramLike.Contracts\TelegramLike.Contracts.csproj" />
+    <PackageReference Include="TelegramLike.Shared.Domain" Version="1.0.0" />
+    <PackageReference Include="TelegramLike.Contracts" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="11.10.0" />
     <PackageReference Include="MediatR" Version="14.1.0" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
 
 </Project>

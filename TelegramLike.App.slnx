@@ -1,7 +1,6 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/TelegramLike.Contracts/TelegramLike.Contracts.csproj" />
-  </Folder>
+  <!-- Contracts is not here any more: the app gets it as a package through the SDK
+       (see TelegramLike.Shared.slnx). Pack the shared layer once before building this. -->
   <Folder Name="/src/app/">
     <Project Path="src/app/TelegramLike.App/TelegramLike.App.csproj" />
   </Folder>

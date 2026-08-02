@@ -6,6 +6,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageId>TelegramLike.Shared.Api</PackageId>
+    <Version>1.0.0</Version>
+    <Description>API-layer building blocks shared by TelegramLike services: service JWT authentication and the controller base that reads the caller's identity from the signed token.</Description>
+  </PropertyGroup>
+
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>

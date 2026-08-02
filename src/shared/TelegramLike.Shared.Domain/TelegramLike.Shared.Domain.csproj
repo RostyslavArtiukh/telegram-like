@@ -6,4 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageId>TelegramLike.Shared.Domain</PackageId>
+    <Version>1.0.0</Version>
+    <Description>Domain-layer primitives shared by every TelegramLike service: entity identity and equality, recorded change events, and the semantic exception types. Zero dependencies.</Description>
+  </PropertyGroup>
+
 </Project>

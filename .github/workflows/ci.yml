@@ -32,6 +32,13 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
+      # The shared layer ships as versioned packages, so it has to be published to the local
+      # feed before anything that consumes it can even restore. Packing in dependency order is
+      # what the script exists for — Shared.Application restores Shared.Domain as a package.
+      - name: Pack the shared layer
+        shell: pwsh
+        run: ./build/pack-shared.ps1
+
       - name: Restore
         run: dotnet restore TelegramLike.sln
 
@@ -72,6 +79,12 @@ jobs:
 
       - name: Install MAUI (Windows) workload
         run: dotnet workload install maui-windows
+
+      # Same reason as the build-test job: the app reaches Contracts through the SDK, and the
+      # SDK now consumes it as a package rather than a project reference.
+      - name: Pack the shared layer
+        shell: pwsh
+        run: ./build/pack-shared.ps1
 
       # Build the Windows TFM of the app project directly (not the .slnx): the .slnx
       # also carries a net10.0-android TFM, and CI only installs the maui-windows

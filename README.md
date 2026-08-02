@@ -137,9 +137,16 @@ watch messages/typing/presence update in real time.
 ## Building & testing
 
 ```bash
+./build/pack-shared.ps1       # publish the shared layer to the local NuGet feed — do this first
 dotnet build TelegramLike.sln
 dotnet test                   # Infrastructure tests use Testcontainers — Docker must be running
 ```
+
+The shared layer (`TelegramLike.Contracts` + `src/shared/*`) ships as **versioned NuGet
+packages** rather than project references, so services depend on a version instead of on
+whatever is currently on disk. It has its own solution, `TelegramLike.Shared.slnx`, and its own
+local feed at `artifacts/packages`; nothing else can restore until it has been packed once, and
+`docker compose build` needs it too. Changing shared code means bumping that package's version.
 
 The MAUI app is **not** part of `TelegramLike.sln` (CI runs on Linux); build it via
 `TelegramLike.App.slnx`.

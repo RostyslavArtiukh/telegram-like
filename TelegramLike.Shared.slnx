@@ -1,0 +1,16 @@
+<Solution>
+  <!-- The shared layer, built and versioned on its own. Kept out of TelegramLike.sln on
+       purpose: services consume these as packages, so if they also sat in the services'
+       solution the project would silently win over the package version and the boundary
+       would be decorative. Pack into the local feed with:
+         dotnet pack TelegramLike.Shared.slnx -c Release -->
+  <Folder Name="/src/">
+    <Project Path="src/TelegramLike.Contracts/TelegramLike.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/shared/">
+    <Project Path="src/shared/TelegramLike.Shared.Domain/TelegramLike.Shared.Domain.csproj" />
+    <Project Path="src/shared/TelegramLike.Shared.Application/TelegramLike.Shared.Application.csproj" />
+    <Project Path="src/shared/TelegramLike.Shared.Infrastructure/TelegramLike.Shared.Infrastructure.csproj" />
+    <Project Path="src/shared/TelegramLike.Shared.Api/TelegramLike.Shared.Api.csproj" />
+  </Folder>
+</Solution>

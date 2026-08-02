@@ -1,7 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>TelegramLike.Shared.Infrastructure</PackageId>
+    <Version>1.0.0</Version>
+    <Description>Infrastructure building blocks shared by TelegramLike services: the transactional outbox (outgoing-events queue, sender and metrics), declared Mongo indexes, and the Mongo/Redis/RabbitMQ setup helpers.</Description>
+  </PropertyGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\TelegramLike.Shared.Application\TelegramLike.Shared.Application.csproj" />
+    <PackageReference Include="TelegramLike.Shared.Application" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -18,14 +30,9 @@
 
   <ItemGroup>
     <!-- The shared outbox is integration-tested from the Chats test project, which already
-         owns the replica-set Mongo fixture the queue needs. -->
+         owns the replica-set Mongo fixture the queue needs. Compiled into the package, so it
+         keeps working for consumers that reference the package rather than the project. -->
     <InternalsVisibleTo Include="TelegramLike.Chats.Tests" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
 
 </Project>

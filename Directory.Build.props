@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- Package identity shared by everything this repo publishes. Only the five shared-layer
+       projects and the client SDK set PackageId/Version and are actually packed; the rest
+       inherit these harmlessly. PackageOutputPath is fixed here so `dotnet pack` and the
+       local feed in NuGet.config can never drift apart. -->
+  <PropertyGroup>
+    <Authors>TelegramLike</Authors>
+    <RepositoryUrl>https://github.com/RostyslavArtiukh/telegram-like</RepositoryUrl>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)artifacts/packages</PackageOutputPath>
+  </PropertyGroup>
+
+</Project>

@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../shared/TelegramLike.Shared.Application/TelegramLike.Shared.Application.csproj" />
+    <PackageReference Include="TelegramLike.Shared.Application" Version="1.0.0" />
   </ItemGroup>
 
 </Project>

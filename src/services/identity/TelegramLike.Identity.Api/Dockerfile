@@ -11,15 +11,14 @@ RUN apt-get update \
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
+# The shared layer arrives as versioned packages from the local feed, not as project
+# references. Run build/pack-shared.ps1 before building images or restore will not find them.
+COPY ["NuGet.config", "Directory.Build.props", "./"]
+COPY ["artifacts/packages/", "artifacts/packages/"]
 COPY ["src/services/identity/TelegramLike.Identity.Api/TelegramLike.Identity.Api.csproj", "src/services/identity/TelegramLike.Identity.Api/"]
 COPY ["src/services/identity/TelegramLike.Identity.Infrastructure/TelegramLike.Identity.Infrastructure.csproj", "src/services/identity/TelegramLike.Identity.Infrastructure/"]
 COPY ["src/services/identity/TelegramLike.Identity.Application/TelegramLike.Identity.Application.csproj", "src/services/identity/TelegramLike.Identity.Application/"]
 COPY ["src/services/identity/TelegramLike.Identity.Domain/TelegramLike.Identity.Domain.csproj", "src/services/identity/TelegramLike.Identity.Domain/"]
-COPY ["src/shared/TelegramLike.Shared.Api/TelegramLike.Shared.Api.csproj", "src/shared/TelegramLike.Shared.Api/"]
-COPY ["src/shared/TelegramLike.Shared.Infrastructure/TelegramLike.Shared.Infrastructure.csproj", "src/shared/TelegramLike.Shared.Infrastructure/"]
-COPY ["src/shared/TelegramLike.Shared.Application/TelegramLike.Shared.Application.csproj", "src/shared/TelegramLike.Shared.Application/"]
-COPY ["src/shared/TelegramLike.Shared.Domain/TelegramLike.Shared.Domain.csproj", "src/shared/TelegramLike.Shared.Domain/"]
-COPY ["src/TelegramLike.Contracts/TelegramLike.Contracts.csproj", "src/TelegramLike.Contracts/"]
 RUN dotnet restore "src/services/identity/TelegramLike.Identity.Api/TelegramLike.Identity.Api.csproj"
 
 COPY . .

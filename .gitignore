@@ -64,6 +64,13 @@ secrets.json
 .nuget/
 packages/
 project.lock.json
+# The local feed's contents are build output, but the folder itself must exist in a fresh
+# clone: NuGet.config names it as a source and the service Dockerfiles COPY it. Git won't
+# look inside an excluded directory, so the folder has to be un-excluded before its one
+# tracked file can be.
+!artifacts/packages/
+artifacts/packages/*
+!artifacts/packages/.gitkeep
 
 # MongoDB / Mongo dump output
 dump/

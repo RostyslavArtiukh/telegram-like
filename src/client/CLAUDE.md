@@ -2,6 +2,8 @@
 
 Typed .NET SDK every client app uses to talk to the backend **through the YARP gateway** (one base URL, e.g. `http://localhost:8090`). Consumed by the Web BFF (project reference) and by future MAUI/console apps (project reference or `dotnet pack` → NuGet). References only `TelegramLike.Contracts` + `Microsoft.Extensions.Http.Resilience` — no domain, no ASP.NET Core.
 
+Since [TL-120] `TelegramLike.Contracts` is a **PackageReference**, so `dotnet pack` here emits a real dependency on a versioned contracts package instead of a dangling project reference — and building this project needs the local feed populated first (`./build/pack-shared.ps1`).
+
 ## Layout
 - `Identity/ Chats/ Messaging/ Notifications/ Presence/` — one typed client per service (public `<Name>ApiClient`; лише `IIdentityAuthApi` зберіг інтерфейс — його мокають тести `TelegramLikeSession`) with its wire DTOs (`*Contract` records; Notifications DTOs live in Contracts).
 - `Http/` — `ServicePrefixHandler` (prepends `/chats` etc., gateway strips it) + shared resilience pipeline (timeout/retry/circuit-breaker; POSTs retried only with `Idempotency-Key`).

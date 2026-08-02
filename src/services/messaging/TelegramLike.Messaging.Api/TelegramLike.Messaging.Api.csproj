@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TelegramLike.Messaging.Infrastructure\TelegramLike.Messaging.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\..\shared\TelegramLike.Shared.Api\TelegramLike.Shared.Api.csproj" />
+    <PackageReference Include="TelegramLike.Shared.Api" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>

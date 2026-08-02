@@ -20,7 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../shared/TelegramLike.Shared.Infrastructure/TelegramLike.Shared.Infrastructure.csproj" />
+    <PackageReference Include="TelegramLike.Shared.Infrastructure" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>
